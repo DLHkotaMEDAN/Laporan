@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,12 +53,39 @@ interface FlatRow {
   rowNo: number;
 }
 
+const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
+
+const getFuelReportDuplicateKey = (report: FuelReport) => {
+  const items = (report.items || []).map((item) => ({
+    vehicle_operator: normalizeText(item.vehicle_operator),
+    fuel_type: item.fuel_type,
+    amount: Number(item.amount || 0),
+    amount_rp: Number(item.amount_rp || 0),
+    amount_liter: Number(item.amount_liter || 0),
+    item_remarks: normalizeText(item.item_remarks),
+    street: normalizeText(item.location?.street),
+    subDistrict: normalizeText(item.location?.subDistrict),
+    village: normalizeText(item.location?.village),
+  })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  return JSON.stringify({
+    date: report.date,
+    region: normalizeText(report.region),
+    team: normalizeText(report.team),
+    remarks: normalizeText(report.remarks),
+    price_pertamax: Number(report.price_pertamax || 0),
+    price_dexlite: Number(report.price_dexlite || 0),
+    items,
+  });
+};
+
 const FuelReportList = () => {
   const navigate = useNavigate();
   const { profile, session, signOut } = useAuth();
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState("");
@@ -188,12 +215,27 @@ const FuelReportList = () => {
 
   const resetFilters = () => {
     setSearchQuery("");
+    setShowDuplicatesOnly(false);
     setSelectedDate("");
     setAppliedDate("");
     setAppliedMonth("semua");
     setAppliedYear("semua");
     setCurrentPage(1);
   };
+
+  const duplicateReportKeys = useMemo(() => {
+    const counts = new Map<string, number>();
+    reports.forEach((report) => {
+      const key = getFuelReportDuplicateKey(report);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
+  }, [reports]);
+
+  const duplicateReportCount = useMemo(() => {
+    return reports.filter((report) => duplicateReportKeys.has(getFuelReportDuplicateKey(report))).length;
+  }, [reports, duplicateReportKeys]);
 
   const filteredReports = reports.filter(r => {
     const search = searchQuery.toLowerCase();
@@ -202,7 +244,8 @@ const FuelReportList = () => {
       r.region.toLowerCase().includes(search) ||
       r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
       r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
-    return matchSearch;
+    const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
+    return matchSearch && matchDuplicate;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
@@ -319,9 +362,24 @@ const FuelReportList = () => {
           <div className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end">
             <div className="col-span-2 md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500">Cari Tim / Wilayah / Lokasi</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                <Input placeholder="Ketik kata kunci..." className="pl-9 bg-slate-50 border-slate-200 h-9 text-sm" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
+              <div className="flex gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input placeholder="Ketik kata kunci..." className="pl-9 bg-slate-50 border-slate-200 h-9 text-sm" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
+                </div>
+                <Button
+                  type="button"
+                  variant={showDuplicatesOnly ? "default" : "outline"}
+                  onClick={() => { setShowDuplicatesOnly(prev => !prev); setCurrentPage(1); }}
+                  className={cn("h-9 shrink-0 px-3 text-[11px] font-bold", showDuplicatesOnly && "bg-amber-600 hover:bg-amber-700 text-white")}
+                >
+                  Data Ganda
+                  {duplicateReportCount > 0 && (
+                    <Badge className={cn("ml-1.5 px-1.5 py-0 text-[9px]", showDuplicatesOnly ? "bg-white text-amber-700" : "bg-amber-100 text-amber-700")}>
+                      {duplicateReportCount}
+                    </Badge>
+                  )}
+                </Button>
               </div>
             </div>
             <div className="col-span-2 md:col-span-2 space-y-1">
@@ -369,7 +427,7 @@ const FuelReportList = () => {
               </Button>
             </div>
           </div>
-          {(appliedDate || appliedMonth !== "semua" || appliedYear !== "semua") && (
+          {(appliedDate || appliedMonth !== "semua" || appliedYear !== "semua" || showDuplicatesOnly) && (
             <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
               <Search className="h-3 w-3 shrink-0" />
               {appliedDate ? (
@@ -377,6 +435,7 @@ const FuelReportList = () => {
               ) : (
                 <span>Menampilkan: <strong>{appliedMonth !== "semua" ? months[parseInt(appliedMonth)-1] : "Semua Bulan"}</strong> / <strong>{appliedYear !== "semua" ? appliedYear : "Semua Tahun"}</strong></span>
               )}
+              {showDuplicatesOnly && <span className="font-bold text-amber-700">Data ganda saja</span>}
             </div>
           )}
         </div>
@@ -426,6 +485,9 @@ const FuelReportList = () => {
                           <td rowSpan={row.totalItems} className={cn("px-3 py-2 text-center font-medium text-slate-700 border-r border-slate-100 align-middle whitespace-nowrap", borderTop)}>
                             <div className="flex flex-col items-center gap-0.5">
                               <span>{row.report.date}</span>
+                              {duplicateReportKeys.has(getFuelReportDuplicateKey(row.report)) && (
+                                <Badge className="text-[8px] bg-amber-100 text-amber-700 border-amber-200 px-1 py-0">Ganda</Badge>
+                              )}
                               {row.report.pimpinan_note && (
                                 <Badge className="text-[8px] bg-amber-100 text-amber-700 border-amber-200 px-1 py-0">Catatan</Badge>
                               )}
