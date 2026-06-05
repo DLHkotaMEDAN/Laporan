@@ -411,64 +411,66 @@ const Index = () => {
           </div>
 
           {/* Filter Section */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border ring-1 ring-slate-100 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-              <div className="md:col-span-4 space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Pencarian Cepat</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input 
-                    placeholder="Cari uraian kegiatan atau lokasi..." 
-                    className="pl-10 bg-slate-50 border-slate-200 h-11 rounded-xl focus-visible:ring-blue-500" 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                  />
+          {(activeTab === "reports" || activeTab === "workplans") && (
+            <div className="bg-white p-5 rounded-2xl shadow-sm border ring-1 ring-slate-100 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <div className="md:col-span-4 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Pencarian Cepat</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input 
+                      placeholder="Cari uraian kegiatan atau lokasi..." 
+                      className="pl-10 bg-slate-50 border-slate-200 h-11 rounded-xl focus-visible:ring-blue-500" 
+                      value={searchQuery} 
+                      onChange={(e) => setSearchQuery(e.target.value)} 
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="md:col-span-3 space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Kategori Tim</label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isUserRestricted}>
-                  <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
-                    <SelectValue placeholder="Pilih Kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => <SelectItem key={cat} value={cat} className="font-medium">{cat === 'semua' ? 'Semua Kategori' : cat}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Tanggal</label>
-                <div className="relative">
-                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input type="date" className="pl-10 bg-slate-50 border-slate-200 h-11 rounded-xl" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                <div className="md:col-span-3 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Kategori Tim</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isUserRestricted}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
+                      <SelectValue placeholder="Pilih Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(cat => <SelectItem key={cat} value={cat} className="font-medium">{cat === 'semua' ? 'Semua Kategori' : cat}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Bulan</label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!!selectedDate}>
-                  <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-11 rounded-xl font-medium", selectedDate && "opacity-50")}>
-                    <SelectValue placeholder="Pilih Bulan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="semua">Semua Bulan</SelectItem>
-                    {months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-1 flex justify-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={resetFilters} className="h-11 w-11 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl border border-dashed border-slate-200">
-                        <FilterX className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Reset Filter</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Tanggal</label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input type="date" className="pl-10 bg-slate-50 border-slate-200 h-11 rounded-xl" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Bulan</label>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!!selectedDate}>
+                    <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-11 rounded-xl font-medium", selectedDate && "opacity-50")}>
+                      <SelectValue placeholder="Pilih Bulan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semua">Semua Bulan</SelectItem>
+                      {months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-1 flex justify-end">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={resetFilters} className="h-11 w-11 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl border border-dashed border-slate-200">
+                          <FilterX className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Reset Filter</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <TabsContent value="reports" className="mt-0">
             {loading ? (
