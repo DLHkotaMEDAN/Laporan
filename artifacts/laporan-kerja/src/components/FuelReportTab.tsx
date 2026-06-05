@@ -48,8 +48,6 @@ const FuelReportTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("semua");
-  const [selectedYear, setSelectedYear] = useState("semua");
   const [appliedDate, setAppliedDate] = useState("");
   const [appliedMonth, setAppliedMonth] = useState("semua");
   const [appliedYear, setAppliedYear] = useState("semua");
@@ -104,19 +102,25 @@ const FuelReportTab = () => {
     }
   };
 
-  const applyFilter = () => {
-    setAppliedDate(selectedDate);
-    setAppliedMonth(selectedDate ? "semua" : selectedMonth);
-    setAppliedYear(selectedDate ? "semua" : selectedYear);
-  };
-
   const handleSpecificDateChange = (date: string) => {
     setSelectedDate(date);
-    setSelectedMonth("semua");
-    setSelectedYear("semua");
     setAppliedDate(date);
     setAppliedMonth("semua");
     setAppliedYear("semua");
+    setCurrentPage(1);
+  };
+
+  const handleMonthChange = (month: string) => {
+    setSelectedDate("");
+    setAppliedDate("");
+    setAppliedMonth(month);
+    setCurrentPage(1);
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedDate("");
+    setAppliedDate("");
+    setAppliedYear(year);
     setCurrentPage(1);
   };
 
@@ -131,8 +135,6 @@ const FuelReportTab = () => {
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedDate("");
-    setSelectedMonth("semua");
-    setSelectedYear("semua");
     setAppliedDate("");
     setAppliedMonth("semua");
     setAppliedYear("semua");
@@ -230,7 +232,7 @@ const FuelReportTab = () => {
           </div>
           <div className="col-span-1 md:col-span-2 space-y-1">
             <label className="text-[10px] font-bold uppercase text-slate-500">Bulan</label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!!selectedDate}>
+            <Select value={appliedMonth} onValueChange={handleMonthChange} disabled={!!selectedDate}>
               <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-9 text-sm", selectedDate && "opacity-50")}>
                 <SelectValue placeholder="Bulan" />
               </SelectTrigger>
@@ -242,7 +244,7 @@ const FuelReportTab = () => {
           </div>
           <div className="col-span-1 md:col-span-2 space-y-1">
             <label className="text-[10px] font-bold uppercase text-slate-500">Tahun</label>
-            <Select value={selectedYear} onValueChange={setSelectedYear} disabled={!!selectedDate}>
+            <Select value={appliedYear} onValueChange={handleYearChange} disabled={!!selectedDate}>
               <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-9 text-sm", selectedDate && "opacity-50")}>
                 <SelectValue placeholder="Tahun" />
               </SelectTrigger>
@@ -252,13 +254,7 @@ const FuelReportTab = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-1 md:col-span-2 space-y-1">
-            <label className="text-[10px] font-bold uppercase text-slate-500">Terapkan</label>
-            <Button onClick={applyFilter} disabled={loading} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
-              <Search className="h-3.5 w-3.5 mr-1.5" /> Cari Data
-            </Button>
-          </div>
-          <div className="col-span-1 md:col-span-1 space-y-1">
+          <div className="col-span-2 md:col-span-3 space-y-1">
             <label className="text-[10px] font-bold uppercase text-slate-500">Reset</label>
             <Button variant="ghost" size="icon" onClick={resetFilters} className="h-9 w-full border border-dashed text-slate-400 hover:text-red-500 hover:bg-red-50">
               <FilterX className="h-4 w-4" />
