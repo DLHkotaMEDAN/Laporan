@@ -8,7 +8,7 @@ import {
   FileText, Search, Cloud, Printer,
   LogOut, LogIn, FilterX, Database, ChevronDown,
   Table, ClipboardList, CalendarDays, Fuel, Trash2, Loader2, UserCircle, Bell,
-  ArrowUpDown, Edit, Eye, EyeOff
+  ArrowUpDown, ChevronUp, Edit, Eye, EyeOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Report } from '@/types/report';
@@ -56,6 +56,8 @@ const months = [
 
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
+type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
+type WorkPlanSortKey = "date" | "category" | "description" | "location" | "items" | "status";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -71,7 +73,10 @@ const Index = () => {
   const [selectedMonth, setSelectedMonth] = useState("semua");
   const [selectedYear, setSelectedYear] = useState("semua");
   const [selectedCategory, setSelectedCategory] = useState("semua");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("date");
+  const [reportSortDirection, setReportSortDirection] = useState<SortDirection>("desc");
+  const [workPlanSortKey, setWorkPlanSortKey] = useState<WorkPlanSortKey>("date");
+  const [workPlanSortDirection, setWorkPlanSortDirection] = useState<SortDirection>("desc");
 
   const isLoggedIn = !!session;
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
@@ -206,20 +211,6 @@ const Index = () => {
     });
   }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile]);
 
-  const sortedReports = useMemo(() => {
-    return [...filteredReports].sort((a, b) => {
-      const result = new Date(a.date).getTime() - new Date(b.date).getTime();
-      return sortDirection === "asc" ? result : -result;
-    });
-  }, [filteredReports, sortDirection]);
-
-  const sortedWorkPlans = useMemo(() => {
-    return [...filteredWorkPlans].sort((a, b) => {
-      const result = new Date(a.date).getTime() - new Date(b.date).getTime();
-      return sortDirection === "asc" ? result : -result;
-    });
-  }, [filteredWorkPlans, sortDirection]);
-
   const formatReportLocation = (report: Report) => {
     const villages = Array.isArray(report.location.village) ? report.location.village.join(", ") : report.location.village;
     return [report.location.street, villages, report.location.subDistrict].filter(Boolean).join(", ");
@@ -230,6 +221,66 @@ const Index = () => {
     if (!location) return "-";
     const villages = Array.isArray(location.village) ? location.village.join(", ") : location.village;
     return [location.street, villages, location.subDistrict].filter(Boolean).join(", ");
+  };
+
+  const getReportSortValue = (report: Report, key: ReportSortKey) => {
+    if (key === "date") return new Date(report.date).getTime();
+    if (key === "category") return report.category;
+    if (key === "description") return report.description;
+    if (key === "location") return formatReportLocation(report);
+    if (key === "volume") return report.volume;
+    return report.remarks || report.pimpinan_note || "";
+  };
+
+  const getWorkPlanSortValue = (plan: WorkPlan, key: WorkPlanSortKey) => {
+    if (key === "date") return new Date(plan.date).getTime();
+    if (key === "category") return plan.category;
+    if (key === "description") return plan.items?.[0]?.description || "";
+    if (key === "location") return formatWorkPlanLocation(plan);
+    if (key === "items") return plan.items?.length || 0;
+    return plan.is_visible === false ? 0 : 1;
+  };
+
+  const compareSortValues = (a: string | number, b: string | number) => {
+    if (typeof a === "number" && typeof b === "number") return a - b;
+    return String(a).localeCompare(String(b), "id-ID", { numeric: true, sensitivity: "base" });
+  };
+
+  const sortedReports = useMemo(() => {
+    return [...filteredReports].sort((a, b) => {
+      const result = compareSortValues(getReportSortValue(a, reportSortKey), getReportSortValue(b, reportSortKey));
+      return reportSortDirection === "asc" ? result : -result;
+    });
+  }, [filteredReports, reportSortKey, reportSortDirection]);
+
+  const sortedWorkPlans = useMemo(() => {
+    return [...filteredWorkPlans].sort((a, b) => {
+      const result = compareSortValues(getWorkPlanSortValue(a, workPlanSortKey), getWorkPlanSortValue(b, workPlanSortKey));
+      return workPlanSortDirection === "asc" ? result : -result;
+    });
+  }, [filteredWorkPlans, workPlanSortKey, workPlanSortDirection]);
+
+  const toggleReportSort = (key: ReportSortKey) => {
+    if (reportSortKey === key) {
+      setReportSortDirection(prev => prev === "asc" ? "desc" : "asc");
+      return;
+    }
+    setReportSortKey(key);
+    setReportSortDirection("asc");
+  };
+
+  const toggleWorkPlanSort = (key: WorkPlanSortKey) => {
+    if (workPlanSortKey === key) {
+      setWorkPlanSortDirection(prev => prev === "asc" ? "desc" : "asc");
+      return;
+    }
+    setWorkPlanSortKey(key);
+    setWorkPlanSortDirection("asc");
+  };
+
+  const SortIcon = ({ active, direction }: { active: boolean; direction: SortDirection }) => {
+    if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />;
+    return direction === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />;
   };
 
   const stats = useMemo(() => {
@@ -500,33 +551,6 @@ const Index = () => {
             </div>
           )}
 
-          {(activeTab === "reports" || activeTab === "workplans") && (
-            <div className="flex items-center justify-between gap-3 bg-white border rounded-2xl shadow-sm px-4 py-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                <ArrowUpDown className="h-4 w-4 text-blue-600" />
-                Urutkan tanggal
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={sortDirection === "desc" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSortDirection("desc")}
-                  className={cn("h-8 text-xs font-bold", sortDirection === "desc" && "bg-blue-600 hover:bg-blue-700")}
-                >
-                  Terbaru
-                </Button>
-                <Button
-                  variant={sortDirection === "asc" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSortDirection("asc")}
-                  className={cn("h-8 text-xs font-bold", sortDirection === "asc" && "bg-blue-600 hover:bg-blue-700")}
-                >
-                  Terlama
-                </Button>
-              </div>
-            </div>
-          )}
-
           <TabsContent value="reports" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -540,12 +564,36 @@ const Index = () => {
                     <thead>
                       <tr className="bg-slate-700 text-white">
                         <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-12">No</th>
-                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-28">Tanggal</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-36">Kategori</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Uraian Kegiatan</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Lokasi</th>
-                        <th className="px-3 py-3 text-right font-semibold border-r border-slate-600 w-28">Volume</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-40">Keterangan</th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-28">
+                          <button type="button" onClick={() => toggleReportSort("date")} className="mx-auto flex items-center justify-center gap-1.5 hover:text-blue-100">
+                            Tanggal <SortIcon active={reportSortKey === "date"} direction={reportSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-36">
+                          <button type="button" onClick={() => toggleReportSort("category")} className="flex items-center gap-1.5 hover:text-blue-100">
+                            Kategori <SortIcon active={reportSortKey === "category"} direction={reportSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">
+                          <button type="button" onClick={() => toggleReportSort("description")} className="flex items-center gap-1.5 hover:text-blue-100">
+                            Uraian Kegiatan <SortIcon active={reportSortKey === "description"} direction={reportSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">
+                          <button type="button" onClick={() => toggleReportSort("location")} className="flex items-center gap-1.5 hover:text-blue-100">
+                            Lokasi <SortIcon active={reportSortKey === "location"} direction={reportSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-right font-semibold border-r border-slate-600 w-28">
+                          <button type="button" onClick={() => toggleReportSort("volume")} className="ml-auto flex items-center justify-end gap-1.5 hover:text-blue-100">
+                            Volume <SortIcon active={reportSortKey === "volume"} direction={reportSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-40">
+                          <button type="button" onClick={() => toggleReportSort("remarks")} className="flex items-center gap-1.5 hover:text-blue-100">
+                            Keterangan <SortIcon active={reportSortKey === "remarks"} direction={reportSortDirection} />
+                          </button>
+                        </th>
                         {isLoggedIn && <th className="px-3 py-3 text-center font-semibold w-24">Aksi</th>}
                       </tr>
                     </thead>
@@ -626,12 +674,36 @@ const Index = () => {
                     <thead>
                       <tr className="bg-slate-700 text-white">
                         <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-12">No</th>
-                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-28">Tanggal</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-36">Kategori</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Uraian Rencana</th>
-                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Lokasi</th>
-                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">Titik</th>
-                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">Status</th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-28">
+                          <button type="button" onClick={() => toggleWorkPlanSort("date")} className="mx-auto flex items-center justify-center gap-1.5 hover:text-emerald-100">
+                            Tanggal <SortIcon active={workPlanSortKey === "date"} direction={workPlanSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-36">
+                          <button type="button" onClick={() => toggleWorkPlanSort("category")} className="flex items-center gap-1.5 hover:text-emerald-100">
+                            Kategori <SortIcon active={workPlanSortKey === "category"} direction={workPlanSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">
+                          <button type="button" onClick={() => toggleWorkPlanSort("description")} className="flex items-center gap-1.5 hover:text-emerald-100">
+                            Uraian Rencana <SortIcon active={workPlanSortKey === "description"} direction={workPlanSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">
+                          <button type="button" onClick={() => toggleWorkPlanSort("location")} className="flex items-center gap-1.5 hover:text-emerald-100">
+                            Lokasi <SortIcon active={workPlanSortKey === "location"} direction={workPlanSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">
+                          <button type="button" onClick={() => toggleWorkPlanSort("items")} className="mx-auto flex items-center justify-center gap-1.5 hover:text-emerald-100">
+                            Titik <SortIcon active={workPlanSortKey === "items"} direction={workPlanSortDirection} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">
+                          <button type="button" onClick={() => toggleWorkPlanSort("status")} className="mx-auto flex items-center justify-center gap-1.5 hover:text-emerald-100">
+                            Status <SortIcon active={workPlanSortKey === "status"} direction={workPlanSortDirection} />
+                          </button>
+                        </th>
                         {isLoggedIn && <th className="px-3 py-3 text-center font-semibold w-28">Aksi</th>}
                       </tr>
                     </thead>
