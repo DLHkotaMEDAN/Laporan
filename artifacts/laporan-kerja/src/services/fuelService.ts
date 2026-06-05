@@ -1,38 +1,63 @@
 import { supabase } from '@/lib/supabase';
 import { FuelReport } from '@/types/fuelReport';
 
+const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await buildQuery().range(from, to);
+
+    if (error) throw error;
+
+    const page = (data || []) as T[];
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return rows;
+};
+
 export const fuelService = {
   async getAllReports(includeDeleted = false) {
-    let query = supabase
-      .from('fuel_reports')
-      .select('*')
-      .order('date', { ascending: false })
-      .limit(10000);
-    
-    if (!includeDeleted) {
-      query = query.is('deleted_at', null);
-    } else {
-      query = query.not('deleted_at', 'is', null);
-    }
-    
-    const { data, error } = await query;
-    if (error) throw error;
-    return data as FuelReport[];
+    return fetchAllPages<FuelReport>(() => {
+      let query = supabase
+        .from('fuel_reports')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      } else {
+        query = query.not('deleted_at', 'is', null);
+      }
+
+      return query;
+    });
+  },
+
+  async getReportsBySpecificDate(date: string) {
+    return fetchAllPages<FuelReport>(() =>
+      supabase
+        .from('fuel_reports')
+        .select('*')
+        .is('deleted_at', null)
+        .eq('date', date)
+        .order('created_at', { ascending: true })
+    );
   },
 
   async getReportsByDateRange(startDate: string, endDate: string) {
-    console.log('[fuelService] getReportsByDateRange', startDate, endDate);
-    const { data, error } = await supabase
-      .from('fuel_reports')
-      .select('*')
-      .is('deleted_at', null)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true })
-      .limit(5000);
-    if (error) { console.error('[fuelService] error:', error); throw error; }
-    console.log('[fuelService] getReportsByDateRange returned', data?.length, 'records');
-    return data as FuelReport[];
+    return fetchAllPages<FuelReport>(() =>
+      supabase
+        .from('fuel_reports')
+        .select('*')
+        .is('deleted_at', null)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true })
+    );
   },
 
   async getReportById(id: string) {

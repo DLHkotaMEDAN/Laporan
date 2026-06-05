@@ -1,41 +1,142 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Calendar, Fuel, Trash2, Edit, 
-  Search, RefreshCw, ArrowRight, FilterX, CalendarDays
-} from 'lucide-react';
-import { FuelReport } from '@/types/fuelReport';
+import { Trash2, CreditCard as Edit, Search, RefreshCw, ListFilter as FilterX, CalendarDays, ArrowLeft, ArrowRight, Eye } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FuelReport, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
+
+const months = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
+const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+
+const PAGE_SIZE = 100;
+
+interface FlatRow {
+  reportId: string;
+  report: FuelReport;
+  item: FuelUsageItem;
+  itemIndex: number;
+  totalItems: number;
+  rowNo: number;
+}
 
 const FuelReportTab = () => {
   const navigate = useNavigate();
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedDate, setSelectedDate] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("semua");
+  const [selectedYear, setSelectedYear] = useState("semua");
+  const [appliedDate, setAppliedDate] = useState("");
+  const [appliedMonth, setAppliedMonth] = useState("semua");
+  const [appliedYear, setAppliedYear] = useState("semua");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const reqIdRef = useRef(0);
+  const specificDateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadReports();
-  }, []);
+    loadReports(appliedDate, appliedMonth, appliedYear);
+  }, [appliedDate, appliedMonth, appliedYear]);
 
-  const loadReports = async () => {
+  const loadReports = async (date: string, month: string, year: string) => {
+    const id = ++reqIdRef.current;
     try {
       setLoading(true);
-      const data = await fuelService.getAllReports();
+      let data: FuelReport[];
+
+      if (date) {
+        data = await fuelService.getReportsBySpecificDate(date);
+      } else if (month !== "semua" && year !== "semua") {
+        const y = parseInt(year);
+        const m = parseInt(month);
+        const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(y, m, 0).getDate();
+        const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+        data = await fuelService.getReportsByDateRange(startDate, endDate);
+      } else if (year !== "semua") {
+        const startDate = `${year}-01-01`;
+        const endDate = `${year}-12-31`;
+        data = await fuelService.getReportsByDateRange(startDate, endDate);
+      } else if (month !== "semua") {
+        const y = new Date().getFullYear();
+        const m = parseInt(month);
+        const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(y, m, 0).getDate();
+        const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+        data = await fuelService.getReportsByDateRange(startDate, endDate);
+      } else {
+        data = await fuelService.getAllReports();
+      }
+
+      if (id !== reqIdRef.current) return;
       setReports(data);
+      setCurrentPage(1);
     } catch (error) {
+      if (id !== reqIdRef.current) return;
       showError("Gagal memuat data BBM");
     } finally {
+      if (id !== reqIdRef.current) return;
       setLoading(false);
     }
+  };
+
+  const applyFilter = () => {
+    setAppliedDate(selectedDate);
+    setAppliedMonth(selectedDate ? "semua" : selectedMonth);
+    setAppliedYear(selectedDate ? "semua" : selectedYear);
+  };
+
+  const handleSpecificDateChange = (date: string) => {
+    setSelectedDate(date);
+    setSelectedMonth("semua");
+    setSelectedYear("semua");
+    setAppliedDate(date);
+    setAppliedMonth("semua");
+    setAppliedYear("semua");
+    setCurrentPage(1);
+  };
+
+  const openSpecificDatePicker = () => {
+    const input = specificDateInputRef.current;
+    if (!input) return;
+
+    input.showPicker?.();
+    input.focus();
+  };
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedDate("");
+    setSelectedMonth("semua");
+    setSelectedYear("semua");
+    setAppliedDate("");
+    setAppliedMonth("semua");
+    setAppliedYear("semua");
+    setCurrentPage(1);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -51,95 +152,282 @@ const FuelReportTab = () => {
   };
 
   const filteredReports = reports.filter(r => {
-    const matchSearch = r.team.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       r.region.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchDate = !selectedDate || r.date === selectedDate;
-    return matchSearch && matchDate;
+    const search = searchQuery.toLowerCase();
+    return !search ||
+      r.team.toLowerCase().includes(search) ||
+      r.region.toLowerCase().includes(search) ||
+      r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
+      r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  const paginatedReports = filteredReports.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const flatRows: FlatRow[] = [];
+  let rowNo = (currentPage - 1) * PAGE_SIZE + 1;
+  paginatedReports.forEach(report => {
+    const items = report.items?.length ? report.items : [{
+      vehicle_operator: '-', fuel_type: 'Pertamax' as const, amount: 0, amount_rp: 0,
+      amount_liter: 0, location: { street: '-' }
+    }];
+    items.forEach((item, idx) => {
+      flatRows.push({
+        reportId: report.id,
+        report,
+        item,
+        itemIndex: idx,
+        totalItems: items.length,
+        rowNo: idx === 0 ? rowNo++ : 0,
+      });
+    });
+  });
+
+  const fuelBadgeColor = (type: string) => {
+    if (type === 'Pertamax') return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (type === 'Dexlite') return 'bg-green-100 text-green-700 border-green-200';
+    return 'bg-amber-100 text-amber-700 border-amber-200';
+  };
+
+  const formatRp = (n: number) => n > 0 ? `Rp ${n.toLocaleString('id-ID')}` : '-';
+  const formatL = (n: number) => n > 0 ? `${n.toLocaleString('id-ID')} L` : '-';
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-xl border shadow-sm space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-          <div className="lg:col-span-5 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Cari Tim / Wilayah</label>
+      {/* Filter */}
+      <div className="bg-white p-4 rounded-xl border shadow-sm space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end">
+          <div className="col-span-2 md:col-span-3 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-slate-500">Cari Tim / Wilayah / Lokasi</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input 
-                placeholder="Ketik nama tim..." 
-                className="pl-10 bg-slate-50 border-slate-200 h-10 text-sm" 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Ketik kata kunci..."
+                className="pl-9 bg-slate-50 border-slate-200 h-9 text-sm"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               />
             </div>
           </div>
-          <div className="lg:col-span-3 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Filter Tanggal</label>
+          <div className="col-span-2 md:col-span-2 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-slate-500">Tanggal Spesifik</label>
             <div className="relative">
-              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input 
+              <button
+                type="button"
+                aria-label="Pilih tanggal spesifik"
+                onClick={openSpecificDatePicker}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+              </button>
+              <Input
+                ref={specificDateInputRef}
                 type="date"
-                className="pl-10 bg-slate-50 border-slate-200 h-10 text-sm" 
+                className="pl-10 bg-slate-50 border-slate-200 h-9 text-sm"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => handleSpecificDateChange(e.target.value)}
               />
             </div>
           </div>
-          <div className="lg:col-span-4 flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => { setSearchQuery(""); setSelectedDate(""); }}
-              className="h-10 w-10 shrink-0 border-slate-200 text-slate-400 hover:text-red-500"
-            >
-              <FilterX size={18} />
+          <div className="col-span-1 md:col-span-2 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-slate-500">Bulan</label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!!selectedDate}>
+              <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-9 text-sm", selectedDate && "opacity-50")}>
+                <SelectValue placeholder="Bulan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="semua">Semua Bulan</SelectItem>
+                {months.map((m, i) => <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-1 md:col-span-2 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-slate-500">Tahun</label>
+            <Select value={selectedYear} onValueChange={setSelectedYear} disabled={!!selectedDate}>
+              <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-9 text-sm", selectedDate && "opacity-50")}>
+                <SelectValue placeholder="Tahun" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="semua">Semua Tahun</SelectItem>
+                {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-1 md:col-span-2 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-slate-500">Terapkan</label>
+            <Button onClick={applyFilter} disabled={loading} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
+              <Search className="h-3.5 w-3.5 mr-1.5" /> Cari Data
             </Button>
-            
-            <Button variant="outline" size="icon" onClick={loadReports} disabled={loading} className="h-10 w-10 shrink-0 border-slate-200">
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            </Button>
-            <Button onClick={() => navigate('/fuel-reports/create')} className="bg-orange-600 hover:bg-orange-700 h-10 flex-1 font-bold text-xs md:text-sm">
-              <Fuel className="mr-2 h-4 w-4" /> Input BBM Baru
+          </div>
+          <div className="col-span-1 md:col-span-1 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-slate-500">Reset</label>
+            <Button variant="ghost" size="icon" onClick={resetFilters} className="h-9 w-full border border-dashed text-slate-400 hover:text-red-500 hover:bg-red-50">
+              <FilterX className="h-4 w-4" />
             </Button>
           </div>
         </div>
+        {(appliedDate || appliedMonth !== "semua" || appliedYear !== "semua") && (
+          <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            <Search className="h-3 w-3 shrink-0" />
+            {appliedDate ? (
+              <span>Menampilkan tanggal spesifik: <strong>{appliedDate}</strong></span>
+            ) : (
+              <span>Menampilkan: <strong>{appliedMonth !== "semua" ? months[parseInt(appliedMonth) - 1] : "Semua Bulan"}</strong> / <strong>{appliedYear !== "semua" ? appliedYear : "Semua Tahun"}</strong></span>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* Datasheet Table */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <RefreshCw className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-slate-500 text-sm font-medium">Memuat data BBM...</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-xl border">
+          <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-slate-500 font-medium animate-pulse">Memuat data...</p>
         </div>
-      ) : filteredReports.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredReports.map((report) => (
-            <Card key={report.id} className="hover:shadow-md transition-all border-l-4 border-l-orange-500 cursor-pointer group" onClick={() => navigate(`/fuel-reports/${report.id}`)}>
-              <CardHeader className="p-4 pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center text-[10px] text-slate-500 font-medium"><Calendar className="h-3 w-3 mr-1" /> {report.date}</div>
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-100 text-[10px]">{report.region}</Badge>
-                  </div>
-                  <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/edit/${report.id}`); }}><Edit size={14} /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500" onClick={(e) => handleDelete(e, report.id)}><Trash2 size={14} /></Button>
-                  </div>
-                </div>
-                <CardTitle className="text-base mt-2 group-hover:text-orange-600 transition-colors">{report.team}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="pt-2 border-t flex justify-between items-center text-[10px]">
-                  <span className="text-slate-400 italic">{report.items?.length || 0} Item Pemakaian</span>
-                  <div className="flex items-center text-blue-600 font-bold">Lihat Detail <ArrowRight className="ml-1 h-3 w-3" /></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      ) : flatRows.length > 0 ? (
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-slate-700 text-white">
+                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-10">No</th>
+                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-24">Tanggal</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-32">Tim</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-24">Wilayah</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Kendaraan / Operator</th>
+                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Jenis BBM</th>
+                  <th className="px-3 py-2.5 text-right font-semibold border-r border-slate-600 w-20">Jml (L)</th>
+                  <th className="px-3 py-2.5 text-right font-semibold border-r border-slate-600 w-28">Nilai (Rp)</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Lokasi</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-28">Keterangan Item</th>
+                  <th className="px-3 py-2.5 text-center font-semibold w-20">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flatRows.map((row, idx) => {
+                  const isFirstItem = row.itemIndex === 0;
+                  const isEvenReport = paginatedReports.findIndex(r => r.id === row.reportId) % 2 === 0;
+                  const rowBg = isEvenReport ? 'bg-white' : 'bg-slate-50/60';
+                  const borderTop = isFirstItem && idx > 0 ? 'border-t-2 border-slate-200' : '';
+
+                  return (
+                    <tr key={`${row.reportId}-${row.itemIndex}`} className={cn(rowBg, "hover:bg-blue-50/40 transition-colors")}>
+                      {isFirstItem && (
+                        <td rowSpan={row.totalItems} className={cn("px-3 py-2 text-center font-bold text-slate-500 border-r border-slate-100 align-middle", borderTop)}>
+                          {row.rowNo}
+                        </td>
+                      )}
+                      {isFirstItem && (
+                        <td rowSpan={row.totalItems} className={cn("px-3 py-2 text-center font-medium text-slate-700 border-r border-slate-100 align-middle whitespace-nowrap", borderTop)}>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span>{row.report.date}</span>
+                            {row.report.pimpinan_note && (
+                              <Badge className="text-[8px] bg-amber-100 text-amber-700 border-amber-200 px-1 py-0">Catatan</Badge>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      {isFirstItem && (
+                        <td rowSpan={row.totalItems} className={cn("px-3 py-2 font-semibold text-slate-800 border-r border-slate-100 align-middle", borderTop)}>
+                          {row.report.team}
+                        </td>
+                      )}
+                      {isFirstItem && (
+                        <td rowSpan={row.totalItems} className={cn("px-3 py-2 border-r border-slate-100 align-middle", borderTop)}>
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] whitespace-nowrap">
+                            {row.report.region}
+                          </Badge>
+                        </td>
+                      )}
+
+                      <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                        {row.item.vehicle_operator}
+                      </td>
+                      <td className={cn("px-3 py-2 text-center border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", fuelBadgeColor(row.item.fuel_type))}>
+                          {row.item.fuel_type}
+                        </Badge>
+                      </td>
+                      <td className={cn("px-3 py-2 text-right font-mono text-slate-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                        {row.item.fuel_type === 'Oli' ? formatL(row.item.amount_liter || row.item.amount) : (row.item.amount_liter > 0 ? formatL(row.item.amount_liter) : '-')}
+                      </td>
+                      <td className={cn("px-3 py-2 text-right font-mono font-semibold text-orange-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                        {row.item.fuel_type !== 'Oli' ? formatRp(row.item.amount_rp || row.item.amount) : '-'}
+                      </td>
+                      <td className={cn("px-3 py-2 text-slate-600 border-r border-slate-100 max-w-[180px]", borderTop && isFirstItem ? borderTop : '')}>
+                        <span className="line-clamp-2">{row.item.location.street}</span>
+                        {row.item.location.subDistrict && (
+                          <span className="text-slate-400 text-[10px]"> — {row.item.location.subDistrict}</span>
+                        )}
+                      </td>
+                      <td className={cn("px-3 py-2 text-slate-500 italic border-r border-slate-100 max-w-[120px]", borderTop && isFirstItem ? borderTop : '')}>
+                        <span className="line-clamp-2">{row.item.item_remarks || '-'}</span>
+                      </td>
+
+                      {isFirstItem && (
+                        <td rowSpan={row.totalItems} className={cn("px-2 py-2 text-center border-r border-slate-100 align-middle", borderTop)}>
+                          <div className="flex items-center justify-center gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`/fuel-reports/${row.reportId}`)}>
+                                    <Eye size={13} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Lihat Detail</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => navigate(`/fuel-reports/edit/${row.reportId}`)}>
+                                    <Edit size={13} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Edit</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDelete(e, row.reportId)}>
+                                    <Trash2 size={13} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Hapus</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-2.5 border-t bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+            <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item BBM/Oli ditampilkan</span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-7 w-7" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span className="px-2 font-medium text-slate-600">Hal {currentPage} / {totalPages}</span>
+                <Button variant="outline" size="icon" className="h-7 w-7" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300 text-slate-500">
-          <Search className="mx-auto h-8 w-8 text-slate-200 mb-2" />
-          <p className="text-sm">Tidak ada laporan BBM ditemukan</p>
+          <div className="mx-auto w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+            <Search className="text-slate-300 h-6 w-6" />
+          </div>
+          <p className="font-medium">Tidak ada laporan BBM ditemukan</p>
+          <p className="text-xs mt-1">Coba ubah filter pencarian atau klik tombol reset</p>
+          <Button variant="link" onClick={resetFilters} className="mt-2 text-blue-600">Reset Semua Filter</Button>
         </div>
       )}
     </div>

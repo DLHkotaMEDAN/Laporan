@@ -1,28 +1,45 @@
 import { supabase } from '@/lib/supabase';
 import { WorkPlan } from '@/types/workPlan';
 
+const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await buildQuery().range(from, to);
+
+    if (error) throw error;
+
+    const page = (data || []) as T[];
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return rows;
+};
+
 export const workPlanService = {
   async getAllWorkPlans(categoryFilter?: string | null, includeDeleted = false) {
-    let query = supabase
-      .from('work_plans')
-      .select('*')
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false });
-    
-    if (categoryFilter && categoryFilter !== 'semua') {
-      query = query.eq('category', categoryFilter);
-    }
+    return fetchAllPages<WorkPlan>(() => {
+      let query = supabase
+        .from('work_plans')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
+      
+      if (categoryFilter && categoryFilter !== 'semua') {
+        query = query.eq('category', categoryFilter);
+      }
 
-    if (!includeDeleted) {
-      query = query.is('deleted_at', null);
-    } else {
-      query = query.not('deleted_at', 'is', null);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    return data as WorkPlan[];
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      } else {
+        query = query.not('deleted_at', 'is', null);
+      }
+
+      return query;
+    });
   },
 
   async getWorkPlanById(id: string) {

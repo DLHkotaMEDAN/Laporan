@@ -1,47 +1,62 @@
 import { supabase } from '@/lib/supabase';
 import { Report } from '@/types/report';
 
+const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await buildQuery().range(from, to);
+
+    if (error) throw error;
+
+    const page = (data || []) as T[];
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return rows;
+};
+
 export const reportService = {
   async getAllReports(categoryFilter?: string | null, includeDeleted = false) {
-    let query = supabase
-      .from('reports')
-      .select('*')
-      .order('date', { ascending: false })
-      .limit(10000);
-    
-    if (categoryFilter && categoryFilter !== 'semua') {
-      query = query.eq('category', categoryFilter);
-    }
+    return fetchAllPages<Report>(() => {
+      let query = supabase
+        .from('reports')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (categoryFilter && categoryFilter !== 'semua') {
+        query = query.eq('category', categoryFilter);
+      }
 
-    if (!includeDeleted) {
-      query = query.is('deleted_at', null);
-    } else {
-      query = query.not('deleted_at', 'is', null);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    return data as Report[];
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      } else {
+        query = query.not('deleted_at', 'is', null);
+      }
+
+      return query;
+    });
   },
 
   async getReportsByDateRange(startDate: string, endDate: string, categoryFilter?: string | null) {
-    let query = supabase
-      .from('reports')
-      .select('*')
-      .is('deleted_at', null)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true })
-      .limit(5000);
+    return fetchAllPages<Report>(() => {
+      let query = supabase
+        .from('reports')
+        .select('*')
+        .is('deleted_at', null)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true });
 
-    if (categoryFilter && categoryFilter !== 'semua') {
-      query = query.eq('category', categoryFilter);
-    }
+      if (categoryFilter && categoryFilter !== 'semua') {
+        query = query.eq('category', categoryFilter);
+      }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data as Report[];
+      return query;
+    });
   },
 
   async getReportById(id: string) {
