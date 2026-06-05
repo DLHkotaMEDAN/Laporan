@@ -195,17 +195,50 @@ const FuelReportTab = () => {
     return reports.filter((report) => duplicateReportKeys.has(getFuelReportDuplicateKey(report))).length;
   }, [reports, duplicateReportKeys]);
 
-  const filteredReports = reports.filter(r => {
-    const search = searchQuery.toLowerCase();
-    const matchSearch = !search ||
-      r.team.toLowerCase().includes(search) ||
-      r.region.toLowerCase().includes(search) ||
-      r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
-      r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
-    const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
+  const duplicateReportGroupIndexes = useMemo(() => {
+    const firstIndexes = new Map<string, number>();
+    reports.forEach((report, index) => {
+      const key = getFuelReportDuplicateKey(report);
+      if (!firstIndexes.has(key)) firstIndexes.set(key, index);
+    });
 
-    return matchSearch && matchDuplicate;
-  });
+    const duplicateKeys = [...duplicateReportKeys].sort((a, b) => {
+      return (firstIndexes.get(a) || 0) - (firstIndexes.get(b) || 0);
+    });
+
+    return new Map(duplicateKeys.map((key, index) => [key, index]));
+  }, [reports, duplicateReportKeys]);
+
+  const reportOrderIndexes = useMemo(() => {
+    return new Map(reports.map((report, index) => [report.id, index]));
+  }, [reports]);
+
+  const filteredReports = reports
+    .filter(r => {
+      const search = searchQuery.toLowerCase();
+      const matchSearch = !search ||
+        r.team.toLowerCase().includes(search) ||
+        r.region.toLowerCase().includes(search) ||
+        r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
+        r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
+      const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
+
+      return matchSearch && matchDuplicate;
+    })
+    .sort((a, b) => {
+      const aKey = getFuelReportDuplicateKey(a);
+      const bKey = getFuelReportDuplicateKey(b);
+      const aDuplicate = duplicateReportKeys.has(aKey);
+      const bDuplicate = duplicateReportKeys.has(bKey);
+
+      if (aDuplicate && bDuplicate) {
+        const groupDiff = (duplicateReportGroupIndexes.get(aKey) || 0) - (duplicateReportGroupIndexes.get(bKey) || 0);
+        if (groupDiff !== 0) return groupDiff;
+      }
+
+      if (aDuplicate !== bDuplicate) return aDuplicate ? -1 : 1;
+      return (reportOrderIndexes.get(a.id) || 0) - (reportOrderIndexes.get(b.id) || 0);
+    });
 
   const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
   const paginatedReports = filteredReports.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -362,8 +395,15 @@ const FuelReportTab = () => {
               <tbody>
                 {flatRows.map((row, idx) => {
                   const isFirstItem = row.itemIndex === 0;
+                  const duplicateKey = getFuelReportDuplicateKey(row.report);
+                  const duplicateGroupIndex = duplicateReportGroupIndexes.get(duplicateKey);
+                  const isDuplicate = duplicateGroupIndex !== undefined;
                   const isEvenReport = paginatedReports.findIndex(r => r.id === row.reportId) % 2 === 0;
-                  const rowBg = isEvenReport ? 'bg-white' : 'bg-slate-50/60';
+                  const rowBg = isDuplicate
+                    ? duplicateGroupIndex % 2 === 0
+                      ? 'bg-amber-50/80'
+                      : 'bg-blue-50/80'
+                    : isEvenReport ? 'bg-white' : 'bg-slate-50/60';
                   const borderTop = isFirstItem && idx > 0 ? 'border-t-2 border-slate-200' : '';
 
                   return (
