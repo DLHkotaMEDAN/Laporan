@@ -61,10 +61,11 @@ const FuelReportList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
   
-  // Filter state - langsung mengikuti input (effective)
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("semua");
   const [selectedYear, setSelectedYear] = useState("semua");
+  const [appliedMonth, setAppliedMonth] = useState("semua");
+  const [appliedYear, setAppliedYear] = useState("semua");
 
   const isAdminBbm = profile?.role === 'admin_bbm';
   const isAdmin = profile?.role === 'admin';
@@ -73,22 +74,25 @@ const FuelReportList = () => {
 
   const reqIdRef = useRef(0);
 
-  // Load reports otomatis saat filter berubah
+  useEffect(() => {
+    if (!isAllowed && profile) {
+      showError("Akses ditolak. Hanya Administrator yang dapat mengakses halaman ini.");
+      navigate('/');
+    }
+  }, [profile, isAllowed]);
+
   useEffect(() => {
     if (!isAllowed) return;
-    loadReports(selectedDate, selectedMonth, selectedYear);
-  }, [isAllowed, selectedDate, selectedMonth, selectedYear]);
+    loadReports(appliedMonth, appliedYear);
+  }, [isAllowed, appliedMonth, appliedYear]);
 
-  const loadReports = async (date: string, month: string, year: string) => {
+  const loadReports = async (month: string, year: string) => {
     const id = ++reqIdRef.current;
     try {
       setLoading(true);
       let data: FuelReport[];
 
-      if (date) {
-        // Tanggal spesifik dipilih - gunakan date range query
-        data = await fuelService.getReportsByDateRange(date, date);
-      } else if (month !== "semua" && year !== "semua") {
+      if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
@@ -121,6 +125,11 @@ const FuelReportList = () => {
     }
   };
 
+  const applyFilter = () => {
+    setAppliedMonth(selectedMonth);
+    setAppliedYear(selectedYear);
+  };
+
   const handleLogout = async () => {
     if (window.confirm("Apakah Anda yakin ingin keluar?")) {
       try {
@@ -151,6 +160,8 @@ const FuelReportList = () => {
     setSelectedDate("");
     setSelectedMonth("semua");
     setSelectedYear("semua");
+    setAppliedMonth("semua");
+    setAppliedYear("semua");
   };
 
   const filteredReports = reports.filter(r => {
@@ -255,7 +266,7 @@ const FuelReportList = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={() => loadReports(selectedDate, selectedMonth, selectedYear)} disabled={loading} className="h-9 w-9 bg-white border-slate-200 shrink-0">
+                  <Button variant="outline" size="icon" onClick={() => loadReports(appliedMonth, appliedYear)} disabled={loading} className="h-9 w-9 bg-white border-slate-200 shrink-0">
                     <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                   </Button>
                 </TooltipTrigger>
@@ -313,7 +324,7 @@ const FuelReportList = () => {
             </div>
             <div className="col-span-1 md:col-span-2 space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500">Terapkan</label>
-              <Button onClick={() => loadReports(selectedDate, selectedMonth, selectedYear)} disabled={loading || !!selectedDate} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
+              <Button onClick={applyFilter} disabled={loading || !!selectedDate} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
                 <Search className="h-3.5 w-3.5 mr-1.5" /> Cari Data
               </Button>
             </div>
@@ -324,10 +335,10 @@ const FuelReportList = () => {
               </Button>
             </div>
           </div>
-          {(selectedDate || selectedMonth !== "semua" || selectedYear !== "semua") && (
+          {(appliedMonth !== "semua" || appliedYear !== "semua") && (
             <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
               <Search className="h-3 w-3 shrink-0" />
-              <span>Menampilkan: <strong>{selectedDate || (selectedMonth !== "semua" ? months[parseInt(selectedMonth)-1] : "Semua Bulan")}</strong> / <strong>{selectedYear !== "semua" ? selectedYear : "Semua Tahun"}</strong></span>
+              <span>Menampilkan: <strong>{appliedMonth !== "semua" ? months[parseInt(appliedMonth)-1] : "Semua Bulan"}</strong> / <strong>{appliedYear !== "semua" ? appliedYear : "Semua Tahun"}</strong></span>
             </div>
           )}
         </div>
