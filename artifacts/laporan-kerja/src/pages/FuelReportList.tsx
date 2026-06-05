@@ -64,12 +64,8 @@ const FuelReportList = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("semua");
   const [selectedYear, setSelectedYear] = useState("semua");
-  const effectiveDate = selectedDate;
-  const effectiveMonth = selectedDate ? "semua" : selectedMonth;
-  const effectiveYear = selectedDate ? "semua" : selectedYear;
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const PAGE_SIZE = 100;
+  const [appliedMonth, setAppliedMonth] = useState("semua");
+  const [appliedYear, setAppliedYear] = useState("semua");
 
   const isAdminBbm = profile?.role === 'admin_bbm';
   const isAdmin = profile?.role === 'admin';
@@ -87,18 +83,16 @@ const FuelReportList = () => {
 
   useEffect(() => {
     if (!isAllowed) return;
-    loadReports(effectiveDate, effectiveMonth, effectiveYear);
-  }, [isAllowed, effectiveDate, effectiveMonth, effectiveYear]);
+    loadReports(appliedMonth, appliedYear);
+  }, [isAllowed, appliedMonth, appliedYear]);
 
-  const loadReports = async (date: string, month: string, year: string) => {
+  const loadReports = async (month: string, year: string) => {
     const id = ++reqIdRef.current;
     try {
       setLoading(true);
       let data: FuelReport[];
 
-      if (date) {
-        data = await fuelService.getReportsBySpecificDate(date);
-      } else if (month !== "semua" && year !== "semua") {
+      if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
@@ -122,7 +116,6 @@ const FuelReportList = () => {
 
       if (id !== reqIdRef.current) return;
       setReports(data);
-      setCurrentPage(1);
     } catch (error) {
       if (id !== reqIdRef.current) return;
       showError("Gagal memuat data");
@@ -132,13 +125,20 @@ const FuelReportList = () => {
     }
   };
 
+  const applyFilter = () => {
+    setAppliedMonth(selectedMonth);
+    setAppliedYear(selectedYear);
+  };
+
   const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-      showSuccess("Berhasil keluar");
-    } catch (error) {
-      showError("Gagal keluar");
+    if (window.confirm("Apakah Anda yakin ingin keluar?")) {
+      try {
+        await signOut();
+        navigate('/login');
+        showSuccess("Berhasil keluar");
+      } catch (error) {
+        showError("Gagal keluar");
+      }
     }
   };
 
@@ -160,7 +160,8 @@ const FuelReportList = () => {
     setSelectedDate("");
     setSelectedMonth("semua");
     setSelectedYear("semua");
-    setCurrentPage(1);
+    setAppliedMonth("semua");
+    setAppliedYear("semua");
   };
 
   const filteredReports = reports.filter(r => {
@@ -170,15 +171,13 @@ const FuelReportList = () => {
       r.region.toLowerCase().includes(search) ||
       r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
       r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
-    return matchSearch;
+    const matchSpecificDate = !selectedDate || r.date === selectedDate;
+    return matchSearch && matchSpecificDate;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
-  const paginatedReports = filteredReports.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
   const flatRows: FlatRow[] = [];
-  let rowNo = (currentPage - 1) * PAGE_SIZE + 1;
-  paginatedReports.forEach(report => {
+  let rowNo = 1;
+  filteredReports.forEach(report => {
     const items = report.items?.length ? report.items : [{ 
       vehicle_operator: '-', fuel_type: 'Pertamax' as const, amount: 0, amount_rp: 0, 
       amount_liter: 0, location: { street: '-' } 
@@ -267,7 +266,7 @@ const FuelReportList = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={() => loadReports(effectiveDate, effectiveMonth, effectiveYear)} disabled={loading} className="h-9 w-9 bg-white border-slate-200 shrink-0">
+                  <Button variant="outline" size="icon" onClick={() => loadReports(appliedMonth, appliedYear)} disabled={loading} className="h-9 w-9 bg-white border-slate-200 shrink-0">
                     <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                   </Button>
                 </TooltipTrigger>
@@ -289,7 +288,7 @@ const FuelReportList = () => {
               <label className="text-[10px] font-bold uppercase text-slate-500">Cari Tim / Wilayah / Lokasi</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                <Input placeholder="Ketik kata kunci..." className="pl-9 bg-slate-50 border-slate-200 h-9 text-sm" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
+                <Input placeholder="Ketik kata kunci..." className="pl-9 bg-slate-50 border-slate-200 h-9 text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
             <div className="col-span-2 md:col-span-2 space-y-1">
@@ -325,7 +324,7 @@ const FuelReportList = () => {
             </div>
             <div className="col-span-1 md:col-span-2 space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500">Terapkan</label>
-              <Button onClick={() => loadReports(effectiveDate, effectiveMonth, effectiveYear)} disabled={loading} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
+              <Button onClick={applyFilter} disabled={loading || !!selectedDate} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
                 <Search className="h-3.5 w-3.5 mr-1.5" /> Cari Data
               </Button>
             </div>
@@ -336,14 +335,10 @@ const FuelReportList = () => {
               </Button>
             </div>
           </div>
-          {(effectiveDate || effectiveMonth !== "semua" || effectiveYear !== "semua") && (
+          {(appliedMonth !== "semua" || appliedYear !== "semua") && (
             <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
               <Search className="h-3 w-3 shrink-0" />
-              {effectiveDate ? (
-                <span>Menampilkan tanggal spesifik: <strong>{effectiveDate}</strong></span>
-              ) : (
-                <span>Menampilkan: <strong>{effectiveMonth !== "semua" ? months[parseInt(effectiveMonth)-1] : "Semua Bulan"}</strong> / <strong>{effectiveYear !== "semua" ? effectiveYear : "Semua Tahun"}</strong></span>
-              )}
+              <span>Menampilkan: <strong>{appliedMonth !== "semua" ? months[parseInt(appliedMonth)-1] : "Semua Bulan"}</strong> / <strong>{appliedYear !== "semua" ? appliedYear : "Semua Tahun"}</strong></span>
             </div>
           )}
         </div>
@@ -378,7 +373,7 @@ const FuelReportList = () => {
                 <tbody>
                   {flatRows.map((row, idx) => {
                     const isFirstItem = row.itemIndex === 0;
-                    const isEvenReport = paginatedReports.findIndex(r => r.id === row.reportId) % 2 === 0;
+                    const isEvenReport = filteredReports.findIndex(r => r.id === row.reportId) % 2 === 0;
                     const rowBg = isEvenReport ? 'bg-white' : 'bg-slate-50/60';
                     const borderTop = isFirstItem && idx > 0 ? 'border-t-2 border-slate-200' : '';
 
@@ -493,18 +488,8 @@ const FuelReportList = () => {
               </table>
             </div>
             <div className="px-4 py-2.5 border-t bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-              <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item BBM/Oli ditampilkan</span>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" className="h-7 w-7 text-xs" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                  </Button>
-                  <span className="px-2 font-medium text-slate-600">Hal {currentPage} / {totalPages}</span>
-                  <Button variant="outline" size="icon" className="h-7 w-7 text-xs" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
+              <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item BBM/Oli</span>
+              <span className="text-slate-400">Klik baris untuk detail</span>
             </div>
           </div>
         ) : (
