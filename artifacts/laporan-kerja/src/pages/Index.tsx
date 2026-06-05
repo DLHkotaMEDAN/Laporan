@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileText, Search, Cloud, Printer,
   LogOut, LogIn, FilterX, Database, ChevronDown,
-  Table, ClipboardList, CalendarDays, Fuel, Trash2, Loader2, UserCircle, Bell
+  Table, ClipboardList, CalendarDays, Fuel, Trash2, Loader2, UserCircle, Bell,
+  ArrowUpDown, Edit, Eye, EyeOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Report } from '@/types/report';
@@ -21,9 +22,8 @@ import FuelReportTab from '@/components/FuelReportTab';
 import FuelSpjTab from '@/components/FuelSpjTab';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import QuickActions from '@/components/dashboard/QuickActions';
-import ReportCard from '@/components/dashboard/ReportCard';
-import WorkPlanCard from '@/components/dashboard/WorkPlanCard';
 import { cn } from "@/lib/utils";
+import { getUnitByCategory } from '@/utils/report-helpers';
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -55,6 +55,7 @@ const months = [
 ];
 
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+type SortDirection = "asc" | "desc";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ const Index = () => {
   const [selectedMonth, setSelectedMonth] = useState("semua");
   const [selectedYear, setSelectedYear] = useState("semua");
   const [selectedCategory, setSelectedCategory] = useState("semua");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const isLoggedIn = !!session;
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
@@ -203,6 +205,32 @@ const Index = () => {
       return matchSearch && matchSpecificDate && matchMonth && matchYear && matchCategory && restrictionMatch;
     });
   }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile]);
+
+  const sortedReports = useMemo(() => {
+    return [...filteredReports].sort((a, b) => {
+      const result = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sortDirection === "asc" ? result : -result;
+    });
+  }, [filteredReports, sortDirection]);
+
+  const sortedWorkPlans = useMemo(() => {
+    return [...filteredWorkPlans].sort((a, b) => {
+      const result = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sortDirection === "asc" ? result : -result;
+    });
+  }, [filteredWorkPlans, sortDirection]);
+
+  const formatReportLocation = (report: Report) => {
+    const villages = Array.isArray(report.location.village) ? report.location.village.join(", ") : report.location.village;
+    return [report.location.street, villages, report.location.subDistrict].filter(Boolean).join(", ");
+  };
+
+  const formatWorkPlanLocation = (plan: WorkPlan) => {
+    const location = plan.items?.[0]?.location;
+    if (!location) return "-";
+    const villages = Array.isArray(location.village) ? location.village.join(", ") : location.village;
+    return [location.street, villages, location.subDistrict].filter(Boolean).join(", ");
+  };
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -472,23 +500,106 @@ const Index = () => {
             </div>
           )}
 
+          {(activeTab === "reports" || activeTab === "workplans") && (
+            <div className="flex items-center justify-between gap-3 bg-white border rounded-2xl shadow-sm px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                <ArrowUpDown className="h-4 w-4 text-blue-600" />
+                Urutkan tanggal
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={sortDirection === "desc" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSortDirection("desc")}
+                  className={cn("h-8 text-xs font-bold", sortDirection === "desc" && "bg-blue-600 hover:bg-blue-700")}
+                >
+                  Terbaru
+                </Button>
+                <Button
+                  variant={sortDirection === "asc" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSortDirection("asc")}
+                  className={cn("h-8 text-xs font-bold", sortDirection === "asc" && "bg-blue-600 hover:bg-blue-700")}
+                >
+                  Terlama
+                </Button>
+              </div>
+            </div>
+          )}
+
           <TabsContent value="reports" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
                 <p className="text-slate-500 font-medium">Sinkronisasi data laporan...</p>
               </div>
-            ) : filteredReports.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredReports.map((report) => (
-                  <ReportCard 
-                    key={report.id} 
-                    report={report} 
-                    isLoggedIn={isLoggedIn} 
-                    isPimpinan={isPimpinan} 
-                    onDelete={handleDeleteReport} 
-                  />
-                ))}
+            ) : sortedReports.length > 0 ? (
+              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse min-w-[980px]">
+                    <thead>
+                      <tr className="bg-slate-700 text-white">
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-12">No</th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-28">Tanggal</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-36">Kategori</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Uraian Kegiatan</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Lokasi</th>
+                        <th className="px-3 py-3 text-right font-semibold border-r border-slate-600 w-28">Volume</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-40">Keterangan</th>
+                        {isLoggedIn && <th className="px-3 py-3 text-center font-semibold w-24">Aksi</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedReports.map((report, index) => (
+                        <tr
+                          key={report.id}
+                          className={cn(index % 2 === 0 ? "bg-white" : "bg-slate-50/70", "hover:bg-blue-50/50 transition-colors cursor-pointer border-b border-slate-100")}
+                          onClick={() => navigate(`/report/${report.id}`)}
+                        >
+                          <td className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-100">{index + 1}</td>
+                          <td className="px-3 py-3 text-center font-medium text-slate-700 border-r border-slate-100 whitespace-nowrap">{report.date}</td>
+                          <td className="px-3 py-3 border-r border-slate-100">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] whitespace-nowrap">
+                              {report.category}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[260px]">
+                            <span className="line-clamp-2">{report.description}</span>
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px]">
+                            <span className="line-clamp-2">{formatReportLocation(report)}</span>
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono font-semibold text-slate-700 border-r border-slate-100">
+                            {report.volume} {getUnitByCategory(report.category)}
+                          </td>
+                          <td className="px-3 py-3 text-slate-500 italic border-r border-slate-100 max-w-[160px]">
+                            <span className="line-clamp-2">{report.remarks || report.pimpinan_note || "-"}</span>
+                          </td>
+                          {isLoggedIn && (
+                            <td className="px-2 py-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/report/${report.id}`); }}>
+                                  <Eye size={13} />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/edit/${report.id}`); }}>
+                                  <Edit size={13} />
+                                </Button>
+                                {!isPimpinan && (
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDeleteReport(e, report)}>
+                                    <Trash2 size={13} />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-3 border-t bg-slate-50 text-xs text-slate-500">
+                  <strong className="text-slate-700">{sortedReports.length}</strong> laporan harian ditampilkan
+                </div>
               </div>
             ) : (
               <div className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200">
@@ -508,18 +619,78 @@ const Index = () => {
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />
                 <p className="text-slate-500 font-medium">Memuat rencana kerja...</p>
               </div>
-            ) : filteredWorkPlans.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredWorkPlans.map((plan) => (
-                  <WorkPlanCard 
-                    key={plan.id} 
-                    plan={plan} 
-                    isLoggedIn={isLoggedIn} 
-                    isPimpinan={isPimpinan} 
-                    onDelete={handleDeleteWorkPlan}
-                    onToggleVisibility={handleToggleWorkPlanVisibility}
-                  />
-                ))}
+            ) : sortedWorkPlans.length > 0 ? (
+              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse min-w-[980px]">
+                    <thead>
+                      <tr className="bg-slate-700 text-white">
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-12">No</th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-28">Tanggal</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600 w-36">Kategori</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Uraian Rencana</th>
+                        <th className="px-3 py-3 text-left font-semibold border-r border-slate-600">Lokasi</th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">Titik</th>
+                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">Status</th>
+                        {isLoggedIn && <th className="px-3 py-3 text-center font-semibold w-28">Aksi</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedWorkPlans.map((plan, index) => {
+                        const isHidden = plan.is_visible === false;
+                        return (
+                          <tr
+                            key={plan.id}
+                            className={cn(index % 2 === 0 ? "bg-white" : "bg-slate-50/70", isHidden && "opacity-70", "hover:bg-emerald-50/50 transition-colors cursor-pointer border-b border-slate-100")}
+                            onClick={() => navigate(`/work-plans/print/${plan.id}`)}
+                          >
+                            <td className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-100">{index + 1}</td>
+                            <td className="px-3 py-3 text-center font-medium text-slate-700 border-r border-slate-100 whitespace-nowrap">{plan.date}</td>
+                            <td className="px-3 py-3 border-r border-slate-100">
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] whitespace-nowrap">
+                                {plan.category}
+                              </Badge>
+                            </td>
+                            <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[280px]">
+                              <span className="line-clamp-2">{plan.items?.[0]?.description || "Rencana Kerja"}</span>
+                            </td>
+                            <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px]">
+                              <span className="line-clamp-2">{formatWorkPlanLocation(plan)}</span>
+                            </td>
+                            <td className="px-3 py-3 text-center font-mono font-semibold text-slate-700 border-r border-slate-100">
+                              {plan.items?.length || 0}
+                            </td>
+                            <td className="px-3 py-3 text-center border-r border-slate-100">
+                              <Badge variant="outline" className={cn("text-[10px] font-bold", isHidden ? "bg-red-50 text-red-600 border-red-100" : "bg-green-50 text-green-700 border-green-100")}>
+                                {isHidden ? "Hidden" : "Tampil"}
+                              </Badge>
+                            </td>
+                            {isLoggedIn && (
+                              <td className="px-2 py-3 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" disabled={isPimpinan} onClick={(e) => handleToggleWorkPlanVisibility(e, plan)}>
+                                    {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" disabled={isPimpinan} onClick={(e) => { e.stopPropagation(); if (!isPimpinan) navigate(`/work-plans/edit/${plan.id}`); }}>
+                                    <Edit size={13} />
+                                  </Button>
+                                  {!isPimpinan && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDeleteWorkPlan(e, plan)}>
+                                      <Trash2 size={13} />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-3 border-t bg-slate-50 text-xs text-slate-500">
+                  <strong className="text-slate-700">{sortedWorkPlans.length}</strong> rencana kerja ditampilkan
+                </div>
               </div>
             ) : (
               <div className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200">
