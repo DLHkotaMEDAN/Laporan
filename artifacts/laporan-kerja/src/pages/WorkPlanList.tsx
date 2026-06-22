@@ -3,10 +3,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Plus, Calendar, MapPin, FileText, Trash2, Edit, 
+  Plus, Calendar, FileText, Trash2, Edit, 
   Printer, Search, FilterX, ArrowLeft, ChevronDown,
   Table, CalendarDays, Clock, LogIn, RefreshCw, Eye, EyeOff
 } from 'lucide-react';
@@ -285,90 +284,94 @@ const WorkPlanList = () => {
             <p className="text-slate-500 font-medium animate-pulse">Menghubungkan ke database...</p>
           </div>
         ) : filteredPlans.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPlans.map((plan) => (
-              <Card key={plan.id} className={cn(
-                "hover:shadow-md transition-all cursor-pointer border-l-4 group relative overflow-hidden",
-                plan.is_visible === false ? "border-l-slate-300 opacity-75" : "border-l-blue-500"
-              )} onClick={() => navigate(`/work-plans/print/${plan.id}`)}>
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center text-xs text-slate-500 font-medium">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {new Date(plan.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={cn(
-                          "w-fit text-[10px] border-blue-200",
-                          plan.is_visible === false ? "bg-slate-100 text-slate-500" : "bg-blue-50 text-blue-700"
-                        )}>{plan.category}</Badge>
-                        {plan.is_visible === false && (
-                          <Badge variant="outline" className="text-[9px] bg-red-50 text-red-600 border-red-100">
-                            <EyeOff size={10} className="mr-1" /> Sembunyi di Rekap
+          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse min-w-[920px]">
+                <thead>
+                  <tr className="bg-slate-700 text-white">
+                    <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-12">No</th>
+                    <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-28">Tanggal</th>
+                    <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-36">Kategori</th>
+                    <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Uraian Rencana</th>
+                    <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Lokasi Awal</th>
+                    <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Titik</th>
+                    <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-28">Status</th>
+                    <th className="px-3 py-2.5 text-center font-semibold w-28">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPlans.map((plan, index) => {
+                    const isHidden = plan.is_visible === false;
+                    return (
+                      <tr
+                        key={plan.id}
+                        className={cn(index % 2 === 0 ? "bg-white" : "bg-slate-50/70", isHidden && "opacity-70", "hover:bg-blue-50/50 transition-colors cursor-pointer border-b border-slate-100")}
+                        onClick={() => navigate(`/work-plans/print/${plan.id}`)}
+                      >
+                        <td className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-100">{index + 1}</td>
+                        <td className="px-3 py-3 text-center font-medium text-slate-700 border-r border-slate-100 whitespace-nowrap">{plan.date}</td>
+                        <td className="px-3 py-3 border-r border-slate-100">
+                          <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", isHidden ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-blue-50 text-blue-700 border-blue-200")}>
+                            {plan.category}
                           </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {isLoggedIn && (
-                      <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className={cn(
-                                  "h-8 w-8",
-                                  plan.is_visible === false ? "text-slate-400 hover:text-blue-600" : "text-blue-600 hover:bg-blue-50"
-                                )}
-                                onClick={(e) => handleToggleVisibility(e, plan)}
-                                disabled={isPimpinan}
-                              >
-                                {plan.is_visible === false ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>{plan.is_visible === false ? "Tampilkan di Rekap" : "Sembunyikan dari Rekap"}</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className={cn("h-8 w-8 text-slate-400 hover:text-blue-600", isPimpinan && "opacity-50 cursor-not-allowed")} 
-                          disabled={isPimpinan}
-                          onClick={(e) => { e.stopPropagation(); if(!isPimpinan) navigate(`/work-plans/edit/${plan.id}`); }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className={cn("h-8 w-8 text-slate-400 hover:text-red-500", isPimpinan && "opacity-50 cursor-not-allowed")} 
-                          disabled={isPimpinan}
-                          onClick={(e) => handleDelete(e, plan.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <CardTitle className="text-base mt-2 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                    {plan.items?.[0]?.description || "Tanpa Deskripsi"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 space-y-3">
-                  <div className="text-xs text-slate-600 flex items-start gap-2">
-                    <MapPin className="h-3 w-3 mt-0.5 text-red-500 shrink-0" />
-                    <span className="line-clamp-1">{plan.items?.[0]?.location?.street || "Lokasi tidak ditentukan"}</span>
-                  </div>
-                  <div className="pt-3 border-t flex justify-between items-center text-[10px]">
-                    <span className="text-slate-400 font-medium">{Array.isArray(plan.items) ? plan.items.length : 0} Lokasi Kerja</span>
-                    <div className="flex items-center text-blue-600 font-bold">Preview Cetak <Printer className="ml-1 h-3 w-3" /></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        </td>
+                        <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[280px]">
+                          <span className="line-clamp-2">{plan.items?.[0]?.description || "Tanpa Deskripsi"}</span>
+                        </td>
+                        <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[260px]">
+                          <span className="line-clamp-2">{plan.items?.[0]?.location?.street || "Lokasi tidak ditentukan"}</span>
+                        </td>
+                        <td className="px-3 py-3 text-center font-mono font-semibold text-slate-700 border-r border-slate-100">
+                          {Array.isArray(plan.items) ? plan.items.length : 0}
+                        </td>
+                        <td className="px-3 py-3 text-center border-r border-slate-100">
+                          <Badge variant="outline" className={cn("text-[10px] font-bold whitespace-nowrap", isHidden ? "bg-red-50 text-red-600 border-red-100" : "bg-green-50 text-green-700 border-green-100")}>
+                            {isHidden ? "Sembunyi" : "Tampil Rekap"}
+                          </Badge>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/work-plans/print/${plan.id}`); }}>
+                                    <Printer size={13} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Preview Cetak</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            {isLoggedIn && (
+                              <>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className={cn("h-7 w-7", isHidden ? "text-slate-400 hover:text-blue-600" : "text-slate-400 hover:text-green-600")} onClick={(e) => handleToggleVisibility(e, plan)} disabled={isPimpinan}>
+                                        {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>{isHidden ? "Tampilkan di Rekap" : "Sembunyikan dari Rekap"}</p></TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <Button variant="ghost" size="icon" className={cn("h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50", isPimpinan && "opacity-50 cursor-not-allowed")} disabled={isPimpinan} onClick={(e) => { e.stopPropagation(); if(!isPimpinan) navigate(`/work-plans/edit/${plan.id}`); }}>
+                                  <Edit size={13} />
+                                </Button>
+                                <Button variant="ghost" size="icon" className={cn("h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50", isPimpinan && "opacity-50 cursor-not-allowed")} disabled={isPimpinan} onClick={(e) => handleDelete(e, plan.id)}>
+                                  <Trash2 size={13} />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-2.5 border-t bg-slate-50 text-xs text-slate-500">
+              <strong className="text-slate-700">{filteredPlans.length}</strong> rencana kerja ditampilkan
+            </div>
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">

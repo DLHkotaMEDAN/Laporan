@@ -112,6 +112,26 @@ const WorkPlanWeeklyRecap = () => {
     return groups;
   };
 
+  const getResourceSpans = (groups: ResourceGroup[]) => {
+    const spans: number[] = [];
+    let i = 0;
+    while (i < groups.length) {
+      let j = i + 1;
+      const currentKey = `${groups[i].coordinator}|${groups[i].members}|${groups[i].basis}`;
+      while (j < groups.length && `${groups[j].coordinator}|${groups[j].members}|${groups[j].basis}` === currentKey) {
+        j++;
+      }
+      const count = j - i;
+      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
+      i = j;
+    }
+    return spans;
+  };
+
+  const getRowsInGroups = (groups: ResourceGroup[]) => (
+    groups.reduce((acc, group) => acc + Math.max(group.items.length, group.tools.length, 1), 0)
+  );
+
   const getTableSpans = () => {
     const noSpans: number[] = [];
     const dateSpans: number[] = [];
@@ -125,10 +145,14 @@ const WorkPlanWeeklyRecap = () => {
         rows.push({ plan, isNoActivity: true, date: plan.date });
       } else {
         const resourceGroups = groupPlanResources(plan);
-        resourceGroups.forEach((group) => {
+        const resourceSpans = getResourceSpans(resourceGroups);
+        resourceGroups.forEach((group, groupIndex) => {
           const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
+          const sharedResourceRows = resourceSpans[groupIndex] > 0
+            ? getRowsInGroups(resourceGroups.slice(groupIndex, groupIndex + resourceSpans[groupIndex]))
+            : 0;
           for (let i = 0; i < maxGroupRows; i++) {
-            rows.push({ plan, group, rowIndex: i, maxGroupRows, date: plan.date });
+            rows.push({ plan, group, rowIndex: i, maxGroupRows, date: plan.date, showSharedResource: i === 0 && resourceSpans[groupIndex] > 0, sharedResourceRows });
           }
         });
       }
@@ -331,14 +355,14 @@ const WorkPlanWeeklyRecap = () => {
                             </>
                           ) : null}
 
-                          {rowIndex === 0 && (
+                          {row.showSharedResource && (
                             <>
-                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxGroupRows}>{group.coordinator}</td>
-                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxGroupRows}>{group.members}</td>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows}>{group.basis}</td>
-                              {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
+                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.sharedResourceRows}>{group.coordinator}</td>
+                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.sharedResourceRows}>{group.members}</td>
+                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.sharedResourceRows}>{group.basis}</td>
                             </>
                           )}
+                          {rowIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
                         </tr>
                       );
                     });

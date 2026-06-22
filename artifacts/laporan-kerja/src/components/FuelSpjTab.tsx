@@ -2,13 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  Calendar, FileText, Trash2, Edit, 
-  Search, RefreshCw, ArrowRight, FilterX, CalendarDays, Eye
+  FileText, Trash2, Edit, 
+  Search, RefreshCw, FilterX, CalendarDays, Eye
 } from 'lucide-react';
 import { FuelSpjReport } from '@/types/fuelSpjReport';
 import { fuelSpjService } from '@/services/fuelSpjService';
@@ -61,6 +60,11 @@ const FuelSpjTab = () => {
                                          e.vehicle_operator.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchDate = !selectedDate || r.date === selectedDate;
     return matchSearch && matchDate;
+  });
+
+  const flatRows = filteredReports.flatMap((report, reportIndex) => {
+    const entries = report.entries?.length ? report.entries : [{ spj_no: "-", vehicle_operator: "-", receiver_name: "-", locations: [] }];
+    return entries.map((entry, entryIndex) => ({ report, reportIndex, entry, entryIndex, totalEntries: entries.length }));
   });
 
   return (
@@ -119,35 +123,62 @@ const FuelSpjTab = () => {
           <p className="text-slate-500 text-sm font-medium">Memuat data SPJ...</p>
         </div>
       ) : filteredReports.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredReports.map((report) => (
-            <Card key={report.id} className="hover:shadow-md transition-all border-l-4 border-l-blue-700 cursor-pointer group" onClick={() => navigate(`/fuel-reports/spj/${report.id}`)}>
-              <CardHeader className="p-4 pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center text-[10px] text-slate-500 font-medium"><Calendar className="h-3 w-3 mr-1" /> {report.date}</div>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[10px]">{report.region}</Badge>
-                  </div>
-                  {!isPimpinan && (
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/edit/${report.id}`); }}><Edit size={14} /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={(e) => handleDelete(e, report.id)}><Trash2 size={14} /></Button>
-                    </div>
-                  )}
-                </div>
-                <CardTitle className="text-base mt-2">Laporan SPJ - {report.entries.length} Kendaraan</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="pt-2 border-t flex justify-between items-center text-[10px]">
-                  <span className="text-slate-400 italic">Klik untuk lihat detail</span>
-                  <div className="flex items-center text-blue-700 font-bold">
-                    <Eye className="mr-1 h-3 w-3" /> Lihat Detail
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse min-w-[860px]">
+              <thead>
+                <tr className="bg-slate-700 text-white">
+                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-12">No</th>
+                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-28">Tanggal</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-36">Wilayah</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-32">No. SPJ</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Kendaraan / Operator</th>
+                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Penerima</th>
+                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Lokasi</th>
+                  <th className="px-3 py-2.5 text-center font-semibold w-24">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flatRows.map((row) => (
+                  <tr
+                    key={`${row.report.id}-${row.entryIndex}`}
+                    className={cn(row.reportIndex % 2 === 0 ? "bg-white" : "bg-slate-50/70", "hover:bg-blue-50/50 transition-colors cursor-pointer border-b border-slate-100")}
+                    onClick={() => navigate(`/fuel-reports/spj/${row.report.id}`)}
+                  >
+                    {row.entryIndex === 0 && (
+                      <>
+                        <td rowSpan={row.totalEntries} className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-100 align-middle">{row.reportIndex + 1}</td>
+                        <td rowSpan={row.totalEntries} className="px-3 py-3 text-center font-medium text-slate-700 border-r border-slate-100 align-middle whitespace-nowrap">{row.report.date}</td>
+                        <td rowSpan={row.totalEntries} className="px-3 py-3 border-r border-slate-100 align-middle">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] whitespace-nowrap">{row.report.region}</Badge>
+                        </td>
+                      </>
+                    )}
+                    <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100">{row.entry.spj_no}</td>
+                    <td className="px-3 py-3 text-slate-700 border-r border-slate-100 max-w-[240px]"><span className="line-clamp-2">{row.entry.vehicle_operator}</span></td>
+                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[200px]"><span className="line-clamp-2">{row.entry.receiver_name}</span></td>
+                    <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-100">{row.entry.locations?.length || 0}</td>
+                    {row.entryIndex === 0 && (
+                      <td rowSpan={row.totalEntries} className="px-2 py-3 text-center align-middle">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/${row.report.id}`); }}><Eye size={13} /></Button>
+                          {!isPimpinan && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/edit/${row.report.id}`); }}><Edit size={13} /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDelete(e, row.report.id)}><Trash2 size={13} /></Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-2.5 border-t bg-slate-50 text-xs text-slate-500">
+            <strong className="text-slate-700">{filteredReports.length}</strong> laporan SPJ Â· <strong className="text-slate-700">{flatRows.length}</strong> entry ditampilkan
+          </div>
         </div>
       ) : (
         <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300 text-slate-500">

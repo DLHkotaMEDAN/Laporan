@@ -70,7 +70,7 @@ const PrintWorkPlan = () => {
 
   const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
   const hasRemarks = plan.items.some(item => item.remarks && item.remarks.trim() !== "");
-  const isGlobalStyle = plan.category === "Tim Pohon" || plan.category === "Tim Babat";
+  const isGlobalStyle = plan.category === "Tim Babat";
 
   const getSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
     const spans: number[] = [];
@@ -88,8 +88,10 @@ const PrintWorkPlan = () => {
     return spans;
   };
 
-  const resourceSpans = getSpans(plan.items, (it) => 
-    JSON.stringify(it.tools) + it.coordinator + it.basis + it.personnel.members
+  const toolSpans = getSpans(plan.items, (it) => JSON.stringify(it.tools));
+  const teamSpans = getSpans(plan.items, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
+  const getRowsInItems = (items: WorkPlanItem[]) => (
+    items.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)
   );
 
   return (
@@ -241,7 +243,8 @@ const PrintWorkPlan = () => {
             ) : (
               plan.items.flatMap((item, itemIdx) => {
                 const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "" }];
-                const rSpan = resourceSpans[itemIdx];
+                const toolSpan = toolSpans[itemIdx];
+                const teamSpan = teamSpans[itemIdx];
 
                 return toolsToRender.map((tool, toolIdx) => (
                   <tr key={`${itemIdx}-${toolIdx}`}>
@@ -263,45 +266,49 @@ const PrintWorkPlan = () => {
                       </>
                     )}
 
-                    {rSpan > 0 && toolIdx === 0 ? (
+                    {toolSpan > 0 && toolIdx === 0 ? (
                       <>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.name ? `• ${t.name}` : "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.unit || "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.usage || "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
-                          {item.coordinator}
-                        </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
-                          {item.personnel.members} Org
-                        </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
-                          {item.basis}
-                        </td>
-                        {hasRemarks && (
-                          <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={plan.items.slice(itemIdx, itemIdx + rSpan).reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>
-                            {item.remarks || "-"}
-                          </td>
-                        )}
                       </>
                     ) : null}
+                    {teamSpan > 0 && toolIdx === 0 && (
+                      <>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + teamSpan))}>
+                          {item.coordinator}
+                        </td>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + teamSpan))}>
+                          {item.personnel.members} Org
+                        </td>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + teamSpan))}>
+                          {item.basis}
+                        </td>
+                      </>
+                    )}
+                    {hasRemarks && toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>
+                        {item.remarks || "-"}
+                      </td>
+                    )}
                   </tr>
                 ));
               })

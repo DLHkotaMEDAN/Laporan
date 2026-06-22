@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Save, ArrowLeft, Loader2, MapPin, Users, Wrench, FileText, MessageSquare, ClipboardList, ShieldAlert, Check, HelpCircle, Copy, AlertCircle, Info, X } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Loader2, MapPin, Users, Wrench, FileText, MessageSquare, ClipboardList, ShieldAlert, Check, HelpCircle, Copy, AlertCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
-import { WorkPlan, WorkPlanItem } from '@/types/workPlan';
+import { WorkPlan } from '@/types/workPlan';
 import { medanDistricts } from '@/data/medan-districts';
 import { workPlanService } from '@/services/workPlanService';
 import { auditLogService } from '@/services/auditLogService';
@@ -97,7 +97,7 @@ const formSchema = z.object({
     return;
   }
 
-  const isGlobalStyle = data.category === "Tim Pohon" || data.category === "Tim Babat";
+  const isGlobalStyle = data.category === "Tim Babat";
   if (isGlobalStyle && (!data.globalCoordinator || data.globalCoordinator.trim() === "")) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Koordinator tim wajib diisi", path: ['globalCoordinator'] });
   }
@@ -156,9 +156,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       has_no_activity: initialData.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN",
       no_activity_remarks: initialData.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN" ? initialData.items[0]?.remarks : "",
       items: initialData.items.map(item => ({ ...item, uiMode: 'full' })),
-      globalTools: (initialData.category === "Tim Pohon" || initialData.category === "Tim Babat") ? initialData.items[0].tools : [{ name: "", unit: 1, usage: "" }],
-      globalCoordinator: (initialData.category === "Tim Pohon" || initialData.category === "Tim Babat") ? initialData.items[0].coordinator : "",
-      globalMembers: (initialData.category === "Tim Pohon" || initialData.category === "Tim Babat") ? initialData.items[0].personnel.members : 0,
+      globalTools: initialData.category === "Tim Babat" ? initialData.items[0].tools : [{ name: "", unit: 1, usage: "" }],
+      globalCoordinator: initialData.category === "Tim Babat" ? initialData.items[0].coordinator : "",
+      globalMembers: initialData.category === "Tim Babat" ? initialData.items[0].personnel.members : 0,
     } : {
       date: getTomorrowDate(),
       category: profile?.role === 'user' ? (profile?.category || "") : "",
@@ -174,8 +174,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({ control: form.control, name: "items" });
   const selectedCategory = form.watch("category");
   const hasNoActivity = form.watch("has_no_activity");
-  const isGlobalStyle = selectedCategory === "Tim Pohon" || selectedCategory === "Tim Babat";
-  const useWizard = selectedCategory === "Tim Siram";
+  const isGlobalStyle = selectedCategory === "Tim Babat";
+  const useWizard = selectedCategory === "Tim Siram" || selectedCategory === "Tim Pohon";
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -283,7 +283,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         const cleanGlobalTools = values.globalTools?.filter(t => t.name && t.name.trim() !== "") || [];
         processedItems = values.items.map(item => {
           const { uiMode, ...rest } = item;
-          if (isGlobalStyle) return { ...rest, tools: cleanGlobalTools, coordinator: values.globalCoordinator || "", personnel: { members: values.globalMembers || 0 } };
+          if (isGlobalStyle) {
+            return { ...rest, tools: cleanGlobalTools, coordinator: values.globalCoordinator || "", personnel: { members: values.globalMembers || 0 } };
+          }
           return { ...rest, tools: item.tools.filter(t => t.name && t.name.trim() !== "") };
         });
       }
@@ -456,7 +458,23 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                         <FormField control={form.control} name={`items.${index}.location.village.0`} render={({ field }) => (<FormItem><FormLabel>Kelurahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{form.watch(`items.${index}.location.subDistrict`) && form.watch(`items.${index}.location.subDistrict`) !== " " && medanDistricts[form.watch(`items.${index}.location.subDistrict`)].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                       </div>
                       {uiMode === 'full' && !isGlobalStyle && (
-                        <><div className="pt-4 border-t space-y-4"><div className="flex items-center justify-between"><FormLabel className="flex items-center gap-2 text-blue-700 font-bold"><Wrench size={16} /> Alat Operasional</FormLabel><Button type="button" variant="outline" size="sm" className="h-8 px-2 md:px-3" onClick={() => { const current = form.getValues(`items.${index}.tools`); form.setValue(`items.${index}.tools`, [...current, { name: "", unit: 1, usage: "" }]); }}><Plus size={14} className="md:mr-1" /> <span className="hidden md:inline">Tambah Alat</span></Button></div>{form.watch(`items.${index}.tools`)?.map((_, toolIdx) => (<div key={toolIdx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50 p-3 rounded-lg border"><div className="md:col-span-5"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.name`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Nama Alat</FormLabel><FormControl><Input className="h-9" {...field} list="wp-history-tools" onChange={(e) => { field.onChange(e); const usage = toolUsageMapping[e.target.value]; if (usage) form.setValue(`items.${index}.tools.${toolIdx}.usage`, usage); if (selectedCategory === "Tim Siram" && toolIdx === 0) { const autoCoord = toolCoordinatorMapping[e.target.value]; if (autoCoord) form.setValue(`items.${index}.coordinator`, autoCoord); } }} /></FormControl></FormItem>)} /></div><div className="md:col-span-2"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.unit`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Unit</FormLabel><FormControl><Input type="number" className="h-9" {...field} /></FormControl></FormItem>)} /></div><div className="md:col-span-4"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.usage`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Kegunaan</FormLabel><FormControl><Input className="h-9" {...field} /></FormControl></FormItem>)} /></div><div className="md:col-span-1 flex justify-end"><Button type="button" variant="ghost" size="icon" className="text-red-400 h-9 w-9" onClick={() => { const current = form.getValues(`items.${index}.tools`); form.setValue(`items.${index}.tools`, current.filter((_, i) => i !== toolIdx)); }}><Trash2 size={16} /></Button></div></div>))}</div><div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t"><FormField control={form.control} name={`items.${index}.coordinator`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Users size={16} /> Koordinator</FormLabel><FormControl><Input {...field} list="wp-history-coordinators" /></FormControl></FormItem>)} /><FormField control={form.control} name={`items.${index}.personnel.members`} render={({ field }) => (<FormItem><FormLabel>Jumlah Personil</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} /></div></>
+                        <>
+                          <div className="pt-4 border-t space-y-4">
+                            <div className="flex items-center justify-between">
+                              <FormLabel className="flex items-center gap-2 text-blue-700 font-bold"><Wrench size={16} /> Alat Operasional</FormLabel>
+                              <Button type="button" variant="outline" size="sm" className="h-8 px-2 md:px-3" onClick={() => { const current = form.getValues(`items.${index}.tools`); form.setValue(`items.${index}.tools`, [...current, { name: "", unit: 1, usage: "" }]); }}><Plus size={14} className="md:mr-1" /> <span className="hidden md:inline">Tambah Alat</span></Button>
+                            </div>
+                            {form.watch(`items.${index}.tools`)?.map((_, toolIdx) => (
+                              <div key={toolIdx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50 p-3 rounded-lg border">
+                                <div className="md:col-span-5"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.name`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Nama Alat</FormLabel><FormControl><Input className="h-9" {...field} list="wp-history-tools" onChange={(e) => { field.onChange(e); const usage = toolUsageMapping[e.target.value]; if (usage) form.setValue(`items.${index}.tools.${toolIdx}.usage`, usage); if (selectedCategory === "Tim Siram" && toolIdx === 0) { const autoCoord = toolCoordinatorMapping[e.target.value]; if (autoCoord) form.setValue(`items.${index}.coordinator`, autoCoord); } }} /></FormControl></FormItem>)} /></div>
+                                <div className="md:col-span-2"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.unit`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Unit</FormLabel><FormControl><Input type="number" className="h-9" {...field} /></FormControl></FormItem>)} /></div>
+                                <div className="md:col-span-4"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.usage`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Kegunaan</FormLabel><FormControl><Input className="h-9" {...field} /></FormControl></FormItem>)} /></div>
+                                <div className="md:col-span-1 flex justify-end"><Button type="button" variant="ghost" size="icon" className="text-red-400 h-9 w-9" onClick={() => { const current = form.getValues(`items.${index}.tools`); form.setValue(`items.${index}.tools`, current.filter((_, i) => i !== toolIdx)); }}><Trash2 size={16} /></Button></div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t"><FormField control={form.control} name={`items.${index}.coordinator`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Users size={16} /> Koordinator</FormLabel><FormControl><Input {...field} list="wp-history-coordinators" /></FormControl></FormItem>)} /><FormField control={form.control} name={`items.${index}.personnel.members`} render={({ field }) => (<FormItem><FormLabel>Jumlah Personil</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} /></div>
+                        </>
                       )}
                       {uiMode === 'full' && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t"><FormField control={form.control} name={`items.${index}.basis`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText size={16} /> Dasar Pengerjaan</FormLabel><FormControl><Input {...field} list="wp-history-basis" placeholder="Contoh: SPT No. 123..." /></FormControl></FormItem>)} /><FormField control={form.control} name={`items.${index}.remarks`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><MessageSquare size={16} /> Keterangan</FormLabel><FormControl><Input {...field} list="wp-history-remarks" /></FormControl></FormItem>)} /></div>}
                     </CardContent>

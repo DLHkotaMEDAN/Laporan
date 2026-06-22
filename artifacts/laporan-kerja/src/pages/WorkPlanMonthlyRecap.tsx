@@ -118,6 +118,26 @@ const WorkPlanMonthlyRecap = () => {
     return groups;
   };
 
+  const getResourceSpans = (groups: ResourceGroup[]) => {
+    const spans: number[] = [];
+    let i = 0;
+    while (i < groups.length) {
+      let j = i + 1;
+      const currentKey = `${groups[i].coordinator}|${groups[i].members}|${groups[i].basis}`;
+      while (j < groups.length && `${groups[j].coordinator}|${groups[j].members}|${groups[j].basis}` === currentKey) {
+        j++;
+      }
+      const count = j - i;
+      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
+      i = j;
+    }
+    return spans;
+  };
+
+  const getRowsInGroups = (groups: ResourceGroup[]) => (
+    groups.reduce((acc, group) => acc + Math.max(group.items.length, group.tools.length, 1), 0)
+  );
+
   const renderPlanRows = (plan: WorkPlan, pIdx: number) => {
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
     if (isNoActivity) {
@@ -135,6 +155,7 @@ const WorkPlanMonthlyRecap = () => {
     }
 
     const resourceGroups = groupPlanResources(plan);
+    const resourceSpans = getResourceSpans(resourceGroups);
     const totalPlanRows = resourceGroups.reduce((acc, group) => 
       acc + Math.max(group.items.length, group.tools.length, 1), 0
     );
@@ -192,14 +213,14 @@ const WorkPlanMonthlyRecap = () => {
               </>
             ) : null}
 
-            {rowIndex === 0 && (
+            {rowIndex === 0 && resourceSpans[gIdx] > 0 && (
               <>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxGroupRows}>{group.coordinator}</td>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxGroupRows}>{group.members}</td>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows}>{group.basis}</td>
-                {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
+                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.coordinator}</td>
+                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.members}</td>
+                <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.basis}</td>
               </>
             )}
+            {rowIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
           </tr>
         );
       });
