@@ -133,6 +133,28 @@ const WorkPlanWeeklyRecap = () => {
     groups.reduce((acc, group) => acc + Math.max(group.items.length, group.tools.length, 1), 0)
   );
 
+  const getItemSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
+    const spans: number[] = [];
+    let i = 0;
+    while (i < items.length) {
+      let j = i + 1;
+      const currentKey = keyExtractor(items[i]);
+      while (j < items.length && keyExtractor(items[j]) === currentKey) {
+        j++;
+      }
+      const count = j - i;
+      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
+      i = j;
+    }
+    return spans;
+  };
+
+  const getItemSpanRows = (group: ResourceGroup, itemIndex: number, span: number) => {
+    const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
+    const endRow = itemIndex + span >= group.items.length ? maxGroupRows : itemIndex + span;
+    return endRow - itemIndex;
+  };
+
   const getTableSpans = () => {
     const noSpans: number[] = [];
     const dateSpans: number[] = [];
@@ -149,11 +171,21 @@ const WorkPlanWeeklyRecap = () => {
         const resourceSpans = getResourceSpans(resourceGroups);
         resourceGroups.forEach((group, groupIndex) => {
           const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
+          const descriptionSpans = getItemSpans(group.items, (it) => it.description.trim());
           const sharedResourceRows = resourceSpans[groupIndex] > 0
             ? getRowsInGroups(resourceGroups.slice(groupIndex, groupIndex + resourceSpans[groupIndex]))
             : 0;
           for (let i = 0; i < maxGroupRows; i++) {
-            rows.push({ plan, group, rowIndex: i, maxGroupRows, date: plan.date, showSharedResource: i === 0 && resourceSpans[groupIndex] > 0, sharedResourceRows });
+            rows.push({
+              plan,
+              group,
+              rowIndex: i,
+              maxGroupRows,
+              date: plan.date,
+              showSharedResource: i === 0 && resourceSpans[groupIndex] > 0,
+              sharedResourceRows,
+              descriptionSpanRows: i < group.items.length && descriptionSpans[i] > 0 ? getItemSpanRows(group, i, descriptionSpans[i]) : 0,
+            });
           }
         });
       }
@@ -330,16 +362,14 @@ const WorkPlanWeeklyRecap = () => {
                           {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                           {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={planRows.length}>{plan.category}</td>}
                           
+                          {row.descriptionSpanRows > 0 && (
+                            <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.descriptionSpanRows}>{item.description}</td>
+                          )}
+
                           {rowIndex < group.items.length - 1 ? (
-                            <>
-                              <td className="border-2 border-black p-1 align-top break-words">{item.description}</td>
-                              <td className="border-2 border-black p-1 align-top break-words">{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
-                            </>
+                            <td className="border-2 border-black p-1 align-top break-words">{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           ) : rowIndex === group.items.length - 1 ? (
-                            <>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>{item.description}</td>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
-                            </>
+                            <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           ) : null}
 
                           {rowIndex < group.tools.length - 1 ? (

@@ -139,6 +139,28 @@ const WorkPlanMonthlyRecap = () => {
     groups.reduce((acc, group) => acc + Math.max(group.items.length, group.tools.length, 1), 0)
   );
 
+  const getItemSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
+    const spans: number[] = [];
+    let i = 0;
+    while (i < items.length) {
+      let j = i + 1;
+      const currentKey = keyExtractor(items[i]);
+      while (j < items.length && keyExtractor(items[j]) === currentKey) {
+        j++;
+      }
+      const count = j - i;
+      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
+      i = j;
+    }
+    return spans;
+  };
+
+  const getItemSpanRows = (group: ResourceGroup, itemIndex: number, span: number) => {
+    const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
+    const endRow = itemIndex + span >= group.items.length ? maxGroupRows : itemIndex + span;
+    return endRow - itemIndex;
+  };
+
   const renderPlanRows = (plan: WorkPlan, pIdx: number) => {
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
     if (isNoActivity) {
@@ -165,6 +187,7 @@ const WorkPlanMonthlyRecap = () => {
 
     return resourceGroups.flatMap((group, gIdx) => {
       const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
+      const descriptionSpans = getItemSpans(group.items, (it) => it.description.trim());
       
       return Array.from({ length: maxGroupRows }).map((_, rowIndex) => {
         const item = group.items[rowIndex];
@@ -184,20 +207,18 @@ const WorkPlanMonthlyRecap = () => {
               </>
             )}
             
+            {rowIndex < group.items.length && descriptionSpans[rowIndex] > 0 && (
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getItemSpanRows(group, rowIndex, descriptionSpans[rowIndex])}>{item.description}</td>
+            )}
+
             {rowIndex < group.items.length - 1 ? (
-              <>
-                <td className="border-2 border-black p-1 align-top break-words">{item.description}</td>
-                <td className="border-2 border-black p-1 align-top break-words">
-                  {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
-                </td>
-              </>
+              <td className="border-2 border-black p-1 align-top break-words">
+                {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+              </td>
             ) : rowIndex === group.items.length - 1 ? (
-              <>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>{item.description}</td>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>
-                  {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
-                </td>
-              </>
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>
+                {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+              </td>
             ) : null}
 
             {rowIndex < group.tools.length - 1 ? (

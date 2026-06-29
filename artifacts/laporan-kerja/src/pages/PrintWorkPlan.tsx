@@ -90,6 +90,11 @@ const PrintWorkPlan = () => {
     return spans;
   };
 
+  const getItemSpanRows = (items: WorkPlanItem[], itemIndex: number, span: number) => (
+    getRowsInItems(items.slice(itemIndex, itemIndex + span))
+  );
+
+  const descriptionSpans = getSpans(displayItems, (it) => it.description.trim());
   const toolSpans = getSpans(displayItems, (it) => JSON.stringify(it.tools));
   const teamSpans = getSpans(displayItems, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
   const getRowsInItems = (items: WorkPlanItem[]) => (
@@ -186,6 +191,7 @@ const PrintWorkPlan = () => {
               (() => {
                 const allTools = displayItems[0].tools;
                 const allItems = displayItems;
+                const globalDescriptionSpans = getSpans(allItems, (it) => it.description.trim());
                 const maxRows = Math.max(allItems.length, allTools.length);
                 return Array.from({ length: maxRows }).map((_, rowIndex) => {
                   const item = allItems[rowIndex];
@@ -198,15 +204,16 @@ const PrintWorkPlan = () => {
                         </>
                       )}
                       
+                      {item && globalDescriptionSpans[rowIndex] > 0 && (
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={rowIndex + globalDescriptionSpans[rowIndex] >= allItems.length ? maxRows - rowIndex : globalDescriptionSpans[rowIndex]}>
+                          {item.description}
+                        </td>
+                      )}
+
                       {item && (
-                        <>
-                          <td className="border-2 border-black p-1 align-top break-words" rowSpan={rowIndex === allItems.length - 1 ? maxRows - rowIndex : 1}>
-                            {item.description}
-                          </td>
-                          <td className="border-2 border-black p-1 align-top break-words" rowSpan={rowIndex === allItems.length - 1 ? maxRows - rowIndex : 1}>
-                            {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
-                          </td>
-                        </>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={rowIndex === allItems.length - 1 ? maxRows - rowIndex : 1}>
+                          {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+                        </td>
                       )}
 
                       {rowIndex === 0 && (
@@ -245,6 +252,7 @@ const PrintWorkPlan = () => {
             ) : (
               displayItems.flatMap((item, itemIdx) => {
                 const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "" }];
+                const descriptionSpan = descriptionSpans[itemIdx];
                 const toolSpan = toolSpans[itemIdx];
                 const teamSpan = teamSpans[itemIdx];
 
@@ -257,15 +265,16 @@ const PrintWorkPlan = () => {
                       </>
                     )}
                     
+                    {descriptionSpan > 0 && toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 align-top break-words" rowSpan={getItemSpanRows(displayItems, itemIdx, descriptionSpan)}>
+                        {item.description}
+                      </td>
+                    )}
+
                     {toolIdx === 0 && (
-                      <>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>
-                          {item.description}
-                        </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>
-                          {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
-                        </td>
-                      </>
+                      <td className="border-2 border-black p-1 align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>
+                        {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+                      </td>
                     )}
 
                     {toolSpan > 0 && toolIdx === 0 ? (
