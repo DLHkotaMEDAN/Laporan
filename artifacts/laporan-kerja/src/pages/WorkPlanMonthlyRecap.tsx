@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { sortByCategory } from '@/utils/report-helpers';
+import { getUniqueWorkPlanItems } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -93,7 +94,7 @@ const WorkPlanMonthlyRecap = () => {
 
   const groupPlanResources = (plan: WorkPlan): ResourceGroup[] => {
     const groups: ResourceGroup[] = [];
-    plan.items.forEach((item) => {
+    getUniqueWorkPlanItems(plan.items).forEach((item) => {
       const itemToolsJson = JSON.stringify(item.tools);
       const lastGroup = groups[groups.length - 1];
       const isSameResource = lastGroup && 

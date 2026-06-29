@@ -11,6 +11,7 @@ import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
+import { getUniqueWorkPlanItems } from '@/utils/work-plan-display';
 
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
@@ -71,6 +72,7 @@ const PrintWorkPlan = () => {
   const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
   const hasRemarks = plan.items.some(item => item.remarks && item.remarks.trim() !== "");
   const isGlobalStyle = plan.category === "Tim Babat";
+  const displayItems = getUniqueWorkPlanItems(plan.items);
 
   const getSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
     const spans: number[] = [];
@@ -88,8 +90,8 @@ const PrintWorkPlan = () => {
     return spans;
   };
 
-  const toolSpans = getSpans(plan.items, (it) => JSON.stringify(it.tools));
-  const teamSpans = getSpans(plan.items, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
+  const toolSpans = getSpans(displayItems, (it) => JSON.stringify(it.tools));
+  const teamSpans = getSpans(displayItems, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
   const getRowsInItems = (items: WorkPlanItem[]) => (
     items.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)
   );
@@ -182,8 +184,8 @@ const PrintWorkPlan = () => {
               </tr>
             ) : isGlobalStyle ? (
               (() => {
-                const allTools = plan.items[0].tools;
-                const allItems = plan.items;
+                const allTools = displayItems[0].tools;
+                const allItems = displayItems;
                 const maxRows = Math.max(allItems.length, allTools.length);
                 return Array.from({ length: maxRows }).map((_, rowIndex) => {
                   const item = allItems[rowIndex];
@@ -230,10 +232,10 @@ const PrintWorkPlan = () => {
                               </div>
                             ))}
                           </td>
-                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{plan.items[0].coordinator}</td>
-                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{plan.items[0].personnel.members} Org</td>
-                          <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxRows}>{plan.items[0].basis}</td>
-                          {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxRows}>{plan.items[0].remarks || "-"}</td>}
+                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{displayItems[0].coordinator}</td>
+                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{displayItems[0].personnel.members} Org</td>
+                          <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxRows}>{displayItems[0].basis}</td>
+                          {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxRows}>{displayItems[0].remarks || "-"}</td>}
                         </>
                       )}
                     </tr>
@@ -241,7 +243,7 @@ const PrintWorkPlan = () => {
                 });
               })()
             ) : (
-              plan.items.flatMap((item, itemIdx) => {
+              displayItems.flatMap((item, itemIdx) => {
                 const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "" }];
                 const toolSpan = toolSpans[itemIdx];
                 const teamSpan = teamSpans[itemIdx];
@@ -250,8 +252,8 @@ const PrintWorkPlan = () => {
                   <tr key={`${itemIdx}-${toolIdx}`}>
                     {itemIdx === 0 && toolIdx === 0 && (
                       <>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={plan.items.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>1</td>
-                        <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={plan.items.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>{plan.category}</td>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={displayItems.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>1</td>
+                        <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={displayItems.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>{plan.category}</td>
                       </>
                     )}
                     
@@ -268,21 +270,21 @@ const PrintWorkPlan = () => {
 
                     {toolSpan > 0 && toolIdx === 0 ? (
                       <>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.name ? `• ${t.name}` : "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.unit || "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.usage || "-"}
@@ -293,13 +295,13 @@ const PrintWorkPlan = () => {
                     ) : null}
                     {teamSpan > 0 && toolIdx === 0 && (
                       <>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + teamSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.coordinator}
                         </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + teamSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.personnel.members} Org
                         </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(plan.items.slice(itemIdx, itemIdx + teamSpan))}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.basis}
                         </td>
                       </>
