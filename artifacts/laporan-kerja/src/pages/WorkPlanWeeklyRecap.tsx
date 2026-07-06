@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { WorkPlan, WorkPlanItem } from '@/types/workPlan';
+import { WorkPlan } from '@/types/workPlan';
 import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,13 @@ import { supabase } from '@/lib/supabase';
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { sortByCategory } from '@/utils/report-helpers';
-import { getUniqueWorkPlanItems } from '@/utils/work-plan-display';
+import {
+  WorkPlanResourceGroup,
+  getResourceGroupItemSpanRows,
+  getRowsInResourceGroups,
+  getSequentialSpans,
+  getWorkPlanResourceGroups,
+} from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -31,14 +37,23 @@ const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
 type SignatureMode = "with-signature" | "without-signature";
 
-interface ResourceGroup {
-  items: WorkPlanItem[];
-  tools: any[];
-  coordinator: string;
-  members: number;
-  basis: string;
-  remarks: string;
-}
+type WeeklyTableRow =
+  | {
+      type: "noActivity";
+      plan: WorkPlan;
+      date: string;
+    }
+  | {
+      type: "work";
+      plan: WorkPlan;
+      group: WorkPlanResourceGroup;
+      rowIndex: number;
+      maxGroupRows: number;
+      date: string;
+      showSharedResource: boolean;
+      sharedResourceRows: number;
+      descriptionSpanRows: number;
+    };
 
 const WorkPlanWeeklyRecap = () => {
   const navigate = useNavigate();
@@ -86,105 +101,37 @@ const WorkPlanWeeklyRecap = () => {
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
 
-  const groupPlanResources = (plan: WorkPlan): ResourceGroup[] => {
-    const groups: ResourceGroup[] = [];
-    getUniqueWorkPlanItems(plan.items).forEach((item) => {
-      const itemToolsJson = JSON.stringify(item.tools);
-      const lastGroup = groups[groups.length - 1];
-      const isSameResource = lastGroup && 
-        JSON.stringify(lastGroup.tools) === itemToolsJson && 
-        lastGroup.coordinator === item.coordinator &&
-        lastGroup.members === item.personnel.members &&
-        lastGroup.basis === item.basis;
-
-      if (isSameResource) {
-        lastGroup.items.push(item);
-      } else {
-        groups.push({
-          items: [item],
-          tools: item.tools,
-          coordinator: item.coordinator,
-          members: item.personnel.members,
-          basis: item.basis,
-          remarks: item.remarks
-        });
-      }
-    });
-    return groups;
-  };
-
-  const getResourceSpans = (groups: ResourceGroup[]) => {
-    const spans: number[] = [];
-    let i = 0;
-    while (i < groups.length) {
-      let j = i + 1;
-      const currentKey = `${groups[i].coordinator}|${groups[i].members}|${groups[i].basis}`;
-      while (j < groups.length && `${groups[j].coordinator}|${groups[j].members}|${groups[j].basis}` === currentKey) {
-        j++;
-      }
-      const count = j - i;
-      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
-      i = j;
-    }
-    return spans;
-  };
-
-  const getRowsInGroups = (groups: ResourceGroup[]) => (
-    groups.reduce((acc, group) => acc + Math.max(group.items.length, group.tools.length, 1), 0)
-  );
-
-  const getItemSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
-    const spans: number[] = [];
-    let i = 0;
-    while (i < items.length) {
-      let j = i + 1;
-      const currentKey = keyExtractor(items[i]);
-      while (j < items.length && keyExtractor(items[j]) === currentKey) {
-        j++;
-      }
-      const count = j - i;
-      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
-      i = j;
-    }
-    return spans;
-  };
-
-  const getItemSpanRows = (group: ResourceGroup, itemIndex: number, span: number) => {
-    const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
-    const endRow = itemIndex + span >= group.items.length ? maxGroupRows : itemIndex + span;
-    return endRow - itemIndex;
-  };
-
   const getTableSpans = () => {
     const noSpans: number[] = [];
     const dateSpans: number[] = [];
     let currentNo = 0;
     let lastDate = "";
     
-    const rows: any[] = [];
+    const rows: WeeklyTableRow[] = [];
     plans.forEach((plan) => {
       const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
       if (isNoActivity) {
-        rows.push({ plan, isNoActivity: true, date: plan.date });
+        rows.push({ type: "noActivity", plan, date: plan.date });
       } else {
-        const resourceGroups = groupPlanResources(plan);
-        const resourceSpans = getResourceSpans(resourceGroups);
+        const resourceGroups = getWorkPlanResourceGroups(plan.items);
+        const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}|${group.basis}`);
         resourceGroups.forEach((group, groupIndex) => {
           const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
-          const descriptionSpans = getItemSpans(group.items, (it) => it.description.trim());
+          const descriptionSpans = getSequentialSpans(group.items, (it) => it.description.trim());
           const sharedResourceRows = resourceSpans[groupIndex] > 0
-            ? getRowsInGroups(resourceGroups.slice(groupIndex, groupIndex + resourceSpans[groupIndex]))
+            ? getRowsInResourceGroups(resourceGroups.slice(groupIndex, groupIndex + resourceSpans[groupIndex]))
             : 0;
           for (let i = 0; i < maxGroupRows; i++) {
             rows.push({
               plan,
+              type: "work",
               group,
               rowIndex: i,
               maxGroupRows,
               date: plan.date,
               showSharedResource: i === 0 && resourceSpans[groupIndex] > 0,
               sharedResourceRows,
-              descriptionSpanRows: i < group.items.length && descriptionSpans[i] > 0 ? getItemSpanRows(group, i, descriptionSpans[i]) : 0,
+              descriptionSpanRows: i < group.items.length && descriptionSpans[i] > 0 ? getResourceGroupItemSpanRows(group, i, descriptionSpans[i]) : 0,
             });
           }
         });
@@ -195,7 +142,7 @@ const WorkPlanWeeklyRecap = () => {
       if (row.date !== lastDate) {
         currentNo++;
         lastDate = row.date;
-        const sameDateRows = rows.filter(r => r.date === row.date);
+        const sameDateRows = rows.filter((r) => r.date === row.date);
         noSpans[idx] = sameDateRows.length;
         dateSpans[idx] = sameDateRows.length;
       } else {
@@ -338,7 +285,7 @@ const WorkPlanWeeklyRecap = () => {
                         lastDate = row.date;
                       }
                       
-                      if (row.isNoActivity) {
+                      if (row.type === "noActivity") {
                         return (
                           <tr key={`no-act-${idx}`}>
                             {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}

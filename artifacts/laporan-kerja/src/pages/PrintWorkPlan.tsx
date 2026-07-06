@@ -11,7 +11,11 @@ import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
-import { getUniqueWorkPlanItems } from '@/utils/work-plan-display';
+import {
+  getRowsInWorkPlanItems,
+  getSequentialSpans,
+  getUniqueWorkPlanItems,
+} from '@/utils/work-plan-display';
 
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
@@ -74,32 +78,13 @@ const PrintWorkPlan = () => {
   const isGlobalStyle = plan.category === "Tim Babat";
   const displayItems = getUniqueWorkPlanItems(plan.items);
 
-  const getSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
-    const spans: number[] = [];
-    let i = 0;
-    while (i < items.length) {
-      let j = i + 1;
-      const currentKey = keyExtractor(items[i]);
-      while (j < items.length && keyExtractor(items[j]) === currentKey) {
-        j++;
-      }
-      const count = j - i;
-      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
-      i = j;
-    }
-    return spans;
-  };
-
   const getItemSpanRows = (items: WorkPlanItem[], itemIndex: number, span: number) => (
-    getRowsInItems(items.slice(itemIndex, itemIndex + span))
+    getRowsInWorkPlanItems(items.slice(itemIndex, itemIndex + span))
   );
 
-  const descriptionSpans = getSpans(displayItems, (it) => it.description.trim());
-  const toolSpans = getSpans(displayItems, (it) => JSON.stringify(it.tools));
-  const teamSpans = getSpans(displayItems, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
-  const getRowsInItems = (items: WorkPlanItem[]) => (
-    items.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)
-  );
+  const descriptionSpans = getSequentialSpans(displayItems, (it) => it.description.trim());
+  const toolSpans = getSequentialSpans(displayItems, (it) => JSON.stringify(it.tools));
+  const teamSpans = getSequentialSpans(displayItems, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
@@ -191,7 +176,7 @@ const PrintWorkPlan = () => {
               (() => {
                 const allTools = displayItems[0].tools;
                 const allItems = displayItems;
-                const globalDescriptionSpans = getSpans(allItems, (it) => it.description.trim());
+                const globalDescriptionSpans = getSequentialSpans(allItems, (it) => it.description.trim());
                 const maxRows = Math.max(allItems.length, allTools.length);
                 return Array.from({ length: maxRows }).map((_, rowIndex) => {
                   const item = allItems[rowIndex];
@@ -260,8 +245,8 @@ const PrintWorkPlan = () => {
                   <tr key={`${itemIdx}-${toolIdx}`}>
                     {itemIdx === 0 && toolIdx === 0 && (
                       <>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={displayItems.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>1</td>
-                        <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={displayItems.reduce((acc, it) => acc + Math.max(it.tools.length, 1), 0)}>{plan.category}</td>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems)}>1</td>
+                        <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={getRowsInWorkPlanItems(displayItems)}>{plan.category}</td>
                       </>
                     )}
                     
@@ -279,21 +264,21 @@ const PrintWorkPlan = () => {
 
                     {toolSpan > 0 && toolIdx === 0 ? (
                       <>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.name ? `• ${t.name}` : "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.unit || "-"}
                             </div>
                           ))}
                         </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={ti > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>
                               {t.usage || "-"}
@@ -304,13 +289,13 @@ const PrintWorkPlan = () => {
                     ) : null}
                     {teamSpan > 0 && toolIdx === 0 && (
                       <>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.coordinator}
                         </td>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.personnel.members} Org
                         </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.basis}
                         </td>
                       </>

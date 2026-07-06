@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { WorkPlan, WorkPlanItem } from '@/types/workPlan';
+import { WorkPlan } from '@/types/workPlan';
 import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +11,12 @@ import { supabase } from '@/lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { sortByCategory } from '@/utils/report-helpers';
-import { getUniqueWorkPlanItems } from '@/utils/work-plan-display';
+import {
+  getResourceGroupItemSpanRows,
+  getRowsInResourceGroups,
+  getSequentialSpans,
+  getWorkPlanResourceGroups,
+} from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -36,15 +41,6 @@ const months = [
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
 type SignatureMode = "with-signature" | "without-signature";
-
-interface ResourceGroup {
-  items: WorkPlanItem[];
-  tools: any[];
-  coordinator: string;
-  members: number;
-  basis: string;
-  remarks: string;
-}
 
 const WorkPlanMonthlyRecap = () => {
   const navigate = useNavigate();
@@ -92,75 +88,6 @@ const WorkPlanMonthlyRecap = () => {
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
 
-  const groupPlanResources = (plan: WorkPlan): ResourceGroup[] => {
-    const groups: ResourceGroup[] = [];
-    getUniqueWorkPlanItems(plan.items).forEach((item) => {
-      const itemToolsJson = JSON.stringify(item.tools);
-      const lastGroup = groups[groups.length - 1];
-      const isSameResource = lastGroup && 
-        JSON.stringify(lastGroup.tools) === itemToolsJson && 
-        lastGroup.coordinator === item.coordinator &&
-        lastGroup.members === item.personnel.members &&
-        lastGroup.basis === item.basis;
-
-      if (isSameResource) {
-        lastGroup.items.push(item);
-      } else {
-        groups.push({
-          items: [item],
-          tools: item.tools,
-          coordinator: item.coordinator,
-          members: item.personnel.members,
-          basis: item.basis,
-          remarks: item.remarks
-        });
-      }
-    });
-    return groups;
-  };
-
-  const getResourceSpans = (groups: ResourceGroup[]) => {
-    const spans: number[] = [];
-    let i = 0;
-    while (i < groups.length) {
-      let j = i + 1;
-      const currentKey = `${groups[i].coordinator}|${groups[i].members}|${groups[i].basis}`;
-      while (j < groups.length && `${groups[j].coordinator}|${groups[j].members}|${groups[j].basis}` === currentKey) {
-        j++;
-      }
-      const count = j - i;
-      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
-      i = j;
-    }
-    return spans;
-  };
-
-  const getRowsInGroups = (groups: ResourceGroup[]) => (
-    groups.reduce((acc, group) => acc + Math.max(group.items.length, group.tools.length, 1), 0)
-  );
-
-  const getItemSpans = (items: WorkPlanItem[], keyExtractor: (item: WorkPlanItem) => string) => {
-    const spans: number[] = [];
-    let i = 0;
-    while (i < items.length) {
-      let j = i + 1;
-      const currentKey = keyExtractor(items[i]);
-      while (j < items.length && keyExtractor(items[j]) === currentKey) {
-        j++;
-      }
-      const count = j - i;
-      for (let k = 0; k < count; k++) spans.push(k === 0 ? count : 0);
-      i = j;
-    }
-    return spans;
-  };
-
-  const getItemSpanRows = (group: ResourceGroup, itemIndex: number, span: number) => {
-    const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
-    const endRow = itemIndex + span >= group.items.length ? maxGroupRows : itemIndex + span;
-    return endRow - itemIndex;
-  };
-
   const renderPlanRows = (plan: WorkPlan, pIdx: number) => {
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
     if (isNoActivity) {
@@ -177,17 +104,15 @@ const WorkPlanMonthlyRecap = () => {
       );
     }
 
-    const resourceGroups = groupPlanResources(plan);
-    const resourceSpans = getResourceSpans(resourceGroups);
-    const totalPlanRows = resourceGroups.reduce((acc, group) => 
-      acc + Math.max(group.items.length, group.tools.length, 1), 0
-    );
+    const resourceGroups = getWorkPlanResourceGroups(plan.items);
+    const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}|${group.basis}`);
+    const totalPlanRows = getRowsInResourceGroups(resourceGroups);
 
     let currentPlanRow = 0;
 
     return resourceGroups.flatMap((group, gIdx) => {
       const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
-      const descriptionSpans = getItemSpans(group.items, (it) => it.description.trim());
+      const descriptionSpans = getSequentialSpans(group.items, (it) => it.description.trim());
       
       return Array.from({ length: maxGroupRows }).map((_, rowIndex) => {
         const item = group.items[rowIndex];
@@ -208,7 +133,7 @@ const WorkPlanMonthlyRecap = () => {
             )}
             
             {rowIndex < group.items.length && descriptionSpans[rowIndex] > 0 && (
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getItemSpanRows(group, rowIndex, descriptionSpans[rowIndex])}>{item.description}</td>
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getResourceGroupItemSpanRows(group, rowIndex, descriptionSpans[rowIndex])}>{item.description}</td>
             )}
 
             {rowIndex < group.items.length - 1 ? (
@@ -237,9 +162,9 @@ const WorkPlanMonthlyRecap = () => {
 
             {rowIndex === 0 && resourceSpans[gIdx] > 0 && (
               <>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.coordinator}</td>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.members}</td>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.basis}</td>
+                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.coordinator}</td>
+                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.members}</td>
+                <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.basis}</td>
               </>
             )}
             {rowIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
