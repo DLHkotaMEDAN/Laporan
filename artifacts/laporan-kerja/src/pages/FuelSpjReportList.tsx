@@ -57,6 +57,11 @@ const FuelSpjReportList = () => {
                     (session?.user?.email === 'pimpinan@gmail.com');
 
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const roleLabel = profile?.role === 'admin'
+    ? "Administrator"
+    : isPimpinan
+      ? "Pimpinan"
+      : "Admin SPJ BBM";
 
   useEffect(() => {
     if (!isAllowed && profile) {
@@ -132,15 +137,32 @@ const FuelSpjReportList = () => {
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}><ArrowLeft className="h-5 w-5" /></Button>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <FileText className="text-blue-600" /> Laporan SPJ BBM
-                <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700">{filteredReports.length}</Badge>
-              </h1>
+          <div className="rounded-2xl border bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9 shrink-0">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 ring-1 ring-blue-100">
+                  <FileText className="h-5 w-5 text-blue-700" />
+                </div>
+                <div>
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="bg-blue-50 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                      {roleLabel}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-slate-100 text-[10px] font-bold text-slate-700 md:text-xs">
+                      {filteredReports.length} laporan
+                    </Badge>
+                  </div>
+                  <h1 className="text-lg font-black tracking-tight text-slate-950 md:text-2xl">Sistem Laporan SPJ BBM</h1>
+                  <p className="text-xs font-semibold text-slate-500 md:text-sm">Dinas Lingkungan Hidup Kota Medan</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => signOut()} className="h-9 w-9 self-end rounded-full text-red-500 hover:bg-red-50 md:self-auto">
+                <LogOut size={20} />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-red-500"><LogOut size={20} /></Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

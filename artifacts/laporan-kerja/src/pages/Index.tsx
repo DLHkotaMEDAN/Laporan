@@ -8,7 +8,8 @@ import {
   FileText, Search, Cloud, Printer,
   LogOut, LogIn, FilterX, Database, ChevronDown,
   Table, ClipboardList, CalendarDays, Fuel, Trash2, Loader2, UserCircle, Bell,
-  ArrowUpDown, ChevronUp, Edit, Eye, EyeOff
+  ArrowUpDown, ChevronUp, Edit, Eye, EyeOff, Leaf, MapPin, ShieldCheck,
+  Activity, Clock3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Report } from '@/types/report';
@@ -16,6 +17,7 @@ import { WorkPlan } from '@/types/workPlan';
 import { showSuccess, showError } from '@/utils/toast';
 import { reportService } from '@/services/reportService';
 import { workPlanService } from '@/services/workPlanService';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
 import FuelReportTab from '@/components/FuelReportTab';
@@ -54,6 +56,15 @@ const months = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
 
+const getLogoUrl = (fileName: string) => {
+  const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
+  return data.publicUrl;
+};
+
+const LOGO_MEDAN_URL = getLogoUrl('logo-medan.jpg');
+const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
+const DLH_HERO_IMAGE_URL = "https://dlh.medan.go.id/web/resources/img/cover/780X520.jpg";
+
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
@@ -85,6 +96,14 @@ const Index = () => {
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const showExecutiveHero = isAdmin;
+  const loginScopeLabel = isPimpinan
+    ? "Pimpinan"
+    : isAdminHarian
+      ? "Admin Harian"
+      : isUserRestricted
+        ? (profile?.category || "Petugas Lapangan")
+        : "Sistem Laporan";
 
   useEffect(() => {
     if (authLoading) return;
@@ -303,17 +322,18 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      <header className="bg-white border-b sticky top-0 z-30 shadow-sm">
+    <div className="min-h-screen bg-[#f3f7f2]">
+      <header className="sticky top-0 z-30 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-xl shadow-blue-200 shadow-lg shrink-0">
-              <FileText className="text-white h-5 w-5" />
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-2 py-1 shadow-sm ring-1 ring-slate-200">
+              <img src={LOGO_MEDAN_URL} alt="Logo Kota Medan" className="h-9 w-9 object-contain" />
+              <img src={LOGO_DLH_URL} alt="Logo DLH Kota Medan" className="h-9 w-9 object-contain" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-black text-slate-900 leading-tight tracking-tight">SISTEM LAPORAN</h1>
-              <Badge variant="outline" className="w-fit text-[8px] md:text-[10px] py-0 h-4 bg-green-50 text-green-600 border-green-200 font-bold">
-                <Cloud className="h-2 w-2 mr-1" /> CLOUD DLH
+              <h1 className="text-sm md:text-lg font-black text-slate-900 leading-tight tracking-tight">DLH KOTA MEDAN</h1>
+              <Badge variant="outline" className="w-fit text-[8px] md:text-[10px] py-0 h-4 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold">
+                <Cloud className="h-2 w-2 mr-1" /> SISTEM OPERASIONAL
               </Badge>
             </div>
           </div>
@@ -325,7 +345,7 @@ const Index = () => {
                   <p className="text-[11px] font-black text-slate-900 leading-none uppercase">
                     {isPimpinan ? 'Pimpinan' : isAdminHarian ? 'Admin Harian' : isAdmin ? 'Administrator' : 'User Lapangan'}
                   </p>
-                  <p className="text-[9px] font-bold text-blue-600 mt-1">
+                  <p className="text-[9px] font-bold text-emerald-700 mt-1">
                     {isPimpinan || isAdminHarian ? 'Semua Wilayah' : (profile?.category || 'Umum')}
                   </p>
                 </div>
@@ -356,7 +376,7 @@ const Index = () => {
                 </DropdownMenu>
               </div>
             ) : (
-              <Button onClick={() => navigate('/login')} size="sm" className="bg-blue-600 hover:bg-blue-700 h-9 px-4 font-bold shadow-md">
+              <Button onClick={() => navigate('/login')} size="sm" className="bg-emerald-700 hover:bg-emerald-800 h-9 px-4 font-bold shadow-md">
                 <LogIn className="h-4 w-4 mr-2" /> Masuk
               </Button>
             )}
@@ -365,8 +385,116 @@ const Index = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showExecutiveHero ? (
+        <section className="relative mb-8 overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-2xl shadow-emerald-950/20">
+          <img
+            src={DLH_HERO_IMAGE_URL}
+            alt="Pemerintah Kota Medan Dinas Lingkungan Hidup"
+            className="absolute inset-0 h-full w-full object-cover opacity-55"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-emerald-950/35" />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/70 to-transparent" />
+          <div className="relative grid gap-8 p-6 md:grid-cols-[1.35fr_0.65fr] md:p-8 lg:p-10">
+            <div className="flex min-h-[320px] flex-col justify-between gap-8">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge className="border border-white/20 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-white backdrop-blur">
+                  <Leaf className="mr-2 h-3.5 w-3.5" /> Pemerintah Kota Medan
+                </Badge>
+                <Badge className="border border-emerald-300/30 bg-emerald-400/20 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-emerald-50 backdrop-blur">
+                  <ShieldCheck className="mr-2 h-3.5 w-3.5" /> Wilayah Operasional
+                </Badge>
+              </div>
+
+              <div className="max-w-3xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex items-center gap-2 rounded-2xl bg-white/95 p-2 shadow-xl shadow-black/20">
+                    <img src={LOGO_MEDAN_URL} alt="Logo Kota Medan" className="h-12 w-12 object-contain" />
+                    <img src={LOGO_DLH_URL} alt="Logo Dinas Lingkungan Hidup Kota Medan" className="h-12 w-12 object-contain" />
+                  </div>
+                  <div className="hidden h-12 w-px bg-white/30 sm:block" />
+                  <div className="hidden text-sm font-semibold leading-tight text-white/80 sm:block">
+                    Sistem pelaporan dan rekap kegiatan lapangan
+                  </div>
+                </div>
+                <h2 className="text-3xl font-black leading-tight tracking-tight md:text-5xl">
+                  Dinas Lingkungan Hidup Kota Medan
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-100 md:text-base">
+                  Portal kerja internal untuk laporan harian, rencana kerja, rekap operasional, BBM, dan SPJ BBM dengan tampilan data yang cepat dibaca.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/15 bg-white/12 p-4 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100">Laporan</p>
+                  <p className="mt-1 text-2xl font-black">{stats.totalReports}</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/12 p-4 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100">Rencana Kerja</p>
+                  <p className="mt-1 text-2xl font-black">{stats.totalWorkPlans}</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/12 p-4 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100">Hari Ini</p>
+                  <p className="mt-1 text-2xl font-black">{stats.reportsToday + stats.plansToday}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between gap-4 rounded-3xl border border-white/15 bg-white/14 p-5 backdrop-blur-xl">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-emerald-100">Status Sistem</p>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between rounded-2xl bg-white/12 p-3">
+                    <span className="flex items-center gap-2 text-sm font-bold"><Activity className="h-4 w-4 text-emerald-200" /> Sinkronisasi</span>
+                    <Badge className="bg-emerald-400 text-emerald-950">Aktif</Badge>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl bg-white/12 p-3">
+                    <span className="flex items-center gap-2 text-sm font-bold"><Clock3 className="h-4 w-4 text-amber-200" /> Data Hari Ini</span>
+                    <span className="text-sm font-black">{stats.reportsToday + stats.plansToday}</span>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/12 p-3">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sky-200" />
+                    <p className="text-xs font-medium leading-5 text-white/85">
+                      Jl. Pinang Baris No. 114 Medan Sunggal, Medan, Sumatera Utara - 20127
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button onClick={() => navigate('/create')} disabled={!isLoggedIn || isPimpinan} className="h-11 bg-white text-slate-950 hover:bg-emerald-50">
+                  <FileText className="mr-2 h-4 w-4" /> Laporan
+                </Button>
+                <Button onClick={() => navigate('/work-plans/create')} disabled={!isLoggedIn || isPimpinan} className="h-11 bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
+                  <ClipboardList className="mr-2 h-4 w-4" /> Rencana
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+        ) : (
+        <section className="mb-8 rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-2 ring-1 ring-emerald-100">
+                <img src={LOGO_MEDAN_URL} alt="Logo Kota Medan" className="h-11 w-11 object-contain" />
+                <img src={LOGO_DLH_URL} alt="Logo DLH Kota Medan" className="h-11 w-11 object-contain" />
+              </div>
+              <div>
+                <Badge variant="outline" className="mb-2 bg-emerald-50 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                  {loginScopeLabel}
+                </Badge>
+                <h2 className="text-xl font-black tracking-tight text-slate-950 md:text-2xl">Sistem Laporan</h2>
+                <p className="mt-1 text-sm font-semibold text-slate-600">Dinas Lingkungan Hidup Kota Medan</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="w-fit bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
+              Berdasarkan Login
+            </Badge>
+          </div>
+        </section>
+        )}
         {/* Welcome Section */}
-        <div className="mb-8">
+        <div className="sr-only">
           <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
             Halo, {profile?.username || 'Selamat Datang'}! 👋
           </h2>
@@ -375,16 +503,16 @@ const Index = () => {
           </p>
         </div>
 
-        {/* Stats Overview */}
-        <DashboardStats 
-          totalReports={stats.totalReports}
-          totalWorkPlans={stats.totalWorkPlans}
-          reportsToday={stats.reportsToday}
-          plansToday={stats.plansToday}
-        />
+        {showExecutiveHero && (
+          <DashboardStats 
+            totalReports={stats.totalReports}
+            totalWorkPlans={stats.totalWorkPlans}
+            reportsToday={stats.reportsToday}
+            plansToday={stats.plansToday}
+          />
+        )}
 
-        {/* Quick Actions for Users */}
-        <QuickActions isPimpinan={isPimpinan} isLoggedIn={isLoggedIn} activeTab={activeTab} />
+        {showExecutiveHero && <QuickActions isPimpinan={isPimpinan} isLoggedIn={isLoggedIn} activeTab={activeTab} />}
 
         <Tabs defaultValue="reports" onValueChange={setActiveTab} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">

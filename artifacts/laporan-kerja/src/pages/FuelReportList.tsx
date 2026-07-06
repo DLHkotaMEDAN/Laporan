@@ -100,6 +100,11 @@ const FuelReportList = () => {
   const isAdmin = profile?.role === 'admin';
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAllowed = isAdmin || isAdminBbm || isPimpinan;
+  const roleLabel = isAdmin
+    ? "Administrator"
+    : isPimpinan
+      ? "Pimpinan"
+      : "Admin BBM";
 
   const reqIdRef = useRef(0);
   const specificDateInputRef = useRef<HTMLInputElement>(null);
@@ -320,25 +325,34 @@ const FuelReportList = () => {
 
         {/* Header */}
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold flex items-center gap-2">
-                  <Fuel className="text-orange-600 h-5 w-5 md:h-6 md:w-6" /> Laporan BBM & Oli
-                  {!loading && (
-                    <Badge variant="secondary" className="ml-1 bg-orange-100 text-orange-700 text-[10px] md:text-xs">
-                      {filteredReports.length} laporan
+          <div className="rounded-2xl border bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9 shrink-0">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 ring-1 ring-orange-100">
+                  <Fuel className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-700">
+                      {roleLabel}
                     </Badge>
-                  )}
-                </h1>
+                    {!loading && (
+                      <Badge variant="secondary" className="bg-slate-100 text-[10px] font-bold text-slate-700 md:text-xs">
+                        {filteredReports.length} laporan
+                      </Badge>
+                    )}
+                  </div>
+                  <h1 className="text-lg font-black tracking-tight text-slate-950 md:text-2xl">Sistem Laporan BBM & Oli</h1>
+                  <p className="text-xs font-semibold text-slate-500 md:text-sm">Dinas Lingkungan Hidup Kota Medan</p>
+                </div>
               </div>
+              <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 self-end rounded-full text-red-500 hover:bg-red-50 md:self-auto">
+                <LogOut size={20} />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 text-red-500 hover:bg-red-50 rounded-full">
-              <LogOut size={20} />
-            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

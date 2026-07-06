@@ -18,36 +18,36 @@ const DashboardStats = ({ totalReports, totalWorkPlans, reportsToday, plansToday
       label: "Laporan Hari Ini",
       value: reportsToday,
       icon: FileText,
-      color: "text-blue-600",
-      bgColor: "bg-blue-500/10",
-      borderColor: "border-blue-200/50",
-      trend: "+2 dari kemarin"
+      color: "text-sky-700",
+      bgColor: "bg-sky-100",
+      borderColor: "border-sky-200",
+      trend: "Operasional"
     },
     {
       label: "Rencana Hari Ini",
       value: plansToday,
       icon: ClipboardList,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-500/10",
-      borderColor: "border-emerald-200/50",
-      trend: "Sesuai jadwal"
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100",
+      borderColor: "border-emerald-200",
+      trend: "Terjadwal"
     },
     {
       label: "Total Laporan",
       value: totalReports,
       icon: CheckCircle2,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-500/10",
-      borderColor: "border-indigo-200/50",
+      color: "text-violet-700",
+      bgColor: "bg-violet-100",
+      borderColor: "border-violet-200",
       trend: "Data tersinkron"
     },
     {
       label: "Total Rencana",
       value: totalWorkPlans,
       icon: Calendar,
-      color: "text-orange-600",
-      bgColor: "bg-orange-500/10",
-      borderColor: "border-orange-200/50",
+      color: "text-amber-700",
+      bgColor: "bg-amber-100",
+      borderColor: "border-amber-200",
       trend: "Arsip lengkap"
     }
   ];
@@ -56,16 +56,16 @@ const DashboardStats = ({ totalReports, totalWorkPlans, reportsToday, plansToday
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       {stats.map((stat, i) => (
         <Card key={i} className={cn(
-          "glass-card border-none transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg group",
-          "relative overflow-hidden"
+          "group relative overflow-hidden rounded-2xl border bg-white/90 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+          stat.borderColor
         )}>
-          <div className={cn("absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10 transition-transform group-hover:scale-110", stat.bgColor)} />
+          <div className={cn("absolute right-0 top-0 h-24 w-24 -mr-8 -mt-8 rounded-full opacity-60 transition-transform group-hover:scale-110", stat.bgColor)} />
           <CardContent className="p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <div className={cn("p-2.5 rounded-xl shrink-0", stat.bgColor)}>
+              <div className={cn("p-2.5 rounded-xl shrink-0 ring-1 ring-white/70", stat.bgColor)}>
                 <stat.icon className={cn("h-5 w-5", stat.color)} />
               </div>
-              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase">
+              <div className="flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold uppercase text-slate-500">
                 <TrendingUp size={12} className={stat.color} />
                 {stat.trend}
               </div>
