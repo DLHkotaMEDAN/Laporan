@@ -23,9 +23,8 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
+import { generateRecapDrivePdfBase64 } from '@/utils/recap-drive-pdf';
 import {
   Tooltip,
   TooltipContent,
@@ -170,86 +169,20 @@ const DailyRecap = () => {
   };
 
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
-    if (!printRef.current) return;
     const toastId = showLoading("Menyiapkan PDF A3...");
     try {
-      window.scrollTo(0, 0);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const contentWidth = pdfWidth - (margin * 2);
-      let currentY = margin;
-
-      const headerEl = document.querySelector('.pdf-header') as HTMLElement;
-      if (headerEl) {
-        const canvas = await html2canvas(headerEl, { scale: 2, useCORS: true });
-        const headerImg = canvas.toDataURL('image/jpeg', 0.95);
-        const headerHeight = (canvas.height * contentWidth) / canvas.width;
-        pdf.addImage(headerImg, 'JPEG', margin, currentY, contentWidth, headerHeight);
-        currentY += headerHeight + 5;
-      }
-
-      const tableHeaderEl = document.querySelector('.pdf-table-header') as HTMLElement;
-      let tableHeaderImg = "";
-      let tableHeaderHeight = 0;
-      if (tableHeaderEl) {
-        const canvas = await html2canvas(tableHeaderEl, { scale: 2, useCORS: true });
-        tableHeaderImg = canvas.toDataURL('image/jpeg', 0.95);
-        tableHeaderHeight = (canvas.height * contentWidth) / canvas.width;
-        pdf.addImage(tableHeaderImg, 'JPEG', margin, currentY, contentWidth, tableHeaderHeight);
-        currentY += tableHeaderHeight;
-      }
-
-      const footerEl = document.querySelector('.pdf-footer') as HTMLElement;
-      let footerImg = "";
-      let footerHeight = 0;
-      if (footerEl && signatureMode === "with-signature") {
-        const canvas = await html2canvas(footerEl, { scale: 2, useCORS: true });
-        footerImg = canvas.toDataURL('image/jpeg', 0.95);
-        footerHeight = (canvas.height * contentWidth) / canvas.width;
-      }
-
-      const reportBlocks = document.querySelectorAll('.pdf-report-block');
-      for (let i = 0; i < reportBlocks.length; i++) {
-        const block = reportBlocks[i] as HTMLElement;
-        const canvas = await html2canvas(block, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        const isLastBlock = i === reportBlocks.length - 1;
-        if (isLastBlock && signatureMode === "with-signature") {
-          if (currentY + imgHeight + footerHeight > pdfHeight - margin) {
-            pdf.addPage('a3', 'landscape');
-            currentY = margin;
-            if (tableHeaderImg) {
-              pdf.addImage(tableHeaderImg, 'JPEG', margin, currentY, contentWidth, tableHeaderHeight);
-              currentY += tableHeaderHeight;
-            }
-          }
-        } else {
-          if (currentY + imgHeight > pdfHeight - margin - 20) {
-            pdf.addPage('a3', 'landscape');
-            currentY = margin;
-            if (tableHeaderImg) {
-              pdf.addImage(tableHeaderImg, 'JPEG', margin, currentY, contentWidth, tableHeaderHeight);
-              currentY += tableHeaderHeight;
-            }
-          }
-        }
-        pdf.addImage(imgData, 'JPEG', margin, currentY, contentWidth, imgHeight);
-        currentY += imgHeight;
-      }
-
-      if (footerImg && signatureMode === "with-signature") {
-        if (currentY + footerHeight > pdfHeight - margin) {
-          pdf.addPage('a3', 'landscape');
-          currentY = margin;
-        }
-        pdf.addImage(footerImg, 'JPEG', margin, currentY, contentWidth, footerHeight);
-      }
-      
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      const pdfBase64 = await generateRecapDrivePdfBase64({
+        reports,
+        kind: 'daily',
+        periodLabel: `Tanggal: ${selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+        logoMedanUrl: LOGO_MEDAN_URL,
+        logoDlhUrl: LOGO_DLH_URL,
+        visibleColumns,
+        fuelMode: visibleColumns.fuel ? 'daily' : 'none',
+        signatureMode,
+        showTiurmaida,
+        showArdiansyah,
+      });
       const { data, error } = await supabase.functions.invoke('upload-to-drive', {
         body: { 
           pdfBase64, 

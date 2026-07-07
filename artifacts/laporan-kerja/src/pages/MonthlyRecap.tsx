@@ -20,9 +20,8 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
+import { generateRecapDrivePdfBase64 } from '@/utils/recap-drive-pdf';
 import {
   Tooltip,
   TooltipContent,
@@ -154,305 +153,34 @@ const MonthlyRecap = () => {
     }, 150);
   };
 
-  const waitForImages = async (root: HTMLElement) => {
-    const images = Array.from(root.querySelectorAll('img'));
-    await Promise.all(images.map(img => {
-      if (img.complete) return Promise.resolve();
-      return new Promise(resolve => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
-    }));
-  };
-
-  const normalizePdfExportStyles = (root: HTMLElement) => {
-    const view = root.ownerDocument.defaultView ?? window;
-    root.style.color = '#000000';
-    root.style.backgroundColor = '#ffffff';
-    root.style.borderColor = '#000000';
-    root.style.outlineColor = '#000000';
-    root.style.textDecorationColor = '#000000';
-    root.style.boxShadow = 'none';
-    root.style.textShadow = 'none';
-
-    root.querySelectorAll<HTMLElement>('*').forEach(el => {
-      const computed = view.getComputedStyle(el);
-      const display = computed.display;
-      const position = computed.position;
-      const fontSize = computed.fontSize;
-      const fontWeight = computed.fontWeight;
-      const lineHeight = computed.lineHeight;
-      const textAlign = computed.textAlign;
-      const verticalAlign = computed.verticalAlign;
-      const whiteSpace = computed.whiteSpace;
-      const width = computed.width;
-      const minWidth = computed.minWidth;
-      const maxWidth = computed.maxWidth;
-      const height = computed.height;
-      const padding = computed.padding;
-      const margin = computed.margin;
-      const borderWidth = computed.borderWidth;
-      const borderStyle = computed.borderStyle;
-      const borderCollapse = computed.borderCollapse;
-      const tableLayout = computed.tableLayout;
-      const objectFit = computed.objectFit;
-      const overflow = computed.overflow;
-
-      el.removeAttribute('class');
-      el.style.color = '#000000';
-      el.style.boxShadow = 'none';
-      el.style.textShadow = 'none';
-      el.style.outlineColor = '#000000';
-      el.style.textDecorationColor = '#000000';
-      el.style.borderColor = '#000000';
-      el.style.borderTopColor = '#000000';
-      el.style.borderRightColor = '#000000';
-      el.style.borderBottomColor = '#000000';
-      el.style.borderLeftColor = '#000000';
-      el.style.backgroundImage = 'none';
-      el.style.caretColor = '#000000';
-      el.style.accentColor = '#000000';
-      el.style.display = display;
-      el.style.position = position;
-      el.style.fontSize = fontSize;
-      el.style.fontWeight = fontWeight;
-      el.style.lineHeight = lineHeight;
-      el.style.textAlign = textAlign;
-      el.style.verticalAlign = verticalAlign;
-      el.style.whiteSpace = whiteSpace;
-      el.style.width = width;
-      el.style.minWidth = minWidth;
-      el.style.maxWidth = maxWidth;
-      el.style.height = height;
-      el.style.padding = padding;
-      el.style.margin = margin;
-      el.style.borderWidth = borderWidth;
-      el.style.borderStyle = borderStyle;
-      el.style.borderCollapse = borderCollapse;
-      el.style.tableLayout = tableLayout;
-      el.style.objectFit = objectFit;
-      el.style.overflow = overflow;
-
-      if (el.tagName === 'TH') {
-        el.style.backgroundColor = '#f1f5f9';
-      } else if (el.tagName === 'TD') {
-        el.style.backgroundColor = '#ffffff';
-      } else if (el.tagName === 'TR' || el.tagName === 'THEAD' || el.tagName === 'TBODY' || el.tagName === 'COLGROUP' || el.tagName === 'COL') {
-        el.style.backgroundColor = 'transparent';
-      } else {
-        el.style.backgroundColor = computed.backgroundColor === 'rgba(0, 0, 0, 0)' ? 'transparent' : '#ffffff';
-      }
-
-      if (el instanceof HTMLImageElement) {
-        el.style.backgroundColor = 'transparent';
-      }
-
-      if (el instanceof SVGElement) {
-        el.setAttribute('fill', '#000000');
-        el.setAttribute('stroke', '#000000');
-      }
-    });
-  };
-
-  const createPdfExportClone = async (source: HTMLElement) => {
-    const host = document.createElement('div');
-    const clone = source.cloneNode(true) as HTMLElement;
-
-    host.setAttribute('data-pdf-export-host', 'true');
-    clone.setAttribute('data-pdf-export-root', 'true');
-
-    host.style.position = 'absolute';
-    host.style.left = '-10000px';
-    host.style.top = '0';
-    host.style.zIndex = '-1';
-    host.style.backgroundColor = '#ffffff';
-    host.style.overflow = 'visible';
-
-    clone.style.width = `${Math.max(source.scrollWidth, source.getBoundingClientRect().width)}px`;
-    clone.style.maxWidth = 'none';
-    clone.style.minHeight = 'auto';
-    clone.style.boxShadow = 'none';
-    clone.style.border = '0';
-    clone.style.margin = '0';
-    clone.style.overflow = 'visible';
-    clone.style.backgroundColor = '#ffffff';
-
-    clone.querySelectorAll<HTMLElement>('.overflow-x-auto').forEach(el => {
-      el.style.overflow = 'visible';
-      el.style.width = 'max-content';
-      el.style.maxWidth = 'none';
-    });
-
-    clone.querySelectorAll<HTMLElement>('table').forEach(table => {
-      table.style.width = 'max-content';
-      table.style.maxWidth = 'none';
-      table.style.minWidth = '1200px';
-    });
-
-    host.appendChild(clone);
-    document.body.appendChild(host);
-    normalizePdfExportStyles(clone);
-    await waitForImages(clone);
-    await new Promise(resolve => requestAnimationFrame(resolve));
-
-    const widestTable = Math.max(0, ...Array.from(clone.querySelectorAll<HTMLElement>('table')).map(table => table.scrollWidth));
-    const exportWidth = Math.ceil(Math.max(clone.scrollWidth, widestTable, source.scrollWidth));
-    clone.style.width = `${exportWidth}px`;
-
-    const exportHeight = Math.ceil(clone.scrollHeight);
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('data-pdf-export-frame', 'true');
-    iframe.style.position = 'absolute';
-    iframe.style.left = '-10000px';
-    iframe.style.top = '0';
-    iframe.style.width = `${exportWidth}px`;
-    iframe.style.height = `${Math.max(exportHeight, 1)}px`;
-    iframe.style.border = '0';
-    iframe.style.backgroundColor = '#ffffff';
-    document.body.appendChild(iframe);
-
-    const iframeDocument = iframe.contentDocument;
-    if (!iframeDocument) {
-      host.remove();
-      iframe.remove();
-      throw new Error("Gagal membuat area PDF");
-    }
-
-    iframeDocument.open();
-    iframeDocument.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <style>
-            html, body { margin: 0; padding: 0; background: #ffffff; color: #000000; }
-            * { box-sizing: border-box; color: #000000; border-color: #000000; box-shadow: none; text-shadow: none; }
-            table { border-collapse: collapse; }
-            img { max-width: 100%; }
-          </style>
-        </head>
-        <body></body>
-      </html>
-    `);
-    iframeDocument.close();
-    iframeDocument.body.appendChild(clone);
-    host.remove();
-
-    return { host: iframe, clone, exportWidth };
-  };
-
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
-    if (!printRef.current) return;
     const toastId = showLoading("Menyiapkan PDF A3...");
-    let exportHost: HTMLDivElement | null = null;
     try {
-      window.scrollTo(0, 0);
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const { host, clone, exportWidth } = await createPdfExportClone(printRef.current);
-      exportHost = host;
-      const exportHeight = Math.ceil(clone.scrollHeight);
-
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        windowWidth: exportWidth,
-        windowHeight: exportHeight,
-        width: exportWidth,
-        height: exportHeight,
-        scrollX: 0,
-        scrollY: 0,
-        onclone: (clonedDocument) => {
-          const style = clonedDocument.createElement('style');
-          style.textContent = `
-            html, body {
-              background: #ffffff !important;
-              color: #000000 !important;
-            }
-
-            [data-pdf-export-host],
-            [data-pdf-export-host] *,
-            [data-pdf-export-root],
-            [data-pdf-export-root] * {
-              color: #000000 !important;
-              background-image: none !important;
-              border-color: #000000 !important;
-              outline-color: #000000 !important;
-              text-decoration-color: #000000 !important;
-              box-shadow: none !important;
-              text-shadow: none !important;
-              caret-color: #000000 !important;
-              accent-color: #000000 !important;
-            }
-
-            [data-pdf-export-host],
-            [data-pdf-export-root] {
-              background-color: #ffffff !important;
-            }
-
-            [data-pdf-export-root] th {
-              background-color: #f1f5f9 !important;
-            }
-
-            [data-pdf-export-root] td {
-              background-color: #ffffff !important;
-            }
-
-            [data-pdf-export-root] tr,
-            [data-pdf-export-root] thead,
-            [data-pdf-export-root] tbody,
-            [data-pdf-export-root] colgroup,
-            [data-pdf-export-root] col {
-              background-color: transparent !important;
-            }
-
-            [data-pdf-export-root] img {
-              background-color: transparent !important;
-            }
-          `;
-          clonedDocument.head.appendChild(style);
+      const pdfBase64 = await generateRecapDrivePdfBase64({
+        reports,
+        kind: 'monthly',
+        periodLabel: `Bulan: ${selectedMonth === 'semua' ? 'Semua Bulan' : months[parseInt(selectedMonth)-1]} ${selectedYear === 'semua' ? 'Semua Tahun' : selectedYear}`,
+        logoMedanUrl: LOGO_MEDAN_URL,
+        logoDlhUrl: LOGO_DLH_URL,
+        visibleColumns: {
+          date: true,
+          category: true,
+          description: true,
+          location: true,
+          photos: photoMode === "with-photo",
+          volume: true,
+          equipment: true,
+          heavyEquipment: true,
+          fuel: recapMode === "with-fuel",
+          coordinator: true,
+          members: true,
+          remarks: true,
         },
+        fuelMode: recapMode === "with-fuel" ? 'voucher' : 'none',
+        signatureMode,
+        showTiurmaida,
+        showArdiansyah,
       });
-
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const contentWidth = pdfWidth - (margin * 2);
-      const contentHeight = pdfHeight - (margin * 2);
-      const pageCanvasHeight = Math.floor((contentHeight * canvas.width) / contentWidth);
-      let sourceY = 0;
-      let pageIndex = 0;
-
-      while (sourceY < canvas.height) {
-        const sliceHeight = Math.min(pageCanvasHeight, canvas.height - sourceY);
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sliceHeight;
-        const context = pageCanvas.getContext('2d');
-
-        if (!context) {
-          throw new Error("Gagal membuat halaman PDF");
-        }
-
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        context.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-
-        if (pageIndex > 0) {
-          pdf.addPage('a3', 'landscape');
-        }
-
-        const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-        const imgHeight = (sliceHeight * contentWidth) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, imgHeight);
-
-        sourceY += sliceHeight;
-        pageIndex++;
-      }
-      
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
       const { data, error } = await supabase.functions.invoke('upload-to-drive', {
         body: { 
           pdfBase64, 
@@ -468,7 +196,6 @@ const MonthlyRecap = () => {
       showError("Gagal mengunggah: " + error.message);
       throw error;
     } finally {
-      exportHost?.remove();
       dismissToast(toastId);
     }
   };
