@@ -168,30 +168,63 @@ const MonthlyRecap = () => {
   const normalizePdfExportStyles = (root: HTMLElement) => {
     root.style.color = '#000000';
     root.style.backgroundColor = '#ffffff';
+    root.style.borderColor = '#000000';
+    root.style.outlineColor = '#000000';
+    root.style.textDecorationColor = '#000000';
+    root.style.boxShadow = 'none';
+    root.style.textShadow = 'none';
 
     root.querySelectorAll<HTMLElement>('*').forEach(el => {
+      const computed = window.getComputedStyle(el);
+      const display = computed.display;
+      const position = computed.position;
+      const fontSize = computed.fontSize;
+      const fontWeight = computed.fontWeight;
+      const lineHeight = computed.lineHeight;
+      const textAlign = computed.textAlign;
+      const verticalAlign = computed.verticalAlign;
+      const whiteSpace = computed.whiteSpace;
+
+      el.removeAttribute('class');
       el.style.color = '#000000';
       el.style.boxShadow = 'none';
       el.style.textShadow = 'none';
       el.style.outlineColor = '#000000';
+      el.style.textDecorationColor = '#000000';
+      el.style.borderColor = '#000000';
+      el.style.borderTopColor = '#000000';
+      el.style.borderRightColor = '#000000';
+      el.style.borderBottomColor = '#000000';
+      el.style.borderLeftColor = '#000000';
+      el.style.backgroundImage = 'none';
+      el.style.caretColor = '#000000';
+      el.style.accentColor = '#000000';
+      el.style.display = display;
+      el.style.position = position;
+      el.style.fontSize = fontSize;
+      el.style.fontWeight = fontWeight;
+      el.style.lineHeight = lineHeight;
+      el.style.textAlign = textAlign;
+      el.style.verticalAlign = verticalAlign;
+      el.style.whiteSpace = whiteSpace;
 
       if (el.tagName === 'TH') {
         el.style.backgroundColor = '#f1f5f9';
-        el.style.borderColor = '#000000';
       } else if (el.tagName === 'TD') {
         el.style.backgroundColor = '#ffffff';
-        el.style.borderColor = '#000000';
-      } else if (el.classList.contains('bg-slate-50') || el.classList.contains('bg-slate-100')) {
-        el.style.backgroundColor = '#f8fafc';
+      } else if (el.tagName === 'TR' || el.tagName === 'THEAD' || el.tagName === 'TBODY' || el.tagName === 'COLGROUP' || el.tagName === 'COL') {
+        el.style.backgroundColor = 'transparent';
       } else {
-        const computed = window.getComputedStyle(el);
-        if (computed.backgroundColor.includes('oklch')) {
-          el.style.backgroundColor = 'transparent';
-        }
+        el.style.backgroundColor = computed.backgroundColor === 'rgba(0, 0, 0, 0)' ? 'transparent' : '#ffffff';
       }
 
       if (el instanceof HTMLImageElement) {
         el.style.backgroundColor = 'transparent';
+      }
+
+      if (el instanceof SVGElement) {
+        el.setAttribute('fill', '#000000');
+        el.setAttribute('stroke', '#000000');
       }
     });
   };
@@ -228,10 +261,9 @@ const MonthlyRecap = () => {
       table.style.minWidth = '1200px';
     });
 
-    normalizePdfExportStyles(clone);
-
     host.appendChild(clone);
     document.body.appendChild(host);
+    normalizePdfExportStyles(clone);
     await waitForImages(clone);
     await new Promise(resolve => requestAnimationFrame(resolve));
 
