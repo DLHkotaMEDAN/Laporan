@@ -154,23 +154,82 @@ const MonthlyRecap = () => {
     }, 150);
   };
 
+  const waitForImages = async (root: HTMLElement) => {
+    const images = Array.from(root.querySelectorAll('img'));
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    }));
+  };
+
+  const createPdfExportClone = async (source: HTMLElement) => {
+    const host = document.createElement('div');
+    const clone = source.cloneNode(true) as HTMLElement;
+
+    host.style.position = 'absolute';
+    host.style.left = '-10000px';
+    host.style.top = '0';
+    host.style.zIndex = '-1';
+    host.style.backgroundColor = '#ffffff';
+    host.style.overflow = 'visible';
+
+    clone.style.width = `${Math.max(source.scrollWidth, source.getBoundingClientRect().width)}px`;
+    clone.style.maxWidth = 'none';
+    clone.style.minHeight = 'auto';
+    clone.style.boxShadow = 'none';
+    clone.style.border = '0';
+    clone.style.margin = '0';
+    clone.style.overflow = 'visible';
+    clone.style.backgroundColor = '#ffffff';
+
+    clone.querySelectorAll<HTMLElement>('.overflow-x-auto').forEach(el => {
+      el.style.overflow = 'visible';
+      el.style.width = 'max-content';
+      el.style.maxWidth = 'none';
+    });
+
+    clone.querySelectorAll<HTMLElement>('table').forEach(table => {
+      table.style.width = 'max-content';
+      table.style.maxWidth = 'none';
+      table.style.minWidth = '1200px';
+    });
+
+    host.appendChild(clone);
+    document.body.appendChild(host);
+    await waitForImages(clone);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    const widestTable = Math.max(0, ...Array.from(clone.querySelectorAll<HTMLElement>('table')).map(table => table.scrollWidth));
+    const exportWidth = Math.ceil(Math.max(clone.scrollWidth, widestTable, source.scrollWidth));
+    clone.style.width = `${exportWidth}px`;
+
+    return { host, clone, exportWidth };
+  };
+
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
     if (!printRef.current) return;
     const toastId = showLoading("Menyiapkan PDF A3...");
+    let exportHost: HTMLDivElement | null = null;
     try {
       window.scrollTo(0, 0);
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const printArea = printRef.current;
-      const canvas = await html2canvas(printArea, {
+      const { host, clone, exportWidth } = await createPdfExportClone(printRef.current);
+      exportHost = host;
+      const exportHeight = Math.ceil(clone.scrollHeight);
+
+      const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
-        windowWidth: printArea.scrollWidth,
-        windowHeight: printArea.scrollHeight,
-        width: printArea.scrollWidth,
-        height: printArea.scrollHeight,
+        windowWidth: exportWidth,
+        windowHeight: exportHeight,
+        width: exportWidth,
+        height: exportHeight,
         scrollX: 0,
         scrollY: 0,
       });
@@ -228,6 +287,7 @@ const MonthlyRecap = () => {
       showError("Gagal mengunggah: " + error.message);
       throw error;
     } finally {
+      exportHost?.remove();
       dismissToast(toastId);
     }
   };
@@ -657,12 +717,12 @@ const MonthlyRecap = () => {
         </div>
 
         <div className="overflow-x-auto print:overflow-visible">
-          {reports.length > 0 ? (
+          {flatTasks.length > 0 ? (
             <>
               <table className="w-full min-w-[1200px] border-collapse border-2 border-black text-[11px] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 {tableHeader}
-                <tbody>
+                <tbody className="pdf-report-block">
                   {(() => {
                     let currentNo = 0;
                     let lastDate = "";
