@@ -165,6 +165,37 @@ const MonthlyRecap = () => {
     }));
   };
 
+  const normalizePdfExportStyles = (root: HTMLElement) => {
+    root.style.color = '#000000';
+    root.style.backgroundColor = '#ffffff';
+
+    root.querySelectorAll<HTMLElement>('*').forEach(el => {
+      el.style.color = '#000000';
+      el.style.boxShadow = 'none';
+      el.style.textShadow = 'none';
+      el.style.outlineColor = '#000000';
+
+      if (el.tagName === 'TH') {
+        el.style.backgroundColor = '#f1f5f9';
+        el.style.borderColor = '#000000';
+      } else if (el.tagName === 'TD') {
+        el.style.backgroundColor = '#ffffff';
+        el.style.borderColor = '#000000';
+      } else if (el.classList.contains('bg-slate-50') || el.classList.contains('bg-slate-100')) {
+        el.style.backgroundColor = '#f8fafc';
+      } else {
+        const computed = window.getComputedStyle(el);
+        if (computed.backgroundColor.includes('oklch')) {
+          el.style.backgroundColor = 'transparent';
+        }
+      }
+
+      if (el instanceof HTMLImageElement) {
+        el.style.backgroundColor = 'transparent';
+      }
+    });
+  };
+
   const createPdfExportClone = async (source: HTMLElement) => {
     const host = document.createElement('div');
     const clone = source.cloneNode(true) as HTMLElement;
@@ -196,6 +227,8 @@ const MonthlyRecap = () => {
       table.style.maxWidth = 'none';
       table.style.minWidth = '1200px';
     });
+
+    normalizePdfExportStyles(clone);
 
     host.appendChild(clone);
     document.body.appendChild(host);
