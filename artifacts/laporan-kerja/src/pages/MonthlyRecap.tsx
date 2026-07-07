@@ -160,68 +160,56 @@ const MonthlyRecap = () => {
     try {
       window.scrollTo(0, 0);
       await new Promise(resolve => setTimeout(resolve, 500));
+
+      const printArea = printRef.current;
+      const canvas = await html2canvas(printArea, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        windowWidth: printArea.scrollWidth,
+        windowHeight: printArea.scrollHeight,
+        width: printArea.scrollWidth,
+        height: printArea.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const margin = 10;
       const contentWidth = pdfWidth - (margin * 2);
-      let currentY = margin;
+      const contentHeight = pdfHeight - (margin * 2);
+      const pageCanvasHeight = Math.floor((contentHeight * canvas.width) / contentWidth);
+      let sourceY = 0;
+      let pageIndex = 0;
 
-      const headerEl = document.querySelector('.pdf-header') as HTMLElement;
-      if (headerEl) {
-        const canvas = await html2canvas(headerEl, { scale: 2, useCORS: true });
-        const headerImg = canvas.toDataURL('image/jpeg', 0.95);
-        const headerHeight = (canvas.height * contentWidth) / canvas.width;
-        pdf.addImage(headerImg, 'JPEG', margin, currentY, contentWidth, headerHeight);
-        currentY += headerHeight + 5;
-      }
+      while (sourceY < canvas.height) {
+        const sliceHeight = Math.min(pageCanvasHeight, canvas.height - sourceY);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+        const context = pageCanvas.getContext('2d');
 
-      const tableHeaderEl = document.querySelector('.pdf-table-header') as HTMLElement;
-      let tableHeaderImg = "";
-      let tableHeaderHeight = 0;
-      if (tableHeaderEl) {
-        const canvas = await html2canvas(tableHeaderEl, { scale: 2, useCORS: true });
-        tableHeaderImg = canvas.toDataURL('image/jpeg', 0.95);
-        tableHeaderHeight = (canvas.height * contentWidth) / canvas.width;
-        pdf.addImage(tableHeaderImg, 'JPEG', margin, currentY, contentWidth, tableHeaderHeight);
-        currentY += tableHeaderHeight;
-      }
-
-      const footerEl = document.querySelector('.pdf-footer') as HTMLElement;
-      let footerImg = "";
-      let footerHeight = 0;
-      if (footerEl && signatureMode === "with-signature") {
-        const canvas = await html2canvas(footerEl, { scale: 2, useCORS: true });
-        footerImg = canvas.toDataURL('image/jpeg', 0.95);
-        footerHeight = (canvas.height * contentWidth) / canvas.width;
-      }
-
-      const reportBlocks = document.querySelectorAll('.pdf-report-block');
-      for (let i = 0; i < reportBlocks.length; i++) {
-        const block = reportBlocks[i] as HTMLElement;
-        const canvas = await html2canvas(block, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        
-        if (currentY + imgHeight > pdfHeight - margin - 20) {
-          pdf.addPage('a3', 'landscape');
-          currentY = margin;
-          if (tableHeaderImg) {
-            pdf.addImage(tableHeaderImg, 'JPEG', margin, currentY, contentWidth, tableHeaderHeight);
-            currentY += tableHeaderHeight;
-          }
+        if (!context) {
+          throw new Error("Gagal membuat halaman PDF");
         }
-        
-        pdf.addImage(imgData, 'JPEG', margin, currentY, contentWidth, imgHeight);
-        currentY += imgHeight;
-      }
 
-      if (footerImg && signatureMode === "with-signature") {
-        if (currentY + footerHeight > pdfHeight - margin) {
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        context.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+        if (pageIndex > 0) {
           pdf.addPage('a3', 'landscape');
-          currentY = margin;
         }
-        pdf.addImage(footerImg, 'JPEG', margin, currentY, contentWidth, footerHeight);
+
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const imgHeight = (sliceHeight * contentWidth) / canvas.width;
+        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, imgHeight);
+
+        sourceY += sliceHeight;
+        pageIndex++;
       }
       
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
