@@ -143,17 +143,17 @@ const WorkPlanMonthlyRecap = () => {
             <>
               <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>{t.name ? `• ${t.name}` : "-"}</div>
+                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-black pt-1" : ""}>{t.name ? `• ${t.name}` : "-"}</div>
                 )) : "-"}
               </td>
               <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>{t.unit || "-"}</div>
+                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-black pt-1" : ""}>{t.unit || "-"}</div>
                 )) : "-"}
               </td>
               <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>{t.usage || "-"}</div>
+                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-black pt-1" : ""}>{t.usage || "-"}</div>
                 )) : "-"}
               </td>
             </>
