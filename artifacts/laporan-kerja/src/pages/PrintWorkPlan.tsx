@@ -84,7 +84,8 @@ const PrintWorkPlan = () => {
 
   const descriptionSpans = getSequentialSpans(displayItems, (it) => it.description.trim());
   const toolSpans = getSequentialSpans(displayItems, (it) => JSON.stringify(it.tools));
-  const teamSpans = getSequentialSpans(displayItems, (it) => `${it.coordinator}|${it.personnel.members}|${it.basis}`);
+  const teamSpans = getSequentialSpans(displayItems, (it) => `${it.coordinator}|${it.personnel.members}`);
+  const basisSpans = getSequentialSpans(displayItems, (it) => it.basis.trim());
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
@@ -240,6 +241,7 @@ const PrintWorkPlan = () => {
                 const descriptionSpan = descriptionSpans[itemIdx];
                 const toolSpan = toolSpans[itemIdx];
                 const teamSpan = teamSpans[itemIdx];
+                const basisSpan = basisSpans[itemIdx];
 
                 return toolsToRender.map((tool, toolIdx) => (
                   <tr key={`${itemIdx}-${toolIdx}`}>
@@ -295,7 +297,11 @@ const PrintWorkPlan = () => {
                         <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                           {item.personnel.members} Org
                         </td>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
+                      </>
+                    )}
+                    {basisSpan > 0 && toolIdx === 0 && (
+                      <>
+                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + basisSpan))}>
                           {item.basis}
                         </td>
                       </>

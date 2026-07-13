@@ -105,7 +105,8 @@ const WorkPlanMonthlyRecap = () => {
     }
 
     const resourceGroups = getWorkPlanResourceGroups(plan.items);
-    const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}|${group.basis}`);
+    const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}`);
+    const basisSpans = getSequentialSpans(resourceGroups, (group) => group.basis.trim());
     const totalPlanRows = getRowsInResourceGroups(resourceGroups);
 
     let currentPlanRow = 0;
@@ -164,8 +165,10 @@ const WorkPlanMonthlyRecap = () => {
               <>
                 <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.coordinator}</td>
                 <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.members}</td>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.basis}</td>
               </>
+            )}
+            {rowIndex === 0 && basisSpans[gIdx] > 0 && (
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + basisSpans[gIdx]))}>{group.basis}</td>
             )}
             {rowIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
           </tr>

@@ -52,6 +52,8 @@ type WeeklyTableRow =
       date: string;
       showSharedResource: boolean;
       sharedResourceRows: number;
+      showBasis: boolean;
+      basisRows: number;
       descriptionSpanRows: number;
     };
 
@@ -114,12 +116,16 @@ const WorkPlanWeeklyRecap = () => {
         rows.push({ type: "noActivity", plan, date: plan.date });
       } else {
         const resourceGroups = getWorkPlanResourceGroups(plan.items);
-        const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}|${group.basis}`);
+        const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}`);
+        const basisSpans = getSequentialSpans(resourceGroups, (group) => group.basis.trim());
         resourceGroups.forEach((group, groupIndex) => {
           const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
           const descriptionSpans = getSequentialSpans(group.items, (it) => it.description.trim());
           const sharedResourceRows = resourceSpans[groupIndex] > 0
             ? getRowsInResourceGroups(resourceGroups.slice(groupIndex, groupIndex + resourceSpans[groupIndex]))
+            : 0;
+          const basisRows = basisSpans[groupIndex] > 0
+            ? getRowsInResourceGroups(resourceGroups.slice(groupIndex, groupIndex + basisSpans[groupIndex]))
             : 0;
           for (let i = 0; i < maxGroupRows; i++) {
             rows.push({
@@ -131,6 +137,8 @@ const WorkPlanWeeklyRecap = () => {
               date: plan.date,
               showSharedResource: i === 0 && resourceSpans[groupIndex] > 0,
               sharedResourceRows,
+              showBasis: i === 0 && basisSpans[groupIndex] > 0,
+              basisRows,
               descriptionSpanRows: i < group.items.length && descriptionSpans[i] > 0 ? getResourceGroupItemSpanRows(group, i, descriptionSpans[i]) : 0,
             });
           }
@@ -337,8 +345,10 @@ const WorkPlanWeeklyRecap = () => {
                             <>
                               <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.sharedResourceRows}>{group.coordinator}</td>
                               <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.sharedResourceRows}>{group.members}</td>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.sharedResourceRows}>{group.basis}</td>
                             </>
+                          )}
+                          {row.showBasis && (
+                            <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.basisRows}>{group.basis}</td>
                           )}
                           {rowIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
                         </tr>
