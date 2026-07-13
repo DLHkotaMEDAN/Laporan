@@ -12,10 +12,9 @@ import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { sortByCategory } from '@/utils/report-helpers';
 import {
-  getResourceGroupItemSpanRows,
-  getRowsInResourceGroups,
+  getRowsInWorkPlanItems,
   getSequentialSpans,
-  getWorkPlanResourceGroups,
+  getUniqueWorkPlanItems,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -104,76 +103,76 @@ const WorkPlanMonthlyRecap = () => {
       );
     }
 
-    const resourceGroups = getWorkPlanResourceGroups(plan.items);
-    const resourceSpans = getSequentialSpans(resourceGroups, (group) => `${group.coordinator}|${group.members}`);
-    const basisSpans = getSequentialSpans(resourceGroups, (group) => group.basis.trim());
-    const totalPlanRows = getRowsInResourceGroups(resourceGroups);
+    const displayItems = getUniqueWorkPlanItems(plan.items);
+    const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
+    const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
+    const teamSpans = getSequentialSpans(displayItems, (item) => `${item.coordinator}|${item.personnel.members}`);
+    const basisSpans = getSequentialSpans(displayItems, (item) => item.basis.trim());
+    const totalPlanRows = getRowsInWorkPlanItems(displayItems);
 
-    let currentPlanRow = 0;
+    return displayItems.flatMap((item, itemIdx) => {
+      const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "" }];
+      const descriptionSpan = descriptionSpans[itemIdx];
+      const toolSpan = toolSpans[itemIdx];
+      const teamSpan = teamSpans[itemIdx];
+      const basisSpan = basisSpans[itemIdx];
 
-    return resourceGroups.flatMap((group, gIdx) => {
-      const maxGroupRows = Math.max(group.items.length, group.tools.length, 1);
-      const descriptionSpans = getSequentialSpans(group.items, (it) => it.description.trim());
-      
-      return Array.from({ length: maxGroupRows }).map((_, rowIndex) => {
-        const item = group.items[rowIndex];
-        const tool = group.tools[rowIndex];
-        const isFirstInPlan = currentPlanRow === 0;
-        currentPlanRow++;
-
-        return (
-          <tr key={`${plan.id}-${gIdx}-${rowIndex}`}>
-            {isFirstInPlan && (
-              <>
-                <td className="border-2 border-black p-1 text-center align-top font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
-                <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={totalPlanRows}>
-                  {format(parseISO(plan.date), 'dd/MM/yy')}
-                </td>
-                <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={totalPlanRows}>{plan.category}</td>
-              </>
-            )}
-            
-            {rowIndex < group.items.length && descriptionSpans[rowIndex] > 0 && (
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getResourceGroupItemSpanRows(group, rowIndex, descriptionSpans[rowIndex])}>{item.description}</td>
-            )}
-
-            {rowIndex < group.items.length - 1 ? (
-              <td className="border-2 border-black p-1 align-top break-words">
-                {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+      return toolsToRender.map((tool, toolIdx) => (
+        <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
+          {itemIdx === 0 && toolIdx === 0 && (
+            <>
+              <td className="border-2 border-black p-1 text-center align-top font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
+              <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={totalPlanRows}>
+                {format(parseISO(plan.date), 'dd/MM/yy')}
               </td>
-            ) : rowIndex === group.items.length - 1 ? (
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>
-                {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+              <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={totalPlanRows}>{plan.category}</td>
+            </>
+          )}
+
+          {descriptionSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + descriptionSpan))}>{item.description}</td>
+          )}
+
+          {toolIdx === 0 && (
+            <td className="border-2 border-black p-1 align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>
+              {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
+            </td>
+          )}
+
+          {toolSpan > 0 && toolIdx === 0 && (
+            <>
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                {item.tools.length > 0 ? item.tools.map((t, idx) => (
+                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>{t.name ? `• ${t.name}` : "-"}</div>
+                )) : "-"}
               </td>
-            ) : null}
+              <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                {item.tools.length > 0 ? item.tools.map((t, idx) => (
+                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>{t.unit || "-"}</div>
+                )) : "-"}
+              </td>
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                {item.tools.length > 0 ? item.tools.map((t, idx) => (
+                  <div key={idx} className={idx > 0 ? "mt-1 border-t border-slate-200 pt-1" : ""}>{t.usage || "-"}</div>
+                )) : "-"}
+              </td>
+            </>
+          )}
 
-            {rowIndex < group.tools.length - 1 ? (
-              <>
-                <td className="border-2 border-black p-1 align-top break-words">{tool?.name ? `• ${tool.name}` : ""}</td>
-                <td className="border-2 border-black p-1 text-center align-top">{tool?.unit || ""}</td>
-                <td className="border-2 border-black p-1 align-top break-words">{tool?.usage || ""}</td>
-              </>
-            ) : rowIndex === group.tools.length - 1 || (group.tools.length === 0 && rowIndex === 0) ? (
-              <>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>{tool?.name ? `• ${tool.name}` : ""}</td>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxGroupRows - rowIndex}>{tool?.unit || ""}</td>
-                <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxGroupRows - rowIndex}>{tool?.usage || ""}</td>
-              </>
-            ) : null}
-
-            {rowIndex === 0 && resourceSpans[gIdx] > 0 && (
-              <>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.coordinator}</td>
-                <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + resourceSpans[gIdx]))}>{group.members}</td>
-              </>
-            )}
-            {rowIndex === 0 && basisSpans[gIdx] > 0 && (
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInResourceGroups(resourceGroups.slice(gIdx, gIdx + basisSpans[gIdx]))}>{group.basis}</td>
-            )}
-            {rowIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxGroupRows}>{group.remarks || "-"}</td>}
-          </tr>
-        );
-      });
+          {teamSpan > 0 && toolIdx === 0 && (
+            <>
+              <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.coordinator}</td>
+              <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
+            </>
+          )}
+          {basisSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + basisSpan))}>{item.basis}</td>
+          )}
+          {hasRemarks && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
+          )}
+        </tr>
+      ));
     });
   };
 
