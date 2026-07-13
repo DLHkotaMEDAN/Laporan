@@ -89,35 +89,6 @@ const formSchema = z.object({
   globalTools: z.array(toolSchema).optional().default([{ name: "", unit: 1, usage: "" }]),
   globalCoordinator: z.string().optional().default(""),
   globalMembers: z.coerce.number().optional().default(0),
-}).superRefine((data, ctx) => {
-  if (data.has_no_activity) {
-    if (!data.no_activity_remarks || data.no_activity_remarks.trim() === "") {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan bantuan wajib diisi", path: ['no_activity_remarks'] });
-    }
-    return;
-  }
-
-  const isGlobalStyle = data.category === "Tim Babat";
-  if (isGlobalStyle && (!data.globalCoordinator || data.globalCoordinator.trim() === "")) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Koordinator tim wajib diisi", path: ['globalCoordinator'] });
-  }
-
-  data.items.forEach((item, index) => {
-    if (!item.description || item.description.trim() === "") {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Detail kegiatan wajib diisi", path: ['items', index, 'description'] });
-    }
-    if (!item.location.street || item.location.street.trim() === "") {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Jalan wajib diisi", path: ['items', index, 'location', 'street'] });
-    }
-    if (!item.basis || item.basis.trim() === "") {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Dasar pengerjaan wajib diisi", path: ['items', index, 'basis'] });
-    }
-    if (data.category !== "Tim Siram" && data.category !== "Tim Babat") {
-      if (!item.location.subDistrict || item.location.subDistrict.trim() === "" || item.location.subDistrict === " ") {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Kecamatan wajib diisi", path: ['items', index, 'location', 'subDistrict'] });
-      }
-    }
-  });
 });
 
 const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPlan; isEditing?: boolean }) => {
