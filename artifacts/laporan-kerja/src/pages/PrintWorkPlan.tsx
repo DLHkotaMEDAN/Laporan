@@ -206,21 +206,21 @@ const PrintWorkPlan = () => {
                         <>
                           <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxRows}>
                             {allTools.map((t, i) => (
-                              <div key={i} className={i > 0 ? "mt-1 border-t border-black pt-1" : ""}>
+                              <div key={i} className={`h-16 flex items-center ${i > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>
                                 {t.name ? `• ${t.name}` : "-"}
                               </div>
                             ))}
                           </td>
                           <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>
                             {allTools.map((t, i) => (
-                              <div key={i} className={i > 0 ? "mt-1 border-t border-black pt-1" : ""}>
+                              <div key={i} className={`h-16 flex items-center justify-center ${i > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>
                                 {t.unit || "-"}
                               </div>
                             ))}
                           </td>
                           <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxRows}>
                             {allTools.map((t, i) => (
-                              <div key={i} className={i > 0 ? "mt-1 border-t border-black pt-1" : ""}>
+                              <div key={i} className={`h-16 flex items-center ${i > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>
                                 {t.usage || "-"}
                               </div>
                             ))}
@@ -268,21 +268,21 @@ const PrintWorkPlan = () => {
                       <>
                         <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
-                            <div key={ti} className={ti > 0 ? "mt-1 border-t border-black pt-1" : ""}>
+                            <div key={ti} className={`h-16 flex items-center ${ti > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>
                               {t.name ? `• ${t.name}` : "-"}
                             </div>
                           ))}
                         </td>
                         <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
-                            <div key={ti} className={ti > 0 ? "mt-1 border-t border-black pt-1" : ""}>
+                            <div key={ti} className={`h-16 flex items-center justify-center ${ti > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>
                               {t.unit || "-"}
                             </div>
                           ))}
                         </td>
                         <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
-                            <div key={ti} className={ti > 0 ? "mt-1 border-t border-black pt-1" : ""}>
+                            <div key={ti} className={`h-16 flex items-center ${ti > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>
                               {t.usage || "-"}
                             </div>
                           ))}
