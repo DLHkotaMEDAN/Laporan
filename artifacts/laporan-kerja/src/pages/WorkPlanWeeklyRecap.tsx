@@ -334,17 +334,17 @@ const WorkPlanWeeklyRecap = () => {
                             <>
                               <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
-                                  <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>
+                                  <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>
                                 )) : "-"}
                               </td>
                               <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
-                                  <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>{tool.unit || "-"}</div>
+                                  <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>
                                 )) : "-"}
                               </td>
                               <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
-                                  <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "mt-1 border-t border-black pt-1" : ""}`}>{tool.usage || "-"}</div>
+                                  <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>
                                 )) : "-"}
                               </td>
                             </>
