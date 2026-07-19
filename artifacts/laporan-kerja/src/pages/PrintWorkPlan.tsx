@@ -171,8 +171,8 @@ const PrintWorkPlan = () => {
               <th className="border-2 border-black p-1 w-[110px]">Alat Operasional</th>
               <th className="border-2 border-black p-1 w-[40px]">Unit</th>
               <th className="border-2 border-black p-1 w-[100px]">Kegunaan</th>
-              <th className="border-2 border-black p-1 w-[80px]">Koordinator</th>
               <th className="border-2 border-black p-1 w-[50px]">Personil</th>
+              <th className="border-2 border-black p-1 w-[80px]">Koordinator</th>
               <th className="border-2 border-black p-1 w-[100px]">Dasar Pengerjaan</th>
               {hasRemarks && <th className="border-2 border-black p-1 w-[100px]">Keterangan</th>}
             </tr>
@@ -239,8 +239,8 @@ const PrintWorkPlan = () => {
                               </div>
                             ))}
                           </td>
-                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{displayItems[0].coordinator}</td>
                           <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{displayItems[0].personnel.members} Org</td>
+                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>{displayItems[0].coordinator}</td>
                           <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxRows}>{displayItems[0].basis}</td>
                           {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxRows}>{displayItems[0].remarks || "-"}</td>}
                         </>
@@ -303,16 +303,16 @@ const PrintWorkPlan = () => {
                         </td>
                       </>
                     ) : null}
-                    {teamSpan > 0 && toolIdx === 0 && (
-                      <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
-                        {item.coordinator}
-                      </td>
-                    )}
                     {plan.category === "Tim Pohon" ? (
                       <td className="border-2 border-black p-1 text-center align-top">{tool.members ?? (toolIdx === 0 ? item.personnel.members : 0)} Org</td>
                     ) : teamSpan > 0 && toolIdx === 0 && (
                       <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
                         {item.personnel.members} Org
+                      </td>
+                    )}
+                    {teamSpan > 0 && toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>
+                        {item.coordinator}
                       </td>
                     )}
                     {basisSpan > 0 && toolIdx === 0 && (

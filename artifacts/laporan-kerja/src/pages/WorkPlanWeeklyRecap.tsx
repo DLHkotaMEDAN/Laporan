@@ -183,8 +183,8 @@ const WorkPlanWeeklyRecap = () => {
       <col style={{ width: '120px' }} />
       <col style={{ width: '30px' }} />
       <col style={{ width: '100px' }} />
-      <col style={{ width: '80px' }} />
       <col style={{ width: '40px' }} />
+      <col style={{ width: '80px' }} />
       <col style={{ width: '100px' }} />
       {hasRemarks && <col style={{ width: '100px' }} />}
     </colgroup>
@@ -296,8 +296,8 @@ const WorkPlanWeeklyRecap = () => {
                     <th className="border-2 border-black p-1">Alat Operasional</th>
                     <th className="border-2 border-black p-1">Unit</th>
                     <th className="border-2 border-black p-1">Kegunaan</th>
-                    <th className="border-2 border-black p-1">Koordinator</th>
                     <th className="border-2 border-black p-1">Pers</th>
+                    <th className="border-2 border-black p-1">Koordinator</th>
                     <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
                     {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
@@ -362,13 +362,13 @@ const WorkPlanWeeklyRecap = () => {
                             </>
                           )}
 
-                          {row.showTeam && (
-                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.coordinator}</td>
-                          )}
                           {row.plan.category === "Tim Pohon" ? (
                             <td className="border-2 border-black p-1 text-center align-top">{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
                           ) : row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
+                          )}
+                          {row.showTeam && (
+                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.coordinator}</td>
                           )}
                           {row.showBasis && (
                             <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.basisRows}>{item.basis}</td>
