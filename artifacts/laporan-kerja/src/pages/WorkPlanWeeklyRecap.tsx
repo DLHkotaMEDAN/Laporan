@@ -346,8 +346,8 @@ const WorkPlanWeeklyRecap = () => {
                           {row.plan.category === "Tim Pohon" ? row.showTools && (
                             <>
                               <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>
-                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>)}</td>
+                              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>
+                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>)}</td>
                             </>
                           ) : row.showTools && (
                             <>
@@ -356,29 +356,29 @@ const WorkPlanWeeklyRecap = () => {
                                   <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>
                                 )) : "-"}
                               </td>
-                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.toolRows}>
+                              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
                                   <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>
                                 )) : "-"}
                               </td>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>
+                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
-                                  <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>
+                                  <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>
                                 )) : "-"}
                               </td>
                             </>
                           )}
 
                           {row.plan.category === "Tim Pohon" ? row.showTools && (
-                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.members ?? 0}</div>)}</td>
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.members ?? 0}</div>)}</td>
                           ) : row.showTeam && (
-                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.personnel.members}</td>
                           )}
                           {row.showTeam && (
-                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.coordinator}</td>
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.coordinator}</td>
                           )}
                           {row.showBasis && (
-                            <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.basisRows}>{item.basis}</td>
+                            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.basisRows}>{item.basis}</td>
                           )}
                           {toolIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={row.itemToolsLength}>{item.remarks || "-"}</td>}
                         </tr>

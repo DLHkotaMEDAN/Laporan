@@ -148,8 +148,8 @@ const WorkPlanDailyRecap = () => {
           {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
             <>
               <td className="border-2 border-black p-1 align-top break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
-              <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
             </>
           ) : toolSpan > 0 && toolIdx === 0 && (
             <>
@@ -158,29 +158,29 @@ const WorkPlanDailyRecap = () => {
                   <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
                 )) : "-"}
               </td>
-              <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
                   <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>
                 )) : "-"}
               </td>
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>
+                  <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>
                 )) : "-"}
               </td>
             </>
           )}
 
           {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
           ) : teamSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
           )}
           {teamSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-top" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.coordinator}</td>
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.coordinator}</td>
           )}
           {basisSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
+            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
           {hasRemarks && toolIdx === 0 && (
             <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
