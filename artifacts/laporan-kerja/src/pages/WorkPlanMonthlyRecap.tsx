@@ -110,10 +110,12 @@ const WorkPlanMonthlyRecap = () => {
     const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
     const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
     const basisSpans = getSequentialSpans(displayItems, (item) => item.basis.trim());
-    const totalPlanRows = getRowsInWorkPlanItems(displayItems);
+    const isTreeLayout = plan.category === "Tim Pohon";
+    const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
+    const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
 
     return displayItems.flatMap((item, itemIdx) => {
-      const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }];
+      const toolsToRender = isTreeLayout ? [item.tools[0] || { name: "", unit: 0, usage: "", members: 0 }] : (item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }]);
       const descriptionSpan = descriptionSpans[itemIdx];
       const toolSpan = toolSpans[itemIdx];
       const teamSpan = teamSpans[itemIdx];
@@ -132,20 +134,20 @@ const WorkPlanMonthlyRecap = () => {
           )}
 
           {descriptionSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + descriptionSpan))}>{item.description}</td>
+            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>{item.description}</td>
           )}
 
           {toolIdx === 0 && (
-            <td className="border-2 border-black p-1 align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>
+            <td className="border-2 border-black p-1 align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
               {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
             </td>
           )}
 
-          {plan.category === "Tim Pohon" ? (
+          {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
             <>
-              <td className="border-2 border-black p-1 align-top break-words">{tool.name ? `• ${tool.name}` : "-"}</td>
-              <td className="border-2 border-black p-1 text-center align-top">{tool.unit || "-"}</td>
-              <td className="border-2 border-black p-1 align-top break-words">{tool.usage || "-"}</td>
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 align-top break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
             </>
           ) : toolSpan > 0 && toolIdx === 0 && (
             <>
@@ -167,19 +169,19 @@ const WorkPlanMonthlyRecap = () => {
             </>
           )}
 
-          {plan.category === "Tim Pohon" ? (
-            <td className="border-2 border-black p-1 text-center align-top">{tool.members ?? (toolIdx === 0 ? item.personnel.members : 0)}</td>
+          {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
           ) : teamSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
           )}
           {teamSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.coordinator}</td>
+            <td className="border-2 border-black p-1 text-center align-top" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.coordinator}</td>
           )}
           {basisSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + basisSpan))}>{item.basis}</td>
+            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
           {hasRemarks && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
+            <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
           )}
         </tr>
       ));

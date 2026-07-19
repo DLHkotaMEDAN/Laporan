@@ -126,7 +126,8 @@ const WorkPlanWeeklyRecap = () => {
         const basisSpans = getSequentialSpans(displayItems, (item) => item.basis.trim());
 
         displayItems.forEach((item, itemIndex) => {
-          const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "" }];
+          const isTreeLayout = plan.category === "Tim Pohon";
+          const toolsToRender = isTreeLayout ? [item.tools[0] || { name: "", unit: 0, usage: "", members: 0 }] : (item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "" }]);
           toolsToRender.forEach((tool, toolIndex) => {
             const descriptionSpan = descriptionSpans[itemIndex];
             const toolSpan = toolSpans[itemIndex];
@@ -137,18 +138,18 @@ const WorkPlanWeeklyRecap = () => {
               plan,
               type: "work",
               item,
-              itemToolsLength: Math.max(item.tools.length, 1),
+              itemToolsLength: isTreeLayout ? 1 : Math.max(item.tools.length, 1),
               tool,
               itemIndex,
               toolIndex,
               date: plan.date,
               showTools: toolIndex === 0 && toolSpan > 0,
-              toolRows: toolSpan > 0 ? getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + toolSpan)) : 0,
+              toolRows: toolSpan > 0 ? (isTreeLayout ? toolSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + toolSpan))) : 0,
               showTeam: toolIndex === 0 && teamSpan > 0,
-              teamRows: teamSpan > 0 ? getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + teamSpan)) : 0,
+              teamRows: teamSpan > 0 ? (isTreeLayout ? teamSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + teamSpan))) : 0,
               showBasis: toolIndex === 0 && basisSpan > 0,
-              basisRows: basisSpan > 0 ? getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + basisSpan)) : 0,
-              descriptionSpanRows: toolIndex === 0 && descriptionSpan > 0 ? getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + descriptionSpan)) : 0,
+              basisRows: basisSpan > 0 ? (isTreeLayout ? basisSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + basisSpan))) : 0,
+              descriptionSpanRows: toolIndex === 0 && descriptionSpan > 0 ? (isTreeLayout ? descriptionSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + descriptionSpan))) : 0,
             });
           });
         });
@@ -342,11 +343,11 @@ const WorkPlanWeeklyRecap = () => {
                             <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.itemToolsLength}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           )}
 
-                          {row.plan.category === "Tim Pohon" ? (
+                          {row.plan.category === "Tim Pohon" ? row.showTools && (
                             <>
-                              <td className="border-2 border-black p-1 align-top break-words">{row.tool.name ? `• ${row.tool.name}` : "-"}</td>
-                              <td className="border-2 border-black p-1 text-center align-top">{row.tool.unit || "-"}</td>
-                              <td className="border-2 border-black p-1 align-top break-words">{row.tool.usage || "-"}</td>
+                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>
+                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>
+                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>)}</td>
                             </>
                           ) : row.showTools && (
                             <>
@@ -368,8 +369,8 @@ const WorkPlanWeeklyRecap = () => {
                             </>
                           )}
 
-                          {row.plan.category === "Tim Pohon" ? (
-                            <td className="border-2 border-black p-1 text-center align-top">{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
+                          {row.plan.category === "Tim Pohon" ? row.showTools && (
+                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.members ?? 0}</div>)}</td>
                           ) : row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
                           )}
