@@ -119,7 +119,10 @@ const WorkPlanWeeklyRecap = () => {
       if (isNoActivity) {
         rows.push({ type: "noActivity", plan, date: plan.date });
       } else {
-        const displayItems = getUniqueWorkPlanItems(plan.items);
+        const displayItems = getUniqueWorkPlanItems(plan.items).map(item => plan.category === "Tim Pohon" ? {
+          ...item,
+          tools: item.tools.map((tool, toolIdx) => ({ ...tool, members: tool.members ?? (toolIdx === 0 ? item.personnel.members : 0) })).sort((a, b) => Number(a.members || 0) - Number(b.members || 0)),
+        } : item);
         const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
         const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
         const teamSpans = getSequentialSpans(displayItems, (item) => `${item.coordinator}|${item.personnel.members}`);
@@ -327,6 +330,8 @@ const WorkPlanWeeklyRecap = () => {
                       const { plan, item, toolIndex } = row;
                       const planRows = rows.filter(r => r.plan?.id === plan.id);
                       const isFirstInPlan = planRows[0] === row;
+                      const itemTools = item.tools.length > 0 ? item.tools : [row.tool];
+                      const toolMemberSpans = getSequentialSpans(itemTools, (tool) => String(tool.members || 0));
 
                       return (
                         <tr key={`row-${idx}`}>
@@ -362,8 +367,8 @@ const WorkPlanWeeklyRecap = () => {
                             </>
                           )}
 
-                          {row.plan.category === "Tim Pohon" ? (
-                            <td className="border-2 border-black p-1 text-center align-top">{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
+                          {row.plan.category === "Tim Pohon" ? toolMemberSpans[row.toolIndex] > 0 && (
+                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolMemberSpans[row.toolIndex]}>{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
                           ) : row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
                           )}

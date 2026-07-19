@@ -110,7 +110,10 @@ const WorkPlanDailyRecap = () => {
       );
     }
 
-    const displayItems = getUniqueWorkPlanItems(plan.items);
+    const displayItems = getUniqueWorkPlanItems(plan.items).map(item => plan.category === "Tim Pohon" ? {
+      ...item,
+      tools: item.tools.map((tool, toolIdx) => ({ ...tool, members: tool.members ?? (toolIdx === 0 ? item.personnel.members : 0) })).sort((a, b) => Number(a.members || 0) - Number(b.members || 0)),
+    } : item);
     const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
     const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
     const teamSpans = getSequentialSpans(displayItems, (item) => `${item.coordinator}|${item.personnel.members}`);
@@ -118,7 +121,8 @@ const WorkPlanDailyRecap = () => {
     const totalPlanRows = getRowsInWorkPlanItems(displayItems);
 
     return displayItems.flatMap((item, itemIdx) => {
-      const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "", members: 0 }];
+      const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }];
+      const toolMemberSpans = getSequentialSpans(toolsToRender, (tool) => String(tool.members || 0));
       const descriptionSpan = descriptionSpans[itemIdx];
       const toolSpan = toolSpans[itemIdx];
       const teamSpan = teamSpans[itemIdx];
@@ -163,8 +167,8 @@ const WorkPlanDailyRecap = () => {
             </>
           )}
 
-          {plan.category === "Tim Pohon" ? (
-            <td className="border-2 border-black p-1 text-center align-top">{tool.members ?? (toolIdx === 0 ? item.personnel.members : 0)}</td>
+          {plan.category === "Tim Pohon" ? toolMemberSpans[toolIdx] > 0 && (
+            <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolMemberSpans[toolIdx]}>{tool.members ?? (toolIdx === 0 ? item.personnel.members : 0)}</td>
           ) : teamSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
           )}
