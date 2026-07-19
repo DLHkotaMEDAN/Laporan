@@ -119,13 +119,10 @@ const WorkPlanWeeklyRecap = () => {
       if (isNoActivity) {
         rows.push({ type: "noActivity", plan, date: plan.date });
       } else {
-        const displayItems = getUniqueWorkPlanItems(plan.items).map(item => plan.category === "Tim Pohon" ? {
-          ...item,
-          tools: item.tools.map((tool, toolIdx) => ({ ...tool, members: tool.members ?? (toolIdx === 0 ? item.personnel.members : 0) })).sort((a, b) => Number(a.members || 0) - Number(b.members || 0)),
-        } : item);
+        const displayItems = getUniqueWorkPlanItems(plan.items);
         const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
         const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
-        const teamSpans = getSequentialSpans(displayItems, (item) => `${item.coordinator}|${item.personnel.members}`);
+        const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
         const basisSpans = getSequentialSpans(displayItems, (item) => item.basis.trim());
 
         displayItems.forEach((item, itemIndex) => {
@@ -330,8 +327,6 @@ const WorkPlanWeeklyRecap = () => {
                       const { plan, item, toolIndex } = row;
                       const planRows = rows.filter(r => r.plan?.id === plan.id);
                       const isFirstInPlan = planRows[0] === row;
-                      const itemTools = item.tools.length > 0 ? item.tools : [row.tool];
-                      const toolMemberSpans = getSequentialSpans(itemTools, (tool) => String(tool.members || 0));
 
                       return (
                         <tr key={`row-${idx}`}>
@@ -347,7 +342,13 @@ const WorkPlanWeeklyRecap = () => {
                             <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.itemToolsLength}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           )}
 
-                          {row.showTools && (
+                          {row.plan.category === "Tim Pohon" ? (
+                            <>
+                              <td className="border-2 border-black p-1 align-top break-words">{row.tool.name ? `• ${row.tool.name}` : "-"}</td>
+                              <td className="border-2 border-black p-1 text-center align-top">{row.tool.unit || "-"}</td>
+                              <td className="border-2 border-black p-1 align-top break-words">{row.tool.usage || "-"}</td>
+                            </>
+                          ) : row.showTools && (
                             <>
                               <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
@@ -367,8 +368,8 @@ const WorkPlanWeeklyRecap = () => {
                             </>
                           )}
 
-                          {row.plan.category === "Tim Pohon" ? toolMemberSpans[row.toolIndex] > 0 && (
-                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={toolMemberSpans[row.toolIndex]}>{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
+                          {row.plan.category === "Tim Pohon" ? (
+                            <td className="border-2 border-black p-1 text-center align-top">{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
                           ) : row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
                           )}
