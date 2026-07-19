@@ -7,7 +7,7 @@ import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -34,6 +34,7 @@ const LOGO_MEDAN_URL = getLogoUrl('logo-medan.jpg');
 const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
 type SignatureMode = "with-signature" | "without-signature";
+type LogoMode = "with-logo" | "without-logo";
 
 const WorkPlanDailyRecap = () => {
   const navigate = useNavigate();
@@ -44,6 +45,7 @@ const WorkPlanDailyRecap = () => {
   
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
+  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
   
   const printRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session;
@@ -227,6 +229,16 @@ const WorkPlanDailyRecap = () => {
           </div>
           
           <div className="flex items-center justify-end gap-2 border-t md:border-t-0 pt-3 md:pt-0">
+            <Select value={logoMode} onValueChange={(v) => setLogoMode(v as LogoMode)}>
+              <SelectTrigger className="w-[40px] md:w-[160px] bg-blue-50 border-blue-200 h-10 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
+                <div className="flex items-center gap-2"><Image size={16} /><span className="hidden md:inline"><SelectValue placeholder="Logo" /></span></div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="with-logo">Dengan Logo</SelectItem>
+                <SelectItem value="without-logo">Tanpa Logo</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
               <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
                 <div className="flex items-center gap-2">
@@ -277,13 +289,13 @@ const WorkPlanDailyRecap = () => {
 
       <div ref={printRef} className="print-area bg-white p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
         <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
-          <img src={LOGO_MEDAN_URL} className="h-20 w-20 object-contain" alt="Logo Medan" />
+          {logoMode === "with-logo" && <img src={LOGO_MEDAN_URL} className="h-20 w-20 object-contain" alt="Logo Medan" />}
           <div className="text-center">
             <h1 className="text-xl font-bold uppercase">Pemerintah Kota Medan</h1>
             <h2 className="text-2xl font-black uppercase">Dinas Lingkungan Hidup</h2>
             <p className="text-xs italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p>
           </div>
-          <img src={LOGO_DLH_URL} className="h-20 w-20 object-contain" alt="Logo DLH" />
+          {logoMode === "with-logo" && <img src={LOGO_DLH_URL} className="h-20 w-20 object-contain" alt="Logo DLH" />}
         </div>
 
         <div className="text-center mb-8">

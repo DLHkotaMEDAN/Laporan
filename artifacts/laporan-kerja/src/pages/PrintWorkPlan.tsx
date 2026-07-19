@@ -5,7 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { WorkPlan, WorkPlanItem } from '@/types/workPlan';
 import { workPlanService } from '@/services/workPlanService';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Printer, Edit, Trash2, Image } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
@@ -25,12 +26,15 @@ const getLogoUrl = (fileName: string) => {
 const LOGO_MEDAN_URL = getLogoUrl('logo-medan.jpg');
 const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
+type LogoMode = "with-logo" | "without-logo";
+
 const PrintWorkPlan = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
   const [plan, setPlan] = useState<WorkPlan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
 
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
@@ -99,6 +103,16 @@ const PrintWorkPlan = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            <Select value={logoMode} onValueChange={(v) => setLogoMode(v as LogoMode)}>
+              <SelectTrigger className="w-[40px] md:w-[160px] bg-blue-50 border-blue-200 h-9 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
+                <div className="flex items-center gap-2"><Image size={16} /><span className="hidden md:inline"><SelectValue placeholder="Logo" /></span></div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="with-logo">Dengan Logo</SelectItem>
+                <SelectItem value="without-logo">Tanpa Logo</SelectItem>
+              </SelectContent>
+            </Select>
+
             {isLoggedIn && !isPimpinan && (
               <>
                 <Button 
@@ -133,13 +147,13 @@ const PrintWorkPlan = () => {
 
       <div className="print-container bg-white p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
         <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
-          <img src={LOGO_MEDAN_URL} className="h-20 w-20 object-contain" alt="Logo Medan" />
+          {logoMode === "with-logo" && <img src={LOGO_MEDAN_URL} className="h-20 w-20 object-contain" alt="Logo Medan" />}
           <div className="text-center">
             <h1 className="text-xl font-bold uppercase">Pemerintah Kota Medan</h1>
             <h2 className="text-2xl font-black uppercase">Dinas Lingkungan Hidup</h2>
             <p className="text-xs italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p>
           </div>
-          <img src={LOGO_DLH_URL} className="h-20 w-20 object-contain" alt="Logo DLH" />
+          {logoMode === "with-logo" && <img src={LOGO_DLH_URL} className="h-20 w-20 object-contain" alt="Logo DLH" />}
         </div>
 
         <div className="text-center mb-6">
