@@ -94,9 +94,9 @@ const WorkPlanMonthlyRecap = () => {
     if (isNoActivity) {
       return (
         <tr key={plan.id}>
-          <td className="border-2 border-black p-1 text-center align-top font-bold">{pIdx + 1}</td>
+          <td className="border-2 border-black p-1 text-center align-middle font-bold">{pIdx + 1}</td>
           <td className="border-2 border-black p-1 text-center align-top text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
-          <td className="border-2 border-black p-1 text-center font-bold align-top">{plan.category}</td>
+          <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
           </td>
@@ -125,20 +125,20 @@ const WorkPlanMonthlyRecap = () => {
         <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
           {itemIdx === 0 && toolIdx === 0 && (
             <>
-              <td className="border-2 border-black p-1 text-center align-top font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
+              <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
               <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={totalPlanRows}>
                 {format(parseISO(plan.date), 'dd/MM/yy')}
               </td>
-              <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={totalPlanRows}>{plan.category}</td>
+              <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>
             </>
           )}
 
           {descriptionSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 align-top break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>{item.description}</td>
+            <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>{item.description}</td>
           )}
 
           {toolIdx === 0 && (
-            <td className="border-2 border-black p-1 align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
+            <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
               {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
             </td>
           )}
@@ -372,6 +372,7 @@ const WorkPlanMonthlyRecap = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster { 

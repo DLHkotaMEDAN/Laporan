@@ -201,19 +201,19 @@ const PrintWorkPlan = () => {
                     <tr key={`global-${rowIndex}`}>
                       {rowIndex === 0 && (
                         <>
-                          <td className="border-2 border-black p-1 text-center align-top" rowSpan={maxRows}>1</td>
-                          <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={maxRows}>{plan.category}</td>
+                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>1</td>
+                          <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={maxRows}>{plan.category}</td>
                         </>
                       )}
                       
                       {item && globalDescriptionSpans[rowIndex] > 0 && (
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={rowIndex + globalDescriptionSpans[rowIndex] >= allItems.length ? maxRows - rowIndex : globalDescriptionSpans[rowIndex]}>
+                        <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={rowIndex + globalDescriptionSpans[rowIndex] >= allItems.length ? maxRows - rowIndex : globalDescriptionSpans[rowIndex]}>
                           {item.description}
                         </td>
                       )}
 
                       {item && (
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={rowIndex === allItems.length - 1 ? maxRows - rowIndex : 1}>
+                        <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={rowIndex === allItems.length - 1 ? maxRows - rowIndex : 1}>
                           {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
                         </td>
                       )}
@@ -263,19 +263,19 @@ const PrintWorkPlan = () => {
                   <tr key={`${itemIdx}-${toolIdx}`}>
                     {itemIdx === 0 && toolIdx === 0 && (
                       <>
-                        <td className="border-2 border-black p-1 text-center align-top" rowSpan={isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems)}>1</td>
-                        <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems)}>{plan.category}</td>
+                        <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems)}>1</td>
+                        <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems)}>{plan.category}</td>
                       </>
                     )}
                     
                     {descriptionSpan > 0 && toolIdx === 0 && (
-                      <td className="border-2 border-black p-1 align-top break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>
+                      <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>
                         {item.description}
                       </td>
                     )}
 
                     {toolIdx === 0 && (
-                      <td className="border-2 border-black p-1 align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
+                      <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
                         {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
                       </td>
                     )}
@@ -353,6 +353,7 @@ const PrintWorkPlan = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .print-container td > div.border-t.border-black { border-top-width: 2px !important; }
         @media print {
           body { background: white !important; }
           .no-print { display: none !important; }

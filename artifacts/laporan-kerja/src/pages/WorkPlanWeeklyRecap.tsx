@@ -316,9 +316,9 @@ const WorkPlanWeeklyRecap = () => {
                       if (row.type === "noActivity") {
                         return (
                           <tr key={`no-act-${idx}`}>
-                            {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
+                            {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
                             {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
-                            <td className="border-2 border-black p-1 text-center font-bold">{row.plan.category}</td>
+                            <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
                             <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
                             {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words">{row.plan.items[0]?.remarks || "-"}</td>}
                           </tr>
@@ -331,16 +331,16 @@ const WorkPlanWeeklyRecap = () => {
 
                       return (
                         <tr key={`row-${idx}`}>
-                          {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
+                          {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
                           {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
-                          {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-top" rowSpan={planRows.length}>{plan.category}</td>}
+                          {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
                           
                           {row.descriptionSpanRows > 0 && (
-                            <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.descriptionSpanRows}>{item.description}</td>
+                            <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={row.descriptionSpanRows}>{item.description}</td>
                           )}
 
                           {toolIndex === 0 && (
-                            <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.itemToolsLength}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
+                            <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={row.itemToolsLength}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           )}
 
                           {row.plan.category === "Tim Pohon" ? row.showTools && (
@@ -428,6 +428,7 @@ const WorkPlanWeeklyRecap = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster { 
