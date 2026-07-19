@@ -6,6 +6,7 @@ export interface WorkPlanTool {
   name: string;
   unit: number;
   usage: string;
+  members?: number;
 }
 
 export interface WorkPlanItem {

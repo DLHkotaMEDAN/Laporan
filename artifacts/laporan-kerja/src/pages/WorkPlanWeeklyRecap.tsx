@@ -363,10 +363,12 @@ const WorkPlanWeeklyRecap = () => {
                           )}
 
                           {row.showTeam && (
-                            <>
-                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.coordinator}</td>
-                              <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
-                            </>
+                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.coordinator}</td>
+                          )}
+                          {row.plan.category === "Tim Pohon" ? (
+                            <td className="border-2 border-black p-1 text-center align-top">{row.tool.members ?? (row.toolIndex === 0 ? item.personnel.members : 0)}</td>
+                          ) : row.showTeam && (
+                            <td className="border-2 border-black p-1 text-center align-top" rowSpan={row.teamRows}>{item.personnel.members}</td>
                           )}
                           {row.showBasis && (
                             <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.basisRows}>{item.basis}</td>

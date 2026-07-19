@@ -118,7 +118,7 @@ const WorkPlanDailyRecap = () => {
     const totalPlanRows = getRowsInWorkPlanItems(displayItems);
 
     return displayItems.flatMap((item, itemIdx) => {
-      const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "" }];
+      const toolsToRender = item.tools.length > 0 ? item.tools : [{ name: "", unit: "", usage: "", members: 0 }];
       const descriptionSpan = descriptionSpans[itemIdx];
       const toolSpan = toolSpans[itemIdx];
       const teamSpan = teamSpans[itemIdx];
@@ -164,10 +164,12 @@ const WorkPlanDailyRecap = () => {
           )}
 
           {teamSpan > 0 && toolIdx === 0 && (
-            <>
-              <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.coordinator}</td>
-              <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
-            </>
+            <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.coordinator}</td>
+          )}
+          {plan.category === "Tim Pohon" ? (
+            <td className="border-2 border-black p-1 text-center align-top">{tool.members ?? (toolIdx === 0 ? item.personnel.members : 0)}</td>
+          ) : teamSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-top" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
           )}
           {basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + basisSpan))}>{item.basis}</td>

@@ -19,6 +19,7 @@ const getUniqueTools = (tools: WorkPlanItem["tools"]) => {
       name: normalizeText(tool.name),
       unit: Number(tool.unit || 0),
       usage: normalizeText(tool.usage),
+      members: Number(tool.members || 0),
     });
 
     if (seen.has(key)) return false;
@@ -45,6 +46,7 @@ export const getUniqueWorkPlanItems = (items: WorkPlanItem[]) => {
         name: normalizeText(tool.name),
         unit: Number(tool.unit || 0),
         usage: normalizeText(tool.usage),
+        members: Number(tool.members || 0),
       })),
       coordinator: normalizeText(item.coordinator),
       members: Number(item.personnel?.members || 0),
