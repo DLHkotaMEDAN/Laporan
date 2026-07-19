@@ -253,7 +253,13 @@ const PrintWorkPlan = () => {
               })()
             ) : (
               displayItems.flatMap((item, itemIdx) => {
-                const toolsToRender = isTreeLayout ? [item.tools[0] || { name: "", unit: 0, usage: "", members: 0 }] : (item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }]);
+                let toolGroupStart = itemIdx;
+                while (toolGroupStart > 0 && toolSpans[toolGroupStart] === 0) toolGroupStart--;
+                const sharedTreeTools = displayItems[toolGroupStart]?.tools || [];
+                const treeToolOffset = itemIdx - toolGroupStart;
+                const alignTreeTools = isTreeLayout && toolSpans[toolGroupStart] === sharedTreeTools.length && toolSpans[toolGroupStart] > 1;
+                const alignedTreeTool = alignTreeTools ? sharedTreeTools[treeToolOffset] : undefined;
+                const toolsToRender = isTreeLayout ? [alignedTreeTool || item.tools[0] || { name: "", unit: 0, usage: "", members: 0 }] : (item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }]);
                 const descriptionSpan = descriptionSpans[itemIdx];
                 const toolSpan = toolSpans[itemIdx];
                 const teamSpan = teamSpans[itemIdx];
@@ -280,13 +286,19 @@ const PrintWorkPlan = () => {
                       </td>
                     )}
 
-                    {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
+                    {isTreeLayout ? (alignTreeTools ? (
+                      <>
+                        <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>
+                        <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>
+                        <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.usage || "-"}</td>
+                      </>
+                    ) : toolSpan > 0 && toolIdx === 0 ? (
                       <>
                         <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
                         <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
                         <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
                       </>
-                    ) : toolSpan > 0 && toolIdx === 0 ? (
+                    ) : null) : toolSpan > 0 && toolIdx === 0 ? (
                       <>
                         <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
@@ -311,9 +323,11 @@ const PrintWorkPlan = () => {
                         </td>
                       </>
                     ) : null}
-                    {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
+                    {isTreeLayout ? (alignTreeTools ? (
+                      <td className="border-2 border-black p-1 text-center align-middle">{tool.members ?? 0} Org</td>
+                    ) : toolSpan > 0 && toolIdx === 0 ? (
                       <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0} Org</div>)}</td>
-                    ) : teamSpan > 0 && toolIdx === 0 && (
+                    ) : null) : teamSpan > 0 && toolIdx === 0 && (
                       <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>
                         {item.personnel.members} Org
                       </td>
