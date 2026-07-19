@@ -265,7 +265,7 @@ const WorkPlanWeeklyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA WILAYAH 4 DLH MEDAN KOTA</h3>
+          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA WILAYAH 4 MEDAN KOTA</h3>
           <p className="text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>
         </div>
 

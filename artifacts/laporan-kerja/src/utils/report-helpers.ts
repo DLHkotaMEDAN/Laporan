@@ -6,12 +6,12 @@ export const getUnitByCategory = (category: ReportCategory | string): string => 
 };
 
 export const categoryOrder = [
-  "Tim Pohon",
-  "Tim Siram",
-  "Tim Babat",
   "Taman Kota",
+  "Taman Amplas",
   "Taman Area",
-  "Taman Amplas"
+  "Tim Babat",
+  "Tim Siram",
+  "Tim Pohon"
 ];
 
 export const sortByCategory = (a: string, b: string) => {

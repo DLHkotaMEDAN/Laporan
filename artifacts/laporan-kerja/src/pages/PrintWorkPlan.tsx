@@ -143,7 +143,7 @@ const PrintWorkPlan = () => {
         </div>
 
         <div className="text-center mb-6">
-          <h3 className="text-lg font-bold underline uppercase">RENCANA KERJA WILAYAH 4 DLH MEDAN KOTA</h3>
+          <h3 className="text-lg font-bold underline uppercase">RENCANA KERJA WILAYAH 4 MEDAN KOTA</h3>
           <p className="font-bold">Tanggal: {new Date(plan.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
 
