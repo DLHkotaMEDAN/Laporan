@@ -105,7 +105,7 @@ const WorkPlanDailyRecap = () => {
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
           </td>
-          {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words">{plan.items[0]?.remarks || "-"}</td>}
+          {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
         </tr>
       );
     }
@@ -147,15 +147,15 @@ const WorkPlanDailyRecap = () => {
 
           {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
             <>
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
               <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
             </>
           ) : toolSpan > 0 && toolIdx === 0 && (
             <>
-              <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
+                  <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
                 )) : "-"}
               </td>
               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
@@ -183,7 +183,7 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
           {hasRemarks && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
+            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
           )}
         </tr>
       ));
@@ -311,7 +311,7 @@ const WorkPlanDailyRecap = () => {
         <div className="text-center mb-8">
           <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA WILAYAH 4 MEDAN KOTA</h3>
           <p className="text-lg font-bold">
-            Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
+            Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
           </p>
         </div>
 

@@ -160,7 +160,7 @@ const PrintWorkPlan = () => {
 
         <div className="text-center mb-6">
           <h3 className="text-lg font-bold underline uppercase">RENCANA KERJA WILAYAH 4 MEDAN KOTA</h3>
-          <p className="font-bold">Tanggal: {new Date(plan.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <p className="font-bold">Tanggal: {new Date(plan.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
 
         <table className="w-full border-collapse border-2 border-black text-[10px] table-fixed">
@@ -187,7 +187,7 @@ const PrintWorkPlan = () => {
                 <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
                   TIDAK ADA RENCANA KERJA/ KEGIATAN
                 </td>
-                {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words">{plan.items[0]?.remarks || "-"}</td>}
+                {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
               </tr>
             ) : isGlobalStyle ? (
               (() => {
@@ -220,9 +220,9 @@ const PrintWorkPlan = () => {
 
                       {rowIndex === 0 && (
                         <>
-                          <td className="border-2 border-black p-1 align-top break-words" rowSpan={maxRows}>
+                          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={maxRows}>
                             {allTools.map((t, i) => (
-                              <div key={i} className={`h-16 flex items-center ${i > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
+                              <div key={i} className={`h-16 flex items-center justify-center text-center ${i > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
                                 {t.name ? `• ${t.name}` : "-"}
                               </div>
                             ))}
@@ -244,7 +244,7 @@ const PrintWorkPlan = () => {
                           <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].personnel.members} Org</td>
                           <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].coordinator}</td>
                           <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].basis}</td>
-                          {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={maxRows}>{displayItems[0].remarks || "-"}</td>}
+                          {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].remarks || "-"}</td>}
                         </>
                       )}
                     </tr>
@@ -282,15 +282,15 @@ const PrintWorkPlan = () => {
 
                     {isTreeLayout ? toolSpan > 0 && toolIdx === 0 && (
                       <>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
+                        <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
                         <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
                         <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
                       </>
                     ) : toolSpan > 0 && toolIdx === 0 ? (
                       <>
-                        <td className="border-2 border-black p-1 align-top break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                        <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                           {item.tools.map((t, ti) => (
-                            <div key={ti} className={`h-16 flex items-center ${ti > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
+                            <div key={ti} className={`h-16 flex items-center justify-center text-center ${ti > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
                               {t.name ? `• ${t.name}` : "-"}
                             </div>
                           ))}
@@ -331,7 +331,7 @@ const PrintWorkPlan = () => {
                       </>
                     )}
                     {hasRemarks && toolIdx === 0 && (
-                      <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
+                      <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
                         {item.remarks || "-"}
                       </td>
                     )}

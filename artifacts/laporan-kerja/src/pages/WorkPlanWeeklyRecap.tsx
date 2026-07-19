@@ -320,7 +320,7 @@ const WorkPlanWeeklyRecap = () => {
                             {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                             <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
                             <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
-                            {hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words">{row.plan.items[0]?.remarks || "-"}</td>}
+                            {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{row.plan.items[0]?.remarks || "-"}</td>}
                           </tr>
                         );
                       }
@@ -345,15 +345,15 @@ const WorkPlanWeeklyRecap = () => {
 
                           {row.plan.category === "Tim Pohon" ? row.showTools && (
                             <>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>
+                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>
                               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>
                               <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>)}</td>
                             </>
                           ) : row.showTools && (
                             <>
-                              <td className="border-2 border-black p-1 align-top break-words" rowSpan={row.toolRows}>
+                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
-                                  <div key={toolIdx} className={`h-16 flex items-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>
+                                  <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>
                                 )) : "-"}
                               </td>
                               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>
@@ -380,7 +380,7 @@ const WorkPlanWeeklyRecap = () => {
                           {row.showBasis && (
                             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.basisRows}>{item.basis}</td>
                           )}
-                          {toolIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic align-top break-words" rowSpan={row.itemToolsLength}>{item.remarks || "-"}</td>}
+                          {toolIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.itemToolsLength}>{item.remarks || "-"}</td>}
                         </tr>
                       );
                     });
