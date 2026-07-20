@@ -34,7 +34,7 @@ const PrintWorkPlan = () => {
   const { session, profile } = useAuth();
   const [plan, setPlan] = useState<WorkPlan | null>(null);
   const [loading, setLoading] = useState(true);
-  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
+  const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
 
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');

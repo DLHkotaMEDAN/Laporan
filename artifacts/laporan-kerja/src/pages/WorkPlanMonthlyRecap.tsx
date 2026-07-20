@@ -51,8 +51,8 @@ const WorkPlanMonthlyRecap = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-  const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
-  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
+  const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
 
   const isLoggedIn = !!session;
 

@@ -46,8 +46,8 @@ const WorkPlanDailyRecap = () => {
   const [loading, setLoading] = useState(true);
   
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
-  const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
-  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
+  const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   
   const printRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session;

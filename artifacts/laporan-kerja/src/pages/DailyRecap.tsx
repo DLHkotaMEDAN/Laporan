@@ -63,8 +63,8 @@ const DailyRecap = () => {
   const [isDriveDialogOpen, setIsDriveDialogOpen] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
-  const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
-  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
+  const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasSetDefaults, setHasSetDefaults] = useState(false);
 

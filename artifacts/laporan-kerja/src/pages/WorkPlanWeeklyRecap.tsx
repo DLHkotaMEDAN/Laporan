@@ -70,8 +70,8 @@ const WorkPlanWeeklyRecap = () => {
   const [plans, setPlans] = useState<WorkPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
-  const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
-  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
+  const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
