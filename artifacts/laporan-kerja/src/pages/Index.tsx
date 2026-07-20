@@ -46,6 +46,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const categories: string[] = [
   "semua", "Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"
@@ -79,6 +87,8 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("reports");
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [isDailyRecapDateOpen, setIsDailyRecapDateOpen] = useState(false);
+  const [dailyRecapDate, setDailyRecapDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("semua");
@@ -572,7 +582,7 @@ const Index = () => {
                       <DropdownMenuItem onClick={() => navigate(`/print-rekap?category=semua`)} className="py-3 cursor-pointer">
                         <Printer className="mr-3 h-4 w-4 text-blue-600" /> Cetak Harian Laporan
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/daily-rekap?categories=semua&date=semua`)} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onSelect={() => setIsDailyRecapDateOpen(true)} className="py-3 cursor-pointer">
                         <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Harian Laporan
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate(`/weekly-rekap?categories=semua&date=${new Date().toISOString().split('T')[0]}`)} className="py-3 cursor-pointer">
@@ -940,6 +950,43 @@ const Index = () => {
         onClose={() => setIsTrashOpen(false)} 
         onRefresh={loadData} 
       />
+
+      <Dialog open={isDailyRecapDateOpen} onOpenChange={setIsDailyRecapDateOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-green-600" /> Pilih Tanggal Rekap Harian
+            </DialogTitle>
+            <DialogDescription>
+              Tentukan tanggal laporan yang ingin ditampilkan dan dicetak.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <label htmlFor="daily-recap-date" className="text-sm font-semibold text-slate-700">Tanggal Laporan</label>
+            <Input
+              id="daily-recap-date"
+              type="date"
+              value={dailyRecapDate}
+              onChange={(event) => setDailyRecapDate(event.target.value)}
+              className="h-11"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setIsDailyRecapDateOpen(false)}>Batal</Button>
+            <Button
+              type="button"
+              disabled={!dailyRecapDate}
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                setIsDailyRecapDateOpen(false);
+                navigate(`/daily-rekap?categories=semua&date=${dailyRecapDate}`);
+              }}
+            >
+              <Printer className="mr-2 h-4 w-4" /> Buka Rekap Harian
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
