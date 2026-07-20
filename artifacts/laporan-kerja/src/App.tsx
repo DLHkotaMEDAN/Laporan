@@ -62,7 +62,7 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
 
-  const isAdminHarian = profile?.role === 'admin_harian' || session.user.email === 'sakinah@gmail.com';
+  const isAdminHarian = profile?.role === 'admin_harian' || session.user.email === 'sakinah@gmail.com' || session.user.email === 'admin.laporan@gmail.com';
   if (isAdminHarian) return <Navigate to="/" replace />;
 
   return <ProtectedRoute>{children}</ProtectedRoute>;

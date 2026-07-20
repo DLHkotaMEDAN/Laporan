@@ -9,7 +9,7 @@ import {
   LogOut, LogIn, FilterX, Database, ChevronDown,
   Table, ClipboardList, CalendarDays, Fuel, Trash2, Loader2, UserCircle, Bell,
   ArrowUpDown, ChevronUp, Edit, Eye, EyeOff, Leaf, MapPin, ShieldCheck,
-  Activity, Clock3
+  Activity, Clock3, Plus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Report } from '@/types/report';
@@ -94,7 +94,7 @@ const Index = () => {
   const isAdminBbm = profile?.role === 'admin_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
+  const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
   const showExecutiveHero = isAdmin;
@@ -512,7 +512,7 @@ const Index = () => {
           />
         )}
 
-        {(showExecutiveHero || isAdminHarian) && (
+        {showExecutiveHero && (
           <QuickActions
             isPimpinan={isPimpinan}
             isLoggedIn={isLoggedIn}
@@ -551,6 +551,15 @@ const Index = () => {
             </TabsList>
 
             <div className="flex items-center gap-2 px-2">
+              {activeTab === 'reports' && isAdminHarian && (
+                <Button
+                  type="button"
+                  onClick={() => navigate('/create')}
+                  className="h-10 rounded-xl bg-blue-600 px-4 font-bold text-white hover:bg-blue-700"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Tambah Laporan Harian
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700 border-slate-200 h-10 px-4 font-bold rounded-xl">
