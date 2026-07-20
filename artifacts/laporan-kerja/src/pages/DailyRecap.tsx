@@ -68,7 +68,6 @@ const DailyRecap = () => {
   const [hasSetDefaults, setHasSetDefaults] = useState(false);
 
   const [visibleColumns, setVisibleColumns] = useState({
-    date: true,
     category: true,
     description: true,
     location: true,
@@ -179,7 +178,7 @@ const DailyRecap = () => {
         periodLabel: `Tanggal: ${selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
         logoMedanUrl: logoMode === "with-logo" ? LOGO_MEDAN_URL : "",
         logoDlhUrl: logoMode === "with-logo" ? LOGO_DLH_URL : "",
-        visibleColumns,
+        visibleColumns: { ...visibleColumns, date: false },
         fuelMode: visibleColumns.fuel ? 'daily' : 'none',
         signatureMode,
         showTiurmaida,
@@ -214,7 +213,6 @@ const DailyRecap = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Rekap Harian');
       const columns: any[] = [{ header: 'No', key: 'no', width: 5 }];
-      if (visibleColumns.date) columns.push({ header: 'Hari / Tgl', key: 'date', width: 15 });
       if (visibleColumns.category) columns.push({ header: 'Tim/Kec.', key: 'cat', width: 15 });
       if (visibleColumns.description) columns.push({ header: 'Uraian Kegiatan', key: 'desc', width: 30 });
       if (visibleColumns.location) columns.push({ header: 'Lokasi', key: 'loc', width: 40 });
@@ -262,7 +260,6 @@ const DailyRecap = () => {
           const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
           const rowData: any = {
             no: i === 0 ? displayIdx : '',
-            date: i === 0 ? new Date(report.date).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short' }) : '',
             cat: i === 0 ? report.category : '',
             desc: task.description,
             loc: `${task.location.street}, ${villages}`,
@@ -299,8 +296,7 @@ const DailyRecap = () => {
               } catch (e) { console.error(e); }
             };
             // Hitung index kolom foto secara dinamis
-            let photoStartCol = 6; // Default jika date, cat, desc, loc ada
-            if (!visibleColumns.date) photoStartCol--;
+            let photoStartCol = 5; // Default jika kategori, uraian, dan lokasi ada
             if (!visibleColumns.category) photoStartCol--;
             if (!visibleColumns.description) photoStartCol--;
             if (!visibleColumns.location) photoStartCol--;
@@ -354,11 +350,6 @@ const DailyRecap = () => {
               <td className="border-2 border-black p-2 text-center align-top font-bold" rowSpan={report.tasks.length}>
                 {reportIdx + 1}
               </td>
-              {visibleColumns.date && (
-                <td className="border-2 border-black p-2 text-center align-top font-medium" rowSpan={report.tasks.length}>
-                  {new Date(report.date).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short' })}
-                </td>
-              )}
               {visibleColumns.category && (
                 <td className="border-2 border-black p-2 text-center align-top font-bold text-blue-700" rowSpan={report.tasks.length}>
                   {report.category}
@@ -415,7 +406,6 @@ const DailyRecap = () => {
   const getColGroup = () => {
     const cols = [];
     cols.push(<col key="no" style={{ width: '35px' }} />);
-    if (visibleColumns.date) cols.push(<col key="date" style={{ width: '70px' }} />);
     if (visibleColumns.category) cols.push(<col key="cat" style={{ width: '75px' }} />);
     if (visibleColumns.description) cols.push(<col key="desc" style={{ width: '105px' }} />);
     if (visibleColumns.location) cols.push(<col key="loc" style={{ width: '110px' }} />);
@@ -448,7 +438,6 @@ const DailyRecap = () => {
       <thead className="pdf-table-header">
         <tr style={{ height: '40px' }}>
           <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">No</div></th>
-          {visibleColumns.date && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Hari / Tgl</div></th>}
           {visibleColumns.category && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Tim/Kec.</div></th>}
           {visibleColumns.description && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Uraian Kegiatan</div></th>}
           {visibleColumns.location && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Lokasi</div></th>}
@@ -480,7 +469,6 @@ const DailyRecap = () => {
 
   const getTotalColSpan = () => {
     let span = 1; // No
-    if (visibleColumns.date) span++;
     if (visibleColumns.category) span++;
     if (visibleColumns.description) span++;
     if (visibleColumns.location) span++;
@@ -565,7 +553,6 @@ const DailyRecap = () => {
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tampilkan Kolom:</p>
                   <div className="space-y-2">
                     {Object.entries({
-                      date: "Hari / Tgl",
                       category: "Tim/Kec.",
                       description: "Uraian Kegiatan",
                       location: "Lokasi",
