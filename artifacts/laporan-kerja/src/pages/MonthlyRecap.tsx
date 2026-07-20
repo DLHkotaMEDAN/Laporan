@@ -109,7 +109,7 @@ const MonthlyRecap = () => {
         const matchMonth = selectedMonth === "semua" || m === selectedMonth;
         const matchYear = selectedYear === "semua" || y === selectedYear;
         let matchCategory = false;
-        if (!isLoggedIn || profile?.role === 'admin' || isPimpinan) {
+        if (!isLoggedIn || profile?.role === 'admin' || isPimpinan || isAdminHarian) {
           matchCategory = selectedCategories.includes('semua') || selectedCategories.includes(r.category);
         } else {
           matchCategory = r.category === profile?.category;
