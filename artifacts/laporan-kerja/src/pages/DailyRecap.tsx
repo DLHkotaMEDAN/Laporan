@@ -51,6 +51,7 @@ const LOGO_MEDAN_URL = getLogoUrl('logo-medan.jpg');
 const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
 type SignatureMode = "with-signature" | "without-signature";
+type LogoMode = "with-logo" | "without-logo";
 
 const DailyRecap = () => {
   const navigate = useNavigate();
@@ -62,6 +63,7 @@ const DailyRecap = () => {
   
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
+  const [logoMode, setLogoMode] = useState<LogoMode>("with-logo");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasSetDefaults, setHasSetDefaults] = useState(false);
 
@@ -175,8 +177,8 @@ const DailyRecap = () => {
         reports,
         kind: 'daily',
         periodLabel: `Tanggal: ${selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
-        logoMedanUrl: LOGO_MEDAN_URL,
-        logoDlhUrl: LOGO_DLH_URL,
+        logoMedanUrl: logoMode === "with-logo" ? LOGO_MEDAN_URL : "",
+        logoDlhUrl: logoMode === "with-logo" ? LOGO_DLH_URL : "",
         visibleColumns,
         fuelMode: visibleColumns.fuel ? 'daily' : 'none',
         signatureMode,
@@ -333,8 +335,8 @@ const DailyRecap = () => {
   const showTiurmaida = selectedCategories.includes('semua') || selectedCategories.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = selectedCategories.includes('semua') || selectedCategories.includes("Tim Pohon");
 
-  const headerStyle = { backgroundColor: '#d9ead3', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
-  const subHeaderStyle = { backgroundColor: '#d9ead3', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
+  const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
+  const subHeaderStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
 
   const totalPertamax = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.pertamax || 0), 0) || 0), 0), 0);
   const totalPertamaxLtr = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.pertamax_liter || 0), 0) || 0), 0), 0);
@@ -590,6 +592,19 @@ const DailyRecap = () => {
               </PopoverContent>
             </Popover>
 
+            <Select value={logoMode} onValueChange={(v) => setLogoMode(v as LogoMode)}>
+              <SelectTrigger className="w-[40px] md:w-[160px] bg-green-50 border-green-200 h-10 text-green-700 font-medium p-0 md:px-3 flex justify-center">
+                <div className="flex items-center gap-2">
+                  <ImageIcon size={16} />
+                  <span className="hidden md:inline"><SelectValue placeholder="Logo" /></span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="with-logo"><div className="flex items-center gap-2"><ImageIcon size={14} /> Dengan Logo</div></SelectItem>
+                <SelectItem value="without-logo"><div className="flex items-center gap-2"><ImageOff size={14} /> Tanpa Logo</div></SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
               <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
                 <div className="flex items-center gap-2">
@@ -650,13 +665,13 @@ const DailyRecap = () => {
       <div ref={printRef} className="print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
         <div className="pdf-header">
           <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
-            <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_MEDAN_URL} className="max-h-full max-w-full object-contain" alt="Logo Medan" /></div>
+            {logoMode === "with-logo" && <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_MEDAN_URL} className="max-h-full max-w-full object-contain" alt="Logo Medan" /></div>}
             <div className="text-center px-4">
               <h1 className="text-2xl font-bold uppercase">Pemerintah Kota Medan</h1>
               <h2 className="text-3xl font-black uppercase">Dinas LIngkungan Hidup</h2>
               <p className="text-sm italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p>
             </div>
-            <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_DLH_URL} className="max-h-full max-w-full object-contain" alt="Logo DLH" /></div>
+            {logoMode === "with-logo" && <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_DLH_URL} className="max-h-full max-w-full object-contain" alt="Logo DLH" /></div>}
           </div>
           <div className="text-center mb-8 space-y-1">
             <h3 className="text-xl font-bold underline uppercase">LAPORAN HARIAN PEKERJAAN TAMAN, PENGHIJAUAN, POHON DAN PEMBABATAN</h3>
@@ -764,7 +779,7 @@ const DailyRecap = () => {
           tr { page-break-inside: avoid; page-break-after: auto; }
           thead { display: table-header-group; }
           .pdf-table-header th {
-            background-color: #d9ead3 !important;
+            background-color: #42FF41 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
