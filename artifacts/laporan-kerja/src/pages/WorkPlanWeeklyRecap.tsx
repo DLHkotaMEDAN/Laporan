@@ -325,7 +325,7 @@ const WorkPlanWeeklyRecap = () => {
                         return (
                           <tr key={`no-act-${idx}`}>
                             {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
-                            {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
+                            {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                             <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
                             <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
                             {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{row.plan.items[0]?.remarks || "-"}</td>}
@@ -340,7 +340,7 @@ const WorkPlanWeeklyRecap = () => {
                       return (
                         <tr key={`row-${idx}`}>
                           {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
-                          {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
+                          {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                           {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
                           
                           {row.descriptionSpanRows > 0 && (

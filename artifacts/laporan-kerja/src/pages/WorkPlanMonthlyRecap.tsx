@@ -95,7 +95,7 @@ const WorkPlanMonthlyRecap = () => {
       return (
         <tr key={plan.id}>
           <td className="border-2 border-black p-1 text-center align-middle font-bold">{pIdx + 1}</td>
-          <td className="border-2 border-black p-1 text-center align-top text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
+          <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
           <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
@@ -132,7 +132,7 @@ const WorkPlanMonthlyRecap = () => {
           {itemIdx === 0 && toolIdx === 0 && (
             <>
               <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
-              <td className="border-2 border-black p-1 text-center align-top text-[8px]" rowSpan={totalPlanRows}>
+              <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={totalPlanRows}>
                 {format(parseISO(plan.date), 'dd/MM/yy')}
               </td>
               <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>
