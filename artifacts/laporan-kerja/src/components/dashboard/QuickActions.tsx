@@ -10,15 +10,16 @@ interface QuickActionsProps {
   isPimpinan: boolean;
   isLoggedIn: boolean;
   activeTab: string;
+  canManageWorkPlans?: boolean;
 }
 
-const QuickActions = ({ isPimpinan, isLoggedIn, activeTab }: QuickActionsProps) => {
+const QuickActions = ({ isPimpinan, isLoggedIn, canManageWorkPlans = true }: QuickActionsProps) => {
   const navigate = useNavigate();
 
   if (!isLoggedIn || isPimpinan) return null;
 
   return (
-    <div className="grid gap-4 mb-8 md:grid-cols-2">
+    <div className={cn("grid gap-4 mb-8", canManageWorkPlans ? "md:grid-cols-2" : "md:grid-cols-1")}>
       <Button 
         onClick={() => navigate('/create')}
         className={cn(
@@ -38,24 +39,26 @@ const QuickActions = ({ isPimpinan, isLoggedIn, activeTab }: QuickActionsProps) 
         <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />
       </Button>
       
-      <Button 
-        onClick={() => navigate('/work-plans/create')}
-        className={cn(
-          "group h-auto justify-between rounded-2xl p-5 text-left shadow-lg shadow-emerald-900/10 transition-all hover:-translate-y-1 active:scale-[0.99]",
-          "bg-gradient-to-br from-emerald-700 to-lime-700 text-white hover:from-emerald-800 hover:to-lime-800"
-        )}
-      >
-        <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-white/20 p-3">
-            <ClipboardList className="h-5 w-5" />
+      {canManageWorkPlans && (
+        <Button 
+          onClick={() => navigate('/work-plans/create')}
+          className={cn(
+            "group h-auto justify-between rounded-2xl p-5 text-left shadow-lg shadow-emerald-900/10 transition-all hover:-translate-y-1 active:scale-[0.99]",
+            "bg-gradient-to-br from-emerald-700 to-lime-700 text-white hover:from-emerald-800 hover:to-lime-800"
+          )}
+        >
+          <div className="flex items-center gap-4">
+            <div className="rounded-xl bg-white/20 p-3">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-base font-black">Buat Rencana Kerja</p>
+              <p className="mt-1 text-xs font-medium text-white/75">Susun agenda tim dan lokasi kerja</p>
+            </div>
           </div>
-          <div>
-            <p className="text-base font-black">Buat Rencana Kerja</p>
-            <p className="mt-1 text-xs font-medium text-white/75">Susun agenda tim dan lokasi kerja</p>
-          </div>
-        </div>
-        <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />
-      </Button>
+          <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />
+        </Button>
+      )}
     </div>
   );
 };
