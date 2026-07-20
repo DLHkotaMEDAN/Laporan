@@ -96,6 +96,7 @@ const Index = () => {
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
   const showExecutiveHero = isAdmin;
   const loginScopeLabel = isPimpinan
     ? "Pimpinan"
@@ -109,7 +110,6 @@ const Index = () => {
     if (authLoading) return;
     if (isAdminBbm) { navigate('/fuel-reports'); return; }
     if (isAdminSpj) { navigate('/fuel-reports/spj'); return; }
-
     loadData();
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
@@ -160,7 +160,7 @@ const Index = () => {
 
   const handleToggleWorkPlanVisibility = async (e: React.MouseEvent, plan: WorkPlan) => {
     e.stopPropagation();
-    if (!isLoggedIn || isPimpinan) return;
+    if (!canManageWorkPlans) return;
     
     const newVisibility = plan.is_visible === false ? true : false;
     try {
@@ -174,7 +174,7 @@ const Index = () => {
 
   const handleDeleteWorkPlan = async (e: React.MouseEvent, plan: WorkPlan) => {
     e.stopPropagation();
-    if (!isLoggedIn || isPimpinan) return;
+    if (!canManageWorkPlans) return;
     if (window.confirm(`Pindahkan rencana kerja "${plan.items[0]?.description}" ke tempat sampah?`)) {
       try {
         await workPlanService.deleteWorkPlan(plan.id);
@@ -464,7 +464,7 @@ const Index = () => {
                 <Button onClick={() => navigate('/create')} disabled={!isLoggedIn || isPimpinan} className="h-11 bg-white text-slate-950 hover:bg-emerald-50">
                   <FileText className="mr-2 h-4 w-4" /> Laporan
                 </Button>
-                <Button onClick={() => navigate('/work-plans/create')} disabled={!isLoggedIn || isPimpinan} className="h-11 bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
+                <Button onClick={() => navigate('/work-plans/create')} disabled={!canManageWorkPlans} className="h-11 bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
                   <ClipboardList className="mr-2 h-4 w-4" /> Rencana
                 </Button>
               </div>
@@ -529,7 +529,7 @@ const Index = () => {
               >
                 <ClipboardList size={16} /> Rencana Kerja
               </TabsTrigger>
-              {(isAdmin || isPimpinan) && (
+              {(isAdmin || isPimpinan) && !isAdminHarian && (
                 <>
                   {isAdmin && (
                     <TabsTrigger value="fuel_reports" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
@@ -832,7 +832,7 @@ const Index = () => {
                             Status <SortIcon active={workPlanSortKey === "status"} direction={workPlanSortDirection} />
                           </button>
                         </th>
-                        {isLoggedIn && <th className="px-3 py-3 text-center font-semibold w-28">Aksi</th>}
+                        {canManageWorkPlans && <th className="px-3 py-3 text-center font-semibold w-28">Aksi</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -865,7 +865,7 @@ const Index = () => {
                                 {isHidden ? "Hidden" : "Tampil"}
                               </Badge>
                             </td>
-                            {isLoggedIn && (
+                            {canManageWorkPlans && (
                               <td className="px-2 py-3 text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" disabled={isPimpinan} onClick={(e) => handleToggleWorkPlanVisibility(e, plan)}>

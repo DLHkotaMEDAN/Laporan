@@ -55,6 +55,7 @@ const WorkPlanList = () => {
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
+  const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
   
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && profile?.category && !isPimpinan && !isAdminHarian;
 
@@ -83,7 +84,7 @@ const WorkPlanList = () => {
 
   const handleToggleVisibility = async (e: React.MouseEvent, plan: WorkPlan) => {
     e.stopPropagation();
-    if (!isLoggedIn || isPimpinan) return;
+    if (!canManageWorkPlans) return;
     
     const newVisibility = plan.is_visible === false ? true : false;
     try {
@@ -97,7 +98,7 @@ const WorkPlanList = () => {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!isLoggedIn || isPimpinan) return;
+    if (!canManageWorkPlans) return;
     if (window.confirm("Hapus rencana kerja ini secara permanen?")) {
       try {
         await workPlanService.deleteWorkPlan(id);
@@ -203,15 +204,15 @@ const WorkPlanList = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {isLoggedIn ? (
+            {canManageWorkPlans ? (
               <Button onClick={() => navigate('/work-plans/create')} className="bg-blue-600 hover:bg-blue-700 px-2 md:px-4 h-9 shadow-sm">
                 <Plus className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Buat Rencana Baru</span>
               </Button>
-            ) : (
+            ) : !isLoggedIn ? (
               <Button onClick={() => navigate('/login')} variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 h-9 px-2 md:px-4">
                 <LogIn className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Masuk Sistem</span>
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -296,7 +297,7 @@ const WorkPlanList = () => {
                     <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Lokasi Awal</th>
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Titik</th>
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-28">Status</th>
-                    <th className="px-3 py-2.5 text-center font-semibold w-28">Aksi</th>
+                    {!isAdminHarian && <th className="px-3 py-2.5 text-center font-semibold w-28">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -329,7 +330,7 @@ const WorkPlanList = () => {
                             {isHidden ? "Sembunyi" : "Tampil Rekap"}
                           </Badge>
                         </td>
-                        <td className="px-2 py-3 text-center">
+                        {!isAdminHarian && <td className="px-2 py-3 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <TooltipProvider>
                               <Tooltip>
@@ -341,7 +342,7 @@ const WorkPlanList = () => {
                                 <TooltipContent><p>Preview Cetak</p></TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            {isLoggedIn && (
+                            {canManageWorkPlans && (
                               <>
                                 <TooltipProvider>
                                   <Tooltip>
@@ -362,7 +363,7 @@ const WorkPlanList = () => {
                               </>
                             )}
                           </div>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })}

@@ -56,6 +56,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" />;
+
+  const isAdminHarian = profile?.role === 'admin_harian' || session.user.email === 'sakinah@gmail.com';
+  if (isAdminHarian) return <Navigate to="/" replace />;
+
+  return <ProtectedRoute>{children}</ProtectedRoute>;
+};
+
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, profile, loading } = useAuth();
   
@@ -94,8 +106,8 @@ const App = () => (
             <Route path="/work-plans/daily-rekap" element={<WorkPlanDailyRecap />} />
             <Route path="/work-plans/weekly-rekap" element={<WorkPlanWeeklyRecap />} />
             <Route path="/work-plans/monthly-rekap" element={<WorkPlanMonthlyRecap />} />
-            <Route path="/work-plans/create" element={<ProtectedRoute><CreateWorkPlan /></ProtectedRoute>} />
-            <Route path="/work-plans/edit/:id" element={<ProtectedRoute><EditWorkPlan /></ProtectedRoute>} />
+            <Route path="/work-plans/create" element={<WorkPlanWriteRoute><CreateWorkPlan /></WorkPlanWriteRoute>} />
+            <Route path="/work-plans/edit/:id" element={<WorkPlanWriteRoute><EditWorkPlan /></WorkPlanWriteRoute>} />
             
             <Route path="/fuel-reports" element={<AdminRoute><FuelReportList /></AdminRoute>} />
             <Route path="/fuel-reports/create" element={<AdminRoute><CreateFuelReport /></AdminRoute>} />
