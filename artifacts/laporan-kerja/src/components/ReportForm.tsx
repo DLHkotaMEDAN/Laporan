@@ -60,7 +60,7 @@ const vehicleCoordinatorMapping: Record<string, string> = {
 };
 
 const locationSchema = z.object({
-  street: z.string().min(1, "Jalan wajib diisi"),
+  street: z.string().default(""),
   village: z.array(z.string()).default([""]),
   subDistrict: z.string().default(""),
 });
@@ -81,21 +81,21 @@ const fuelSchema = z.object({
 });
 
 const taskSchema = z.object({
-  description: z.string().min(1, "Uraian wajib diisi"),
+  description: z.string().default(""),
   location: locationSchema,
   photos: photosSchema,
   volume: z.coerce.number().int().min(0),
   equipment: z.array(z.object({
-    type: z.string().min(1, "Jenis alat wajib diisi"),
-    quantity: z.coerce.number().int().min(1),
+    type: z.string().default(""),
+    quantity: z.coerce.number().int().min(0).default(0),
   })),
   heavyEquipment: z.array(z.object({
-    type: z.string().min(1, "Jenis alat berat wajib diisi"),
+    type: z.string().default(""),
     vehicle: z.string().optional().default(""),
     fuel: fuelSchema,
   })),
   personnel: z.object({
-    coordinator: z.string().min(1, "Nama koordinator wajib diisi"),
+    coordinator: z.string().default(""),
     members: z.coerce.number().int().min(0),
   }),
   vehicle: z.string().optional(),
@@ -109,17 +109,6 @@ const formSchema = z.object({
   price_dexlite: z.coerce.number().min(1, "Harga wajib diisi"),
   tasks: z.array(taskSchema).min(1),
   remarks: z.string().optional().default(""),
-}).superRefine((data, ctx) => {
-  if (data.category !== "Tim Siram") {
-    data.tasks.forEach((task, index) => {
-      if (!task.location.subDistrict || task.location.subDistrict.trim() === "" || task.location.subDistrict === " ") {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Kecamatan wajib diisi", path: ['tasks', index, 'location', 'subDistrict'] });
-      }
-      if (!task.location.village || task.location.village.some(v => !v || v.trim() === "" || v === " ")) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Kelurahan wajib diisi", path: ['tasks', index, 'location', 'village', 0] });
-      }
-    });
-  }
 });
 
 interface ReportFormProps {

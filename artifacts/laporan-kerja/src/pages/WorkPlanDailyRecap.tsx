@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { sortByCategory } from '@/utils/report-helpers';
 import {
@@ -18,6 +18,8 @@ import {
   getUniqueWorkPlanItems,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
+import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
+import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,6 +92,30 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
+
+  const handleExportExcel = async () => {
+    const toastId = showLoading("Menyiapkan rekap Excel...");
+    try {
+      const dateLabel = selectedDate === "semua"
+        ? "Semua Tanggal"
+        : format(parseISO(selectedDate), "dd MMMM yyyy", { locale: localeId });
+      await exportWorkPlanExcel({
+        plans,
+        title: "Rekap Rencana Kerja Harian",
+        periodLabel: `Tanggal: ${dateLabel}`,
+        fileName: `Rekap_Rencana_Kerja_Harian_${selectedDate || "semua"}.xlsx`,
+        includeLogo: logoMode === "with-logo",
+        logoMedanUrl: LOGO_MEDAN_URL,
+        logoDlhUrl: LOGO_DLH_URL,
+      });
+      showSuccess("Rekap Excel berhasil disimpan");
+    } catch (error) {
+      console.error(error);
+      showError("Gagal membuat rekap Excel");
+    } finally {
+      dismissToast(toastId);
+    }
+  };
   
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
@@ -287,6 +313,9 @@ const WorkPlanDailyRecap = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => window.print()} className="cursor-pointer py-2">
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
+                  <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
                 <DropdownMenuItem onClick={() => navigate('/work-plans/daily-rekap')} className="cursor-pointer py-2">
