@@ -78,6 +78,37 @@ type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "items" | "status";
 
+const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
+  if (!Array.isArray(plan.items)) return [];
+
+  return plan.items.map(item => item.description?.trim() || "Tanpa uraian");
+};
+
+const formatLocation = (location: Report["location"] | undefined): string => {
+  if (!location) return "Lokasi tidak ditentukan";
+  const villages = Array.isArray(location.village) ? location.village.join(", ") : location.village;
+  return [location.street, villages, location.subDistrict].filter(Boolean).join(", ") || "Lokasi tidak ditentukan";
+};
+
+const PointList = ({ values, fallback }: { values: string[]; fallback: string }) => {
+  const displayValues = values.length > 0 ? values : [fallback];
+
+  if (displayValues.length === 1) {
+    return <span className="whitespace-normal break-words">{displayValues[0]}</span>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {displayValues.map((value, index) => (
+        <div key={index} className={cn("whitespace-normal break-words", index > 0 && "border-t border-slate-200 pt-2")}>
+          <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Titik {index + 1}</span>
+          <span>{value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const { session, profile, signOut, loading: authLoading } = useAuth();
@@ -211,7 +242,12 @@ const Index = () => {
       const m = (reportDate.getMonth() + 1).toString();
       const y = reportDate.getFullYear().toString();
       
-      const matchSearch = report.description.toLowerCase().includes(search) || report.location.street.toLowerCase().includes(search);
+      const searchableTasks = Array.isArray(report.tasks) ? report.tasks : [];
+      const matchSearch = !search || [
+        report.description,
+        formatLocation(report.location),
+        ...searchableTasks.flatMap(task => [task.description, formatLocation(task.location)]),
+      ].some(value => value?.toLowerCase().includes(search));
       const matchSpecificDate = !selectedDate || report.date === selectedDate;
       const matchMonth = selectedMonth === "semua" || m === selectedMonth;
       const matchYear = selectedYear === "semua" || y === selectedYear;
@@ -227,8 +263,7 @@ const Index = () => {
     return workPlans.filter(plan => {
       const search = searchQuery.toLowerCase().trim();
       const matchSearch = !search || (Array.isArray(plan.items) && plan.items.some(item => 
-        (item.description?.toLowerCase() || "").includes(search) ||
-        (item.location?.street?.toLowerCase() || "").includes(search)
+        [item.description, formatLocation(item.location)].some(value => value?.toLowerCase().includes(search))
       ));
       const matchSpecificDate = !selectedDate || plan.date === selectedDate;
       const matchMonth = selectedMonth === "semua" || (new Date(plan.date).getMonth() + 1).toString() === selectedMonth;
@@ -241,22 +276,18 @@ const Index = () => {
   }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile]);
 
   const formatReportLocation = (report: Report) => {
-    const villages = Array.isArray(report.location.village) ? report.location.village.join(", ") : report.location.village;
-    return [report.location.street, villages, report.location.subDistrict].filter(Boolean).join(", ");
+    return formatLocation(report.location);
   };
 
   const formatWorkPlanLocation = (plan: WorkPlan) => {
-    const location = plan.items?.[0]?.location;
-    if (!location) return "-";
-    const villages = Array.isArray(location.village) ? location.village.join(", ") : location.village;
-    return [location.street, villages, location.subDistrict].filter(Boolean).join(", ");
+    return Array.isArray(plan.items) ? plan.items.map(item => formatLocation(item.location)).join(" | ") : "-";
   };
 
   const getReportSortValue = (report: Report, key: ReportSortKey) => {
     if (key === "date") return new Date(report.date).getTime();
     if (key === "category") return report.category;
-    if (key === "description") return report.description;
-    if (key === "location") return formatReportLocation(report);
+    if (key === "description") return (report.tasks?.map(task => task.description).join(" | ") || report.description);
+    if (key === "location") return (report.tasks?.map(task => formatLocation(task.location)).join(" | ") || formatReportLocation(report));
     if (key === "volume") return report.volume;
     return report.remarks || report.pimpinan_note || "";
   };
@@ -264,7 +295,7 @@ const Index = () => {
   const getWorkPlanSortValue = (plan: WorkPlan, key: WorkPlanSortKey) => {
     if (key === "date") return new Date(plan.date).getTime();
     if (key === "category") return plan.category;
-    if (key === "description") return plan.items?.[0]?.description || "";
+    if (key === "description") return getWorkPlanDescriptions(plan).join(" | ");
     if (key === "location") return formatWorkPlanLocation(plan);
     if (key === "items") return plan.items?.length || 0;
     return plan.is_visible === false ? 0 : 1;
@@ -765,11 +796,11 @@ const Index = () => {
                               {report.category}
                             </Badge>
                           </td>
-                          <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[260px]">
-                            <span className="line-clamp-2">{report.description}</span>
+                          <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[260px] whitespace-normal break-words leading-relaxed align-top">
+                            <PointList values={report.tasks?.map(task => task.description?.trim() || "Tanpa uraian") || []} fallback={report.description || "Tanpa uraian"} />
                           </td>
-                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px]">
-                            <span className="line-clamp-2">{formatReportLocation(report)}</span>
+                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px] leading-relaxed align-top">
+                            <PointList values={report.tasks?.map(task => formatLocation(task.location)) || []} fallback={formatReportLocation(report)} />
                           </td>
                           <td className="px-3 py-3 text-right font-mono font-semibold text-slate-700 border-r border-slate-100">
                             {report.volume} {getUnitByCategory(report.category)}
@@ -877,11 +908,11 @@ const Index = () => {
                                 {plan.category}
                               </Badge>
                             </td>
-                            <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[280px]">
-                              <span className="line-clamp-2">{plan.items?.[0]?.description || "Rencana Kerja"}</span>
+                            <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[280px] whitespace-normal break-words leading-relaxed align-top">
+                              <PointList values={getWorkPlanDescriptions(plan)} fallback="Rencana Kerja" />
                             </td>
-                            <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px]">
-                              <span className="line-clamp-2">{formatWorkPlanLocation(plan)}</span>
+                            <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px] leading-relaxed align-top">
+                              <PointList values={plan.items?.map(item => formatLocation(item.location)) || []} fallback="Lokasi tidak ditentukan" />
                             </td>
                             <td className="px-3 py-3 text-center font-mono font-semibold text-slate-700 border-r border-slate-100">
                               {plan.items?.length || 0}

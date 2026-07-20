@@ -39,6 +39,36 @@ const months = [
 
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
+const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
+  if (!Array.isArray(plan.items)) return [];
+
+  return plan.items.map(item => item.description?.trim() || "Tanpa uraian");
+};
+
+const formatWorkPlanItemLocation = (item: WorkPlan["items"][number]): string => {
+  const villages = Array.isArray(item.location?.village) ? item.location.village.join(", ") : item.location?.village;
+  return [item.location?.street, villages, item.location?.subDistrict].filter(Boolean).join(", ") || "Lokasi tidak ditentukan";
+};
+
+const PointList = ({ values, fallback }: { values: string[]; fallback: string }) => {
+  const displayValues = values.length > 0 ? values : [fallback];
+
+  if (displayValues.length === 1) {
+    return <span className="whitespace-normal break-words">{displayValues[0]}</span>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {displayValues.map((value, index) => (
+        <div key={index} className={cn("whitespace-normal break-words", index > 0 && "border-t border-slate-200 pt-2")}>
+          <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Titik {index + 1}</span>
+          <span>{value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const WorkPlanList = () => {
   const navigate = useNavigate();
   const { session, profile } = useAuth();
@@ -122,8 +152,7 @@ const WorkPlanList = () => {
   const filteredPlans = plans.filter(plan => {
     const search = searchQuery.toLowerCase().trim();
     const matchSearch = !search || (Array.isArray(plan.items) && plan.items.some(item => 
-      (item.description?.toLowerCase() || "").includes(search) ||
-      (item.location?.street?.toLowerCase() || "").includes(search)
+      [item.description, formatWorkPlanItemLocation(item)].some(value => value?.toLowerCase().includes(search))
     ));
 
     const matchCategory = selectedCategory === "semua" || plan.category === selectedCategory;
@@ -316,11 +345,11 @@ const WorkPlanList = () => {
                             {plan.category}
                           </Badge>
                         </td>
-                        <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[280px]">
-                          <span className="line-clamp-2">{plan.items?.[0]?.description || "Tanpa Deskripsi"}</span>
+                        <td className="px-3 py-3 font-semibold text-slate-800 border-r border-slate-100 max-w-[280px] whitespace-normal break-words leading-relaxed align-top">
+                          <PointList values={getWorkPlanDescriptions(plan)} fallback="Tanpa Deskripsi" />
                         </td>
-                        <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[260px]">
-                          <span className="line-clamp-2">{plan.items?.[0]?.location?.street || "Lokasi tidak ditentukan"}</span>
+                        <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[260px] leading-relaxed align-top">
+                          <PointList values={plan.items?.map(formatWorkPlanItemLocation) || []} fallback="Lokasi tidak ditentukan" />
                         </td>
                         <td className="px-3 py-3 text-center font-mono font-semibold text-slate-700 border-r border-slate-100">
                           {Array.isArray(plan.items) ? plan.items.length : 0}
