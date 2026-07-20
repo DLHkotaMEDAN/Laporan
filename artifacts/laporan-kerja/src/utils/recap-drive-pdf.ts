@@ -40,6 +40,7 @@ type GenerateRecapDrivePdfOptions = {
   reports: Report[];
   kind: RecapPdfKind;
   periodLabel: string;
+  title?: string;
   logoMedanUrl: string;
   logoDlhUrl: string;
   visibleColumns?: RecapPdfVisibleColumns;
@@ -302,7 +303,7 @@ const drawDocumentHeader = async (
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10.5);
-  drawText(pdf, titleByKind[options.kind], centerX, margin + 32, { align: 'center' });
+  drawText(pdf, options.title || titleByKind[options.kind], centerX, margin + 32, { align: 'center' });
   pdf.setFontSize(10);
   drawText(pdf, 'WILAYAH 4 MEDAN KOTA', centerX, margin + 38, { align: 'center' });
   drawText(pdf, options.periodLabel, centerX, margin + 44, { align: 'center' });

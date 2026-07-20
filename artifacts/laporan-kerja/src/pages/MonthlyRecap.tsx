@@ -22,6 +22,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
 import { generateRecapDrivePdfBase64 } from '@/utils/recap-drive-pdf';
+import { getReportRecapTitle } from '@/utils/report-recap-title';
 import {
   Tooltip,
   TooltipContent,
@@ -76,16 +77,10 @@ const MonthlyRecap = () => {
   const isLoggedIn = !!session;
   
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
+  const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
 
   useEffect(() => {
-    if (isAdminHarian) {
-      showError("Admin Harian tidak diizinkan mengakses Rekap Bulanan");
-      navigate('/');
-      return;
-    }
-
     if (isLoggedIn && profile) {
       if (isUserRestricted && profile.category) {
         setSelectedCategories([profile.category]);
@@ -95,13 +90,13 @@ const MonthlyRecap = () => {
     } else {
       setSelectedCategories(['semua']);
     }
-  }, [profile, isLoggedIn, isUserRestricted, isAdminHarian, navigate]);
+  }, [profile, isLoggedIn, isUserRestricted]);
 
   useEffect(() => {
-    if (selectedCategories.length > 0 && !isAdminHarian) {
+    if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [selectedMonth, selectedYear, selectedCategories, isAdminHarian]);
+  }, [selectedMonth, selectedYear, selectedCategories]);
 
   const loadData = async () => {
     try {
@@ -159,6 +154,7 @@ const MonthlyRecap = () => {
       const pdfBase64 = await generateRecapDrivePdfBase64({
         reports,
         kind: 'monthly',
+        title: recapTitle,
         periodLabel: `Bulan: ${selectedMonth === 'semua' ? 'Semua Bulan' : months[parseInt(selectedMonth)-1]} ${selectedYear === 'semua' ? 'Semua Tahun' : selectedYear}`,
         logoMedanUrl: LOGO_MEDAN_URL,
         logoDlhUrl: LOGO_DLH_URL,
@@ -239,7 +235,10 @@ const MonthlyRecap = () => {
       worksheet.getCell('A2').value = 'DINAS LINGKUNGAN HIDUP';
       worksheet.getCell('A2').font = { bold: true, size: 16 };
       worksheet.getCell('A2').alignment = { horizontal: 'center' };
-      worksheet.addRow([]);
+      worksheet.mergeCells(`A3:${lastColLetter}3`);
+      worksheet.getCell('A3').value = recapTitle;
+      worksheet.getCell('A3').font = { bold: true, size: 13 };
+      worksheet.getCell('A3').alignment = { horizontal: 'center' };
       
       const headerRow = worksheet.addRow(columns.map(c => c.header));
       headerRow.eachCell(cell => {
@@ -312,6 +311,7 @@ const MonthlyRecap = () => {
   };
 
   const showTiurmaida = selectedCategories.includes('semua') || selectedCategories.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
+  const recapTitle = getReportRecapTitle('bulanan', reports.map(report => report.category));
   const showArdiansyah = selectedCategories.includes('semua') || selectedCategories.includes("Tim Pohon");
 
   const headerStyle = { backgroundColor: '#f1f5f9', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
@@ -618,7 +618,7 @@ const MonthlyRecap = () => {
             <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_DLH_URL} className="max-h-full max-w-full object-contain" alt="Logo DLH" /></div>
           </div>
           <div className="text-center mb-8 space-y-1">
-            <h3 className="text-xl font-bold underline uppercase">LAPORAN BULANAN PEKERJAAN TAMAN, PENGHIJAUAN, POHON DAN PEMBABATAN</h3>
+            <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
             <p className="text-xl font-bold uppercase">WILAYAH 4 MEDAN KOTA</p>
             <p className="text-xl font-bold uppercase">Bulan: {selectedMonth === 'semua' ? 'Semua Bulan' : months[parseInt(selectedMonth)-1]} {selectedYear === 'semua' ? 'Semua Tahun' : selectedYear}</p>
           </div>

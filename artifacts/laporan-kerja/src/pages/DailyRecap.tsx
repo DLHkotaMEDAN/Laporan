@@ -25,6 +25,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
 import { generateRecapDrivePdfBase64 } from '@/utils/recap-drive-pdf';
+import { getReportRecapTitle } from '@/utils/report-recap-title';
 import {
   Tooltip,
   TooltipContent,
@@ -175,6 +176,7 @@ const DailyRecap = () => {
       const pdfBase64 = await generateRecapDrivePdfBase64({
         reports,
         kind: 'daily',
+        title: recapTitle,
         periodLabel: `Tanggal: ${selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
         logoMedanUrl: logoMode === "with-logo" ? LOGO_MEDAN_URL : "",
         logoDlhUrl: logoMode === "with-logo" ? LOGO_DLH_URL : "",
@@ -245,7 +247,10 @@ const DailyRecap = () => {
       worksheet.getCell('A2').value = 'DINAS LINGKUNGAN HIDUP';
       worksheet.getCell('A2').font = { bold: true, size: 16 };
       worksheet.getCell('A2').alignment = { horizontal: 'center' };
-      worksheet.addRow([]);
+      worksheet.mergeCells(`A3:${lastColLetter}3`);
+      worksheet.getCell('A3').value = recapTitle;
+      worksheet.getCell('A3').font = { bold: true, size: 13 };
+      worksheet.getCell('A3').alignment = { horizontal: 'center' };
       const headerRow = worksheet.addRow(columns.map((c: any) => c.header));
       headerRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
@@ -329,6 +334,7 @@ const DailyRecap = () => {
   };
 
   const showTiurmaida = selectedCategories.includes('semua') || selectedCategories.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
+  const recapTitle = getReportRecapTitle('harian', reports.map(report => report.category));
   const showArdiansyah = selectedCategories.includes('semua') || selectedCategories.includes("Tim Pohon");
 
   const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
@@ -661,7 +667,7 @@ const DailyRecap = () => {
             {logoMode === "with-logo" && <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_DLH_URL} className="max-h-full max-w-full object-contain" alt="Logo DLH" /></div>}
           </div>
           <div className="text-center mb-8 space-y-1">
-            <h3 className="text-xl font-bold underline uppercase">LAPORAN HARIAN PEKERJAAN TAMAN, PENGHIJAUAN, POHON DAN PEMBABATAN</h3>
+            <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
             <p className="text-xl font-bold uppercase">WILAYAH 4 MEDAN KOTA</p>
             <p className="text-xl font-bold uppercase">Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
