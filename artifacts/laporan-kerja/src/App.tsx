@@ -86,6 +86,18 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  const isAllowed = profile?.role === 'admin' || session.user.email === 'admin@gmail.com';
+  if (!isAllowed) return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -129,7 +141,7 @@ const App = () => (
             
             <Route path="/create" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditReport /></ProtectedRoute>} />
-            <Route path="/print-rekap" element={<ProtectedRoute><PrintRekap /></ProtectedRoute>} />
+            <Route path="/print-rekap" element={<PrintRekapAdminRoute><PrintRekap /></PrintRekapAdminRoute>} />
             <Route path="/maintenance" element={<AdminRoute><Maintenance /></AdminRoute>} />
             
             <Route path="*" element={<NotFound />} />

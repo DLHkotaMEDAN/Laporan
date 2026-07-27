@@ -609,9 +609,11 @@ const Index = () => {
                 <DropdownMenuContent align="end" className="w-64">
                   {activeTab === 'reports' && (
                     <>
-                      <DropdownMenuItem onClick={() => navigate(`/print-rekap?category=semua`)} className="py-3 cursor-pointer">
-                        <Printer className="mr-3 h-4 w-4 text-blue-600" /> Cetak Harian Laporan
-                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => navigate(`/print-rekap?category=semua`)} className="py-3 cursor-pointer">
+                          <Printer className="mr-3 h-4 w-4 text-blue-600" /> Cetak Harian Laporan
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onSelect={() => setIsDailyRecapDateOpen(true)} className="py-3 cursor-pointer">
                         <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Harian Laporan
                       </DropdownMenuItem>
