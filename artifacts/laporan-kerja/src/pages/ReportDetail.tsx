@@ -118,97 +118,75 @@ const ReportDetail = () => {
             <div><p className="text-slate-500">Total Volume</p><p className="font-bold">{report.volume} {getUnitByCategory(report.category)}</p></div>
           </div>
 
-          <div className="space-y-12">
-            {report.tasks?.map((task, i) => (
-              <div key={i} className="space-y-6 border-b-2 border-slate-100 pb-12 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="bg-black text-white w-8 h-8 flex items-center justify-center font-bold rounded-full">{i + 1}</div>
-                  <h3 className="text-lg font-bold">Kegiatan: {cleanDescription(task.description)}</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="bg-slate-50 p-4 rounded border">
-                      <p className="text-slate-500 text-xs uppercase font-bold mb-1">Lokasi & Volume</p>
-                      <p className="font-bold">{task.location.street}</p>
-                      <p className="text-xs text-slate-600">
-                        Kel: {Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village}, Kec: {task.location.subDistrict}
-                      </p>
-                      <p className="text-blue-600 font-bold mt-2">Volume: {task.volume} {getUnitByCategory(report.category)}</p>
-                    </div>
-
-                    <div className="bg-slate-50 p-4 rounded border space-y-3">
-                      <p className="text-slate-500 text-xs uppercase font-bold mb-1">Sumber Daya & Personil</p>
-                      
-                      {task.vehicle && (
-                        <div className="mb-3 p-2 bg-orange-50 border border-orange-100 rounded flex items-center gap-2 text-orange-700 font-bold text-xs">
-                          <Truck size={14} /> PLAT: {task.vehicle}
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <p className="flex items-center gap-1 font-bold"><Users size={12} /> Koordinator:</p>
-                          <p>{task.personnel.coordinator}</p>
-                        </div>
-                        <div>
-                          <p className="flex items-center gap-1 font-bold"><Users size={12} /> Anggota:</p>
-                          <p>{task.personnel.members} Orang</p>
-                        </div>
-                      </div>
-                      
-                      {task.heavyEquipment?.length > 0 && (
-                        <div className="pt-2 border-t">
-                          <p className="font-bold text-[10px] mb-1">ALAT BERAT & BBM:</p>
-                          {task.heavyEquipment.map((he, idx) => (
-                            <div key={idx} className="mb-2 text-[10px] bg-white p-2 rounded border border-slate-100">
-                              <div className="font-bold text-slate-700">{he.type} {he.vehicle ? `- ${he.vehicle}` : ""}</div>
-                              <div className="flex gap-3 mt-1">
-                                {he.fuel.pertamax > 0 && <span className="text-blue-600">P: Rp {he.fuel.pertamax.toLocaleString()} ({he.fuel.pertamax_liter || 0} L)</span>}
-                                {he.fuel.dexlite > 0 && <span className="text-green-600">D: Rp {he.fuel.dexlite.toLocaleString()} ({he.fuel.dexlite_liter || 0} L)</span>}
-                                {he.fuel.solar > 0 && <span className="text-slate-600">S: Rp {he.fuel.solar.toLocaleString()} ({he.fuel.solar_liter || 0} L)</span>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {task.equipment?.length > 0 && (
-                        <div className="pt-2 border-t">
-                          <p className="font-bold text-[10px] mb-1">PERALATAN:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {task.equipment.map((e, idx) => (
-                              <span key={idx} className="bg-white border px-2 py-0.5 rounded text-[10px]">{e.type} ({e.quantity})</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {task.remarks && (
-                        <div className="pt-2 border-t">
-                          <p className="font-bold text-[10px] mb-1 flex items-center gap-1"><MessageSquare size={10} /> KETERANGAN KEGIATAN:</p>
-                          <p className="text-[10px] italic">{task.remarks}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {['0%', '50%', '100%'].map((label, idx) => {
-                      const img = idx === 0 ? task.photos.zero : idx === 1 ? task.photos.fifty : task.photos.hundred;
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1680px] border-collapse text-[11px]">
+              <thead>
+                <tr className="h-10 bg-slate-100 text-center font-bold text-black">
+                  <th className="border-2 border-black p-2" rowSpan={2}>No</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Uraian Kegiatan</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Lokasi</th>
+                  <th className="border-2 border-black p-2" colSpan={3}>Dokumentasi</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Vol</th>
+                  <th className="border-2 border-black p-2" colSpan={2}>Peralatan</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Alat Berat</th>
+                  <th className="border-2 border-black p-2" colSpan={2}>Personil</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Keterangan</th>
+                </tr>
+                <tr className="h-8 bg-slate-50 text-center font-bold text-black">
+                  <th className="border-2 border-black p-1">0%</th>
+                  <th className="border-2 border-black p-1">50%</th>
+                  <th className="border-2 border-black p-1">100%</th>
+                  <th className="border-2 border-black p-1">Jenis Alat</th>
+                  <th className="border-2 border-black p-1">Jml</th>
+                  <th className="border-2 border-black p-1">Koordinator</th>
+                  <th className="border-2 border-black p-1">Anggota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.tasks?.map((task, i) => (
+                  <tr key={i} className="align-top">
+                    <td className="border-2 border-black p-2 text-center font-bold">{i + 1}</td>
+                    <td className="border-2 border-black p-2 whitespace-normal break-words leading-tight">{cleanDescription(task.description)}</td>
+                    <td className="border-2 border-black p-2 whitespace-normal break-words leading-tight">
+                      <p className="font-semibold">{task.location.street || "-"}</p>
+                      <p className="mt-1">Kel. {Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village || "-"}</p>
+                      <p>Kec. {task.location.subDistrict || "-"}</p>
+                    </td>
+                    {['0%', '50%', '100%'].map((label, photoIndex) => {
+                      const image = photoIndex === 0 ? task.photos.zero : photoIndex === 1 ? task.photos.fifty : task.photos.hundred;
                       return (
-                        <div key={idx} className="space-y-1">
-                          <div className="aspect-[2.26/2.95] border-2 border-black bg-slate-50 overflow-hidden">
-                            {img ? <img src={img} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px]">No Photo</div>}
+                        <td key={label} className="border-2 border-black p-1 align-middle">
+                          <div className="h-[110px] w-[145px] overflow-hidden bg-slate-100">
+                            {image ? <img src={image} alt={`Dokumentasi ${label}`} className="h-full w-full object-fill" /> : <div className="flex h-full items-center justify-center text-[10px] text-slate-400">Tidak ada foto</div>}
                           </div>
-                          <p className="text-center font-bold text-[10px] border-2 border-black py-1">{label}</p>
-                        </div>
+                        </td>
                       );
                     })}
-                  </div>
-                </div>
-              </div>
-            ))}
+                    <td className="border-2 border-black p-2 text-center font-bold">{task.volume} {getUnitByCategory(report.category)}</td>
+                    <td className="border-2 border-black p-1.5 align-top leading-tight">
+                      {task.equipment?.length > 0 ? task.equipment.map((equipment, equipmentIndex) => (
+                        <p key={equipmentIndex} className="mb-0.5">• {equipment.type}</p>
+                      )) : "-"}
+                    </td>
+                    <td className="border-2 border-black p-1.5 text-center align-top leading-tight">
+                      {task.equipment?.length > 0 ? task.equipment.map((equipment, equipmentIndex) => (
+                        <p key={equipmentIndex} className="mb-0.5">{equipment.quantity}</p>
+                      )) : "-"}
+                    </td>
+                    <td className="border-2 border-black p-1.5 align-top leading-tight">
+                      {task.heavyEquipment?.length > 0 ? task.heavyEquipment.map((heavyEquipment, heavyEquipmentIndex) => (
+                        <p key={heavyEquipmentIndex} className="mb-0.5">• {heavyEquipment.type} {heavyEquipment.vehicle || ""}</p>
+                      )) : "-"}
+                    </td>
+                    <td className="border-2 border-black p-2 text-center align-top">{task.personnel.coordinator || "-"}</td>
+                    <td className="border-2 border-black p-2 text-center align-top">{task.personnel.members || 0}</td>
+                    <td className="border-2 border-black p-2 align-top whitespace-normal break-words italic">
+                      {task.remarks || (i === 0 && report.remarks) || "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {report.remarks && (
