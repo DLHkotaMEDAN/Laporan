@@ -76,7 +76,7 @@ const DLH_HERO_IMAGE_URL = "https://dlh.medan.go.id/web/resources/img/cover/780X
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
-type WorkPlanSortKey = "date" | "category" | "description" | "location" | "items" | "status";
+type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
 
 const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
   if (!Array.isArray(plan.items)) return [];
@@ -297,7 +297,6 @@ const Index = () => {
     if (key === "category") return plan.category;
     if (key === "description") return getWorkPlanDescriptions(plan).join(" | ");
     if (key === "location") return formatWorkPlanLocation(plan);
-    if (key === "items") return plan.items?.length || 0;
     return plan.is_visible === false ? 0 : 1;
   };
 
@@ -745,7 +744,7 @@ const Index = () => {
             ) : sortedReports.length > 0 ? (
               <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse min-w-[980px]">
+                  <table className="w-full text-xs border-collapse min-w-[900px]">
                     <thead>
                       <tr className="bg-slate-700 text-white">
                         <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-12">No</th>
@@ -880,11 +879,6 @@ const Index = () => {
                           </button>
                         </th>
                         <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">
-                          <button type="button" onClick={() => toggleWorkPlanSort("items")} className="mx-auto flex items-center justify-center gap-1.5 hover:text-emerald-100">
-                            Titik <SortIcon active={workPlanSortKey === "items"} direction={workPlanSortDirection} />
-                          </button>
-                        </th>
-                        <th className="px-3 py-3 text-center font-semibold border-r border-slate-600 w-24">
                           <button type="button" onClick={() => toggleWorkPlanSort("status")} className="mx-auto flex items-center justify-center gap-1.5 hover:text-emerald-100">
                             Status <SortIcon active={workPlanSortKey === "status"} direction={workPlanSortDirection} />
                           </button>
@@ -913,9 +907,6 @@ const Index = () => {
                             </td>
                             <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[280px] leading-relaxed align-top">
                               <PointList values={plan.items?.map(item => formatLocation(item.location)) || []} fallback="Lokasi tidak ditentukan" />
-                            </td>
-                            <td className="px-3 py-3 text-center font-mono font-semibold text-slate-700 border-r border-slate-100">
-                              {plan.items?.length || 0}
                             </td>
                             <td className="px-3 py-3 text-center border-r border-slate-100">
                               <Badge variant="outline" className={cn("text-[10px] font-bold", isHidden ? "bg-red-50 text-red-600 border-red-100" : "bg-green-50 text-green-700 border-green-100")}>

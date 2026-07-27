@@ -316,7 +316,7 @@ const WorkPlanList = () => {
         ) : filteredPlans.length > 0 ? (
           <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse min-w-[920px]">
+              <table className="w-full text-xs border-collapse min-w-[840px]">
                 <thead>
                   <tr className="bg-slate-700 text-white">
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-12">No</th>
@@ -324,7 +324,6 @@ const WorkPlanList = () => {
                     <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-36">Kategori</th>
                     <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Uraian Rencana</th>
                     <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Lokasi Awal</th>
-                    <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Titik</th>
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-28">Status</th>
                     {!isAdminHarian && <th className="px-3 py-2.5 text-center font-semibold w-28">Aksi</th>}
                   </tr>
@@ -350,9 +349,6 @@ const WorkPlanList = () => {
                         </td>
                         <td className="px-3 py-3 text-slate-600 border-r border-slate-100 max-w-[260px] leading-relaxed align-top">
                           <PointList values={plan.items?.map(formatWorkPlanItemLocation) || []} fallback="Lokasi tidak ditentukan" />
-                        </td>
-                        <td className="px-3 py-3 text-center font-mono font-semibold text-slate-700 border-r border-slate-100">
-                          {Array.isArray(plan.items) ? plan.items.length : 0}
                         </td>
                         <td className="px-3 py-3 text-center border-r border-slate-100">
                           <Badge variant="outline" className={cn("text-[10px] font-bold whitespace-nowrap", isHidden ? "bg-red-50 text-red-600 border-red-100" : "bg-green-50 text-green-700 border-green-100")}>
