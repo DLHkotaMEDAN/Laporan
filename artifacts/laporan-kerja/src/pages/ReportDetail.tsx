@@ -53,7 +53,7 @@ const ReportDetail = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8">
-      <div className="max-w-[1200px] mx-auto space-y-6">
+      <div className="max-w-[420mm] mx-auto space-y-6">
         <div className="flex items-center justify-between no-print">
           <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
             <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Kembali</span>
@@ -101,7 +101,7 @@ const ReportDetail = () => {
           onSave={handleSaveNote} 
         />
 
-        <div id="report-content" className="bg-white border shadow-lg p-8 space-y-8">
+        <div id="report-content" className="print-area w-full max-w-[420mm] bg-white border shadow-lg p-4 md:p-10 space-y-8">
           <div className="border-b-2 border-black pb-4 flex justify-between items-center">
             <div>
               <h1 className="text-xl font-bold">PEMERINTAH KOTA MEDAN</h1>
@@ -118,10 +118,25 @@ const ReportDetail = () => {
             <div><p className="text-slate-500">Total Volume</p><p className="font-bold">{report.volume} {getUnitByCategory(report.category)}</p></div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1680px] border-collapse text-[11px]">
+          <div className="overflow-x-auto print:overflow-visible">
+            <table className="w-full min-w-[1200px] table-fixed border-collapse text-[11px] print:min-w-0">
+              <colgroup>
+                <col style={{ width: '35px' }} />
+                <col style={{ width: '105px' }} />
+                <col style={{ width: '110px' }} />
+                <col style={{ width: '145px' }} />
+                <col style={{ width: '145px' }} />
+                <col style={{ width: '145px' }} />
+                <col style={{ width: '65px' }} />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '25px' }} />
+                <col style={{ width: '120px' }} />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '50px' }} />
+                <col style={{ width: '160px' }} />
+              </colgroup>
               <thead>
-                <tr className="h-10 bg-slate-100 text-center font-bold text-black">
+                <tr className="h-10 bg-[#42FF41] text-center font-bold text-black">
                   <th className="border-2 border-black p-2" rowSpan={2}>No</th>
                   <th className="border-2 border-black p-2" rowSpan={2}>Uraian Kegiatan</th>
                   <th className="border-2 border-black p-2" rowSpan={2}>Lokasi</th>
@@ -129,17 +144,16 @@ const ReportDetail = () => {
                   <th className="border-2 border-black p-2" rowSpan={2}>Vol</th>
                   <th className="border-2 border-black p-2" colSpan={2}>Peralatan</th>
                   <th className="border-2 border-black p-2" rowSpan={2}>Alat Berat</th>
-                  <th className="border-2 border-black p-2" colSpan={2}>Personil</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Koordinator</th>
+                  <th className="border-2 border-black p-2" rowSpan={2}>Anggota</th>
                   <th className="border-2 border-black p-2" rowSpan={2}>Keterangan</th>
                 </tr>
-                <tr className="h-8 bg-slate-50 text-center font-bold text-black">
+                <tr className="h-8 bg-[#42FF41] text-center font-bold text-black">
                   <th className="border-2 border-black p-1">0%</th>
                   <th className="border-2 border-black p-1">50%</th>
                   <th className="border-2 border-black p-1">100%</th>
                   <th className="border-2 border-black p-1">Jenis Alat</th>
                   <th className="border-2 border-black p-1">Jml</th>
-                  <th className="border-2 border-black p-1">Koordinator</th>
-                  <th className="border-2 border-black p-1">Anggota</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,6 +211,27 @@ const ReportDetail = () => {
           )}
         </div>
       </div>
+      <style>{`
+        @media print {
+          body { background: white !important; }
+          .no-print { display: none !important; }
+          .print-area {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            overflow: visible !important;
+          }
+          @page { size: A3 landscape; margin: 1.5cm; }
+          .print-area table { width: 100% !important; min-width: 0 !important; }
+          .print-area tr { page-break-inside: avoid; break-inside: avoid; }
+          .print-area thead { display: table-header-group; }
+          .print-area .overflow-x-auto { overflow: visible !important; }
+          ::-webkit-scrollbar { display: none; }
+        }
+      `}</style>
     </div>
   );
 };
