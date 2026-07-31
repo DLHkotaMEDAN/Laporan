@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { 
-  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound, Pencil
+  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound, Pencil, Eye
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -59,6 +59,9 @@ const UserManagement = () => {
   const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [editUser, setEditUser] = useState({ username: '', role: '', category: 'none', regionId: '' });
+  const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
+  const [accountDetails, setAccountDetails] = useState<{ email?: string; createdAt?: string; lastSignInAt?: string | null; emailConfirmedAt?: string | null } | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
@@ -239,6 +242,24 @@ const UserManagement = () => {
     }
   };
 
+  const handleViewDetails = async (profile: Profile) => {
+    setViewingProfile(profile);
+    setAccountDetails(null);
+    setLoadingDetails(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: { action: 'get-user-details', userId: profile.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAccountDetails(data);
+    } catch (error: any) {
+      showError('Gagal memuat detail akun: ' + error.message);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   const filteredProfiles = profiles.filter(p => 
     (p.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
     (p.role?.toLowerCase() || "").includes(searchQuery.toLowerCase())
@@ -379,6 +400,9 @@ const UserManagement = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" title="Lihat detail akun" onClick={() => handleViewDetails(profile)}>
+                        <Eye size={17} />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -467,6 +491,24 @@ const UserManagement = () => {
             <Button type="button" variant="outline" onClick={() => setEditingProfile(null)}>Batal</Button>
             <Button type="button" onClick={handleSaveProfile} disabled={!!updatingId}>Simpan Perubahan</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewingProfile} onOpenChange={open => !open && setViewingProfile(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detail Akun</DialogTitle>
+            <DialogDescription>Informasi akun hanya terlihat oleh Super Admin.</DialogDescription>
+          </DialogHeader>
+          {loadingDetails ? <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div> : (
+            <dl className="space-y-3 text-sm">
+              <div><dt className="text-slate-500">Nama pengguna</dt><dd className="font-medium">{viewingProfile?.username || 'Tanpa Nama'}</dd></div>
+              <div><dt className="text-slate-500">Email</dt><dd className="font-medium">{accountDetails?.email || '-'}</dd></div>
+              <div><dt className="text-slate-500">ID pengguna</dt><dd className="break-all font-mono text-xs">{viewingProfile?.id}</dd></div>
+              <div><dt className="text-slate-500">Dibuat</dt><dd>{accountDetails?.createdAt ? format(new Date(accountDetails.createdAt), 'dd MMM yyyy, HH:mm', { locale: localeId }) : '-'}</dd></div>
+              <div><dt className="text-slate-500">Login terakhir</dt><dd>{accountDetails?.lastSignInAt ? format(new Date(accountDetails.lastSignInAt), 'dd MMM yyyy, HH:mm', { locale: localeId }) : '-'}</dd></div>
+            </dl>
+          )}
         </DialogContent>
       </Dialog>
     </div>

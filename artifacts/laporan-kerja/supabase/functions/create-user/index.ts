@@ -20,6 +20,11 @@ type ResetPasswordInput = {
   password: string;
 };
 
+type GetUserDetailsInput = {
+  action: 'get-user-details';
+  userId: string;
+};
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -46,7 +51,20 @@ Deno.serve(async (request) => {
       .single();
     if (callerError || callerProfile?.role !== 'admin') throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
-    const input = await request.json() as CreateUserInput | ResetPasswordInput;
+    const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput;
+    if ('action' in input && input.action === 'get-user-details') {
+      if (!input.userId) throw new Error('ID pengguna wajib diisi.');
+      const { data, error } = await adminClient.auth.admin.getUserById(input.userId);
+      if (error || !data.user) throw error ?? new Error('Akun tidak ditemukan.');
+
+      return Response.json({
+        id: data.user.id,
+        email: data.user.email,
+        createdAt: data.user.created_at,
+        lastSignInAt: data.user.last_sign_in_at,
+        emailConfirmedAt: data.user.email_confirmed_at,
+      }, { headers: corsHeaders });
+    }
     if ('action' in input && input.action === 'reset-password') {
       if (!input.userId || !input.password) throw new Error('ID pengguna dan password baru wajib diisi.');
       if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
