@@ -22,7 +22,7 @@ import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
-import { generateRecapDrivePdfBase64 } from '@/utils/recap-drive-pdf';
+import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import {
   Tooltip,
@@ -176,8 +176,8 @@ const MonthlyRecap = () => {
         },
         fuelMode: recapMode === "with-fuel" ? 'voucher' : 'none',
         signatureMode,
-        showTiurmaida,
-        showArdiansyah,
+        coordinatorName: coordinatorSignature.name,
+        coordinatorNip: coordinatorSignature.nip,
       });
       const { data, error } = await supabase.functions.invoke('upload-to-drive', {
         body: { 
@@ -312,9 +312,8 @@ const MonthlyRecap = () => {
     else { setSelectedCategories(newSelected); }
   };
 
-  const showTiurmaida = selectedCategories.includes('semua') || selectedCategories.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
+  const coordinatorSignature = getRegionalCoordinatorSignature(regionName);
   const recapTitle = getReportRecapTitle('bulanan', reports.map(report => report.category));
-  const showArdiansyah = selectedCategories.includes('semua') || selectedCategories.includes("Tim Pohon");
 
   const headerStyle = { backgroundColor: '#f1f5f9', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
   const subHeaderStyle = { backgroundColor: '#f8fafc', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
@@ -653,24 +652,13 @@ const MonthlyRecap = () => {
                   <div className="grid grid-cols-4 gap-4 text-[11px] leading-normal">
                     <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Heni Rustati, ST, M.Si</p><p>NIP. 19720223 200604 2 002</p></div></div>
                     <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Anitha Florida Ginting, ST, M. Si</p><p>NIP. 19811128 201001 2 011</p></div></div>
-                    <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Pengawas Taman Penghijauan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Jhosua Sibarani, S.T</p><p>NIP. 19740907 200903 1 002</p></div></div>
+                    <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Pengawas Taman Penghijauan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">____________________________</p><p>____________________________</p></div></div>
                     <div className="text-center flex flex-col justify-between min-h-[200px] pb-4">
                       <div>
                         <p>Diketahui :</p>
-                        {showTiurmaida && !showArdiansyah && (<><p className="font-bold">Kepala Koordinator Taman</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></>)}
-                        {showArdiansyah && !showTiurmaida && (<><p className="font-bold">Koordinator Tim Pohon</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></>)}
-                        {showTiurmaida && showArdiansyah && (<><p className="font-bold">Koordinator Taman & Tim Pohon</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></>)}
+                        <p className="font-bold">Kepala Koordinator Pemeliharaan Taman</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p>
                       </div>
-                      <div>
-                        {showTiurmaida && !showArdiansyah && (<><p className="font-bold underline">Tiurmaida Silitonga</p><p>NIP. 19690507 200701 2 042</p></>)}
-                        {showArdiansyah && !showTiurmaida && (<><p className="font-bold underline">Ardiansyah Siregar</p><p>NIP. 19860404 201001 1 015</p></>)}
-                        {showTiurmaida && showArdiansyah && (
-                          <div className="flex justify-around gap-2">
-                            <div><p className="font-bold underline">Tiurmaida Silitonga</p><p className="text-[9px]">NIP. 19690507 200701 2 042</p></div>
-                            <div><p className="font-bold underline">Ardiansyah Siregar</p><p className="text-[9px]">NIP. 19860404 201001 1 015</p></div>
-                          </div>
-                        )}
-                      </div>
+                      <div><p className="font-bold underline">{coordinatorSignature.name}</p><p>{coordinatorSignature.nip}</p></div>
                     </div>
                   </div>
                 </div>

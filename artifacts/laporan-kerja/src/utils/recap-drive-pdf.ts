@@ -46,8 +46,20 @@ type GenerateRecapDrivePdfOptions = {
   visibleColumns?: RecapPdfVisibleColumns;
   fuelMode?: RecapPdfFuelMode;
   signatureMode: RecapPdfSignatureMode;
-  showTiurmaida: boolean;
-  showArdiansyah: boolean;
+  coordinatorName: string;
+  coordinatorNip: string;
+};
+
+export const getRegionalCoordinatorSignature = (regionName: string) => {
+  if (regionName.includes('WILAYAH 4') || regionName.includes('WILAYAH 5')) {
+    return { name: 'Tiurmaida Silitonga, SE', nip: 'NIP. 196905072007012042' };
+  }
+
+  if (regionName.includes('WILAYAH 1') || regionName.includes('WILAYAH 2') || regionName.includes('WILAYAH 3')) {
+    return { name: 'Ramli Munte', nip: 'NIP. 197907112025211048' };
+  }
+
+  return { name: '____________________________', nip: '____________________________' };
 };
 
 const defaultColumns: RecapPdfVisibleColumns = {
@@ -325,17 +337,10 @@ const addSignatures = (pdf: jsPDF, options: GenerateRecapDrivePdfOptions, margin
   const blocks = [
     ['Mengetahui :', 'Kabid Tata Lingkungan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Heni Rustati, ST, M.Si', 'NIP. 19720223 200604 2 002'],
     ['Diketahui :', 'Ketua Tim Pemeliharaan Lingkungan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Anitha Florida Ginting, ST, M. Si', 'NIP. 19811128 201001 2 011'],
-    ['Diketahui :', 'Pengawas Taman Penghijauan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Jhosua Sibarani, S.T', 'NIP. 19740907 200903 1 002'],
+    ['Diketahui :', 'Pengawas Taman Penghijauan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', '____________________________', '____________________________'],
   ];
 
-  let coordinatorBlock: string[];
-  if (options.showTiurmaida && options.showArdiansyah) {
-    coordinatorBlock = ['Diketahui :', 'Koordinator Taman & Tim Pohon', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Tiurmaida Silitonga / Ardiansyah Siregar', 'NIP. 19690507 200701 2 042 / 19860404 201001 1 015'];
-  } else if (options.showArdiansyah) {
-    coordinatorBlock = ['Diketahui :', 'Koordinator Tim Pohon', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Ardiansyah Siregar', 'NIP. 19860404 201001 1 015'];
-  } else {
-    coordinatorBlock = ['Diketahui :', 'Kepala Koordinator Taman', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Tiurmaida Silitonga', 'NIP. 19690507 200701 2 042'];
-  }
+  const coordinatorBlock = ['Diketahui :', 'Kepala Koordinator Pemeliharaan Taman', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', options.coordinatorName, options.coordinatorNip];
 
   [...blocks, coordinatorBlock].forEach((block, index) => {
     const x = margin + columnWidth * index + columnWidth / 2;
