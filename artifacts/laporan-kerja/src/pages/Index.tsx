@@ -720,17 +720,6 @@ const Index = () => {
                     />
                   </div>
                 </div>
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Kategori Tim</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isUserRestricted}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
-                      <SelectValue placeholder="Pilih Kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(cat => <SelectItem key={cat} value={cat} className="font-medium">{cat === 'semua' ? 'Semua Kategori' : cat}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
                 {isAdmin && (
                   <div className="md:col-span-2 space-y-1.5">
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Wilayah</label>
@@ -745,6 +734,17 @@ const Index = () => {
                     </Select>
                   </div>
                 )}
+                <div className="md:col-span-3 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Kategori Tim</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isUserRestricted}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
+                      <SelectValue placeholder="Pilih Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(cat => <SelectItem key={cat} value={cat} className="font-medium">{cat === 'semua' ? 'Semua Kategori' : cat}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Tanggal</label>
                   <div className="relative">
