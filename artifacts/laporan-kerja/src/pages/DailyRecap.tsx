@@ -40,10 +40,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const allCategories = [
-  "Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"
-];
-
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
   return data.publicUrl;
@@ -90,6 +86,8 @@ const DailyRecap = () => {
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const regionId = !isPimpinan && profile?.role !== 'admin' ? profile?.region_id : null;
+  const availableCategories = Array.from(new Set(reports.map((report) => report.category))).sort((first, second) => first.localeCompare(second));
 
   useEffect(() => {
     if (profile && !hasSetDefaults) {
@@ -120,21 +118,22 @@ const DailyRecap = () => {
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [selectedDate, selectedCategories]);
+  }, [selectedDate, selectedCategories, regionId]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      let data = await reportService.getAllReports();
+      let data = await reportService.getAllReports(undefined, false, regionId);
       data = data.filter(r => {
         const matchDate = selectedDate === "semua" || r.date === selectedDate;
+        const matchRegion = !regionId || r.region_id === regionId;
         let matchCategory = false;
-        if (!isLoggedIn || profile?.role === 'admin' || isPimpinan || isAdminHarian) {
+        if (!isUserRestricted) {
           matchCategory = selectedCategories.includes('semua') || selectedCategories.includes(r.category);
         } else {
           matchCategory = r.category === profile?.category;
         }
-        return matchDate && matchCategory;
+        return matchDate && matchCategory && matchRegion;
       });
       
       data.sort((a, b) => {
@@ -536,7 +535,7 @@ const DailyRecap = () => {
                   <div className="p-2 space-y-1">
                     <div className="flex items-center space-x-2 p-2 hover:bg-slate-100 rounded-md cursor-pointer" onClick={() => toggleCategory('semua')}><Checkbox checked={selectedCategories.includes('semua')} /><label className="text-sm font-medium leading-none cursor-pointer">Semua Kategori</label></div>
                     <div className="h-px bg-slate-200 my-1" />
-                    {allCategories.map((cat) => (<div key={cat} className="flex items-center space-x-2 p-2 hover:bg-slate-100 rounded-md cursor-pointer" onClick={() => toggleCategory(cat)}><Checkbox checked={selectedCategories.includes(cat)} /><label className="text-sm font-medium leading-none cursor-pointer">{cat}</label></div>))}
+                    {availableCategories.map((cat) => (<div key={cat} className="flex items-center space-x-2 p-2 hover:bg-slate-100 rounded-md cursor-pointer" onClick={() => toggleCategory(cat)}><Checkbox checked={selectedCategories.includes(cat)} /><label className="text-sm font-medium leading-none cursor-pointer">{cat}</label></div>))}
                   </div>
                 </PopoverContent>
               </Popover>
