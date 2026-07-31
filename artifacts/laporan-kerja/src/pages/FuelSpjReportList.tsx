@@ -16,6 +16,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
 import FuelPriceSettings from '@/components/FuelPriceSettings';
 import { cn } from "@/lib/utils";
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import {
   Select,
   SelectContent,
@@ -36,8 +37,6 @@ const months = [
 ];
 
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-const regions = ["Pusat", "Wilayah 1 Utara", "Wilayah 2 Barat", "Wilayah 3 Timur", "Wilayah 4 Kota", "Wilayah 5 Selatan"];
-
 const FuelSpjReportList = () => {
   const navigate = useNavigate();
   const { profile, session, signOut } = useAuth();
@@ -57,6 +56,7 @@ const FuelSpjReportList = () => {
                     (session?.user?.email === 'pimpinan@gmail.com');
 
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const { regions } = useRegionFilterOptions(Boolean(profile), 'semua');
   const roleLabel = profile?.role === 'admin'
     ? "Administrator"
     : isPimpinan
@@ -223,7 +223,7 @@ const FuelSpjReportList = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="semua">Semua Wilayah</SelectItem>
-                  {regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {regions.map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

@@ -38,7 +38,7 @@ const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
 const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-const regions = ["Pusat", "Wilayah 1 Utara", "Wilayah 2 Barat", "Wilayah 3 Timur", "Wilayah 4 Kota", "Wilayah 5 Selatan"];
+const regions = ["Pusat", "Wilayah 1 Medan Utara", "Wilayah 2 Medan Barat", "Wilayah 3 Medan Timur", "Wilayah 4 Medan Kota", "Wilayah 5 Medan Selatan"];
 
 const FuelSpjMonthlyRecap = () => {
   const navigate = useNavigate();

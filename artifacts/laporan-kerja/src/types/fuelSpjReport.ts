@@ -24,6 +24,8 @@ export interface FuelSpjReport {
   date: string;
   region: string;
   team: string;
+  region_id?: string | null;
+  team_id?: string | null;
   entries: FuelSpjEntry[];
   remarks: string;
   price_pertamax: number;

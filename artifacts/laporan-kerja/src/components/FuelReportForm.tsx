@@ -22,6 +22,7 @@ import { medanDistricts } from '@/data/medan-districts';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import {
   Dialog,
   DialogContent,
@@ -30,19 +31,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-const regions = [
-  "Pusat", "Wilayah 1 Utara", "Wilayah 2 Barat", "Wilayah 3 Timur", "Wilayah 4 Kota", "Wilayah 5 Selatan"
-];
-
-const teamOptions: Record<string, string[]> = {
-  "Pusat": ["Mobil Crane", "Mobil Tangga", "Mobil Tangga 30m", "Beco Loader", "Dump Truck", "PickUp"],
-  "Wilayah 1 Utara": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-  "Wilayah 2 Barat": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-  "Wilayah 3 Timur": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-  "Wilayah 4 Kota": ["Tim Babat", "Tim Siram", "Tim Pohon", "Dump Truck"],
-  "Wilayah 5 Selatan": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-};
 
 const usageItemSchema = z.object({
   vehicle_operator: z.string().min(1, "Wajib diisi"),
@@ -171,6 +159,10 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   };
 
   const selectedRegion = form.watch("region");
+  const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
+  const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
+  const teams = allTeams.filter(team => team.region_id === selectedRegionId);
+  const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
 
   const handleAddClick = () => {
     setShowTypePrompt(true);
@@ -204,7 +196,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const isAllowed = profile?.role === 'admin' || profile?.role === 'admin_bbm';
+    const isAllowed = profile?.role === 'admin' || profile?.role === 'admin_bbm' || session?.user?.email === 'admin@gmail.com';
     if (!isAllowed) {
       showError("Anda tidak memiliki izin untuk menyimpan laporan ini");
       return;
@@ -216,6 +208,8 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         date: values.date,
         region: values.region,
         team: values.team,
+        region_id: selectedRegionId,
+        team_id: selectedTeamId,
         price_pertamax: values.price_pertamax,
         price_dexlite: values.price_dexlite,
         items: values.items.map(item => ({
@@ -277,7 +271,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                   <FormLabel>Wilayah</FormLabel>
                   <Select onValueChange={(val) => { field.onChange(val); form.setValue("team", ""); }} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger></FormControl>
-                    <SelectContent>{regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                    <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
@@ -289,7 +283,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                   <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {selectedRegion && teamOptions[selectedRegion]?.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <FormMessage />

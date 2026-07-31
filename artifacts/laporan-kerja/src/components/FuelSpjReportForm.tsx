@@ -22,17 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { FuelType } from '@/types/fuelReport';
 import { cn } from "@/lib/utils";
-
-const regions = ["Pusat", "Wilayah 1 Utara", "Wilayah 2 Barat", "Wilayah 3 Timur", "Wilayah 4 Kota", "Wilayah 5 Selatan"];
-
-const teamOptions: Record<string, string[]> = {
-  "Pusat": ["Mobil Crane", "Mobil Tangga", "Mobil Tangga 30m", "Beco Loader", "Dump Truck", "PickUp"],
-  "Wilayah 1 Utara": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-  "Wilayah 2 Barat": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-  "Wilayah 3 Timur": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-  "Wilayah 4 Kota": ["Tim Babat", "Tim Siram", "Tim Pohon", "Dump Truck"],
-  "Wilayah 5 Selatan": ["Tim Babat", "Tim Siram", "Tim Pohon", "Becak Siram", "Becak Sampah", "Dump Truck"],
-};
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 
 const locationSchema = z.object({
   street: z.string().min(1, "Wajib diisi"),
@@ -104,6 +94,10 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   });
 
   const selectedRegion = form.watch("region");
+  const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
+  const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
+  const teams = allTeams.filter(team => team.region_id === selectedRegionId);
+  const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -172,6 +166,8 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
     try {
       const finalData = { 
         ...values, 
+        region_id: selectedRegionId,
+        team_id: selectedTeamId,
         price_pertamax: values.price_pertamax, 
         price_dexlite: values.price_dexlite,
         entries: values.entries.map(entry => ({
@@ -227,7 +223,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
                 <FormItem><FormLabel>Wilayah</FormLabel>
                   <Select onValueChange={(val) => { field.onChange(val); form.setValue("team", ""); }} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger></FormControl>
-                    <SelectContent>{regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                    <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </FormItem>
               )} />
@@ -238,7 +234,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
                   <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {selectedRegion && teamOptions[selectedRegion]?.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <FormMessage />

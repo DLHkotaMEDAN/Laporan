@@ -23,6 +23,8 @@ export interface FuelReport {
   date: string;
   region: string;
   team: string;
+  region_id?: string | null;
+  team_id?: string | null;
   items: FuelUsageItem[];
   remarks: string;
   price_pertamax: number; // Field baru

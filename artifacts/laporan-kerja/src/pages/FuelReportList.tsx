@@ -97,9 +97,11 @@ const FuelReportList = () => {
   const PAGE_SIZE = 100;
 
   const isAdminBbm = profile?.role === 'admin_bbm';
-  const isAdmin = profile?.role === 'admin';
+  const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isAdmin = isSuperAdmin;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAllowed = isAdmin || isAdminBbm || isPimpinan;
+  const canInputFuelReport = isSuperAdmin || isAdminBbm;
+  const isAllowed = canInputFuelReport || isPimpinan;
   const roleLabel = isAdmin
     ? "Administrator"
     : isPimpinan
@@ -396,7 +398,7 @@ const FuelReportList = () => {
                 <TooltipContent><p>Segarkan Data</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            {!isPimpinan && (
+            {canInputFuelReport && (
               <Button onClick={() => navigate('/fuel-reports/create')} className="bg-blue-600 hover:bg-blue-700 h-9 px-4 font-bold shadow-sm text-xs ml-auto">
                 <Plus className="mr-1.5 h-4 w-4" /> Input Baru
               </Button>
