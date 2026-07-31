@@ -23,6 +23,7 @@ const accessOptions = [
   { value: 'admin', label: 'Super Admin / Administrator' },
   { value: 'admin_wilayah', label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
   { value: 'admin_harian', label: 'Admin Laporan Harian' },
+  { value: 'admin_rencana_kerja', label: 'Admin Rencana Kerja' },
   { value: 'admin_bbm', label: 'Admin BBM' },
   { value: 'admin_spj_bbm', label: 'Admin SPJ BBM' },
   { value: 'pimpinan', label: 'Pimpinan (Lihat Rekap)' },
@@ -77,7 +78,7 @@ const UserManagement = () => {
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
-          regionId: newUser.role === 'admin_wilayah' ? newUser.regionId : null,
+          regionId: ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(newUser.role) ? newUser.regionId : null,
         },
       });
       if (error) throw error;
@@ -173,12 +174,12 @@ const UserManagement = () => {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId })} disabled={newUser.role !== 'admin_wilayah'}>
+          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId })} disabled={!['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(newUser.role)}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
             <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <Button type="submit" disabled={creating || (newUser.role === 'admin_wilayah' && !newUser.regionId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+        <Button type="submit" disabled={creating || (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(newUser.role) && !newUser.regionId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">

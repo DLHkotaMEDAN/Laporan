@@ -336,6 +336,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
       });
 
       const reportData: Omit<Report, 'id' | 'createdAt'> = {
+        region_id: profile?.region_id ?? initialData?.region_id ?? null,
         date: values.date,
         category: values.category as ReportCategory,
         vehicle: finalTasks[0].heavyEquipment?.[0]?.vehicle || finalTasks[0].vehicle,
@@ -444,6 +445,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
         <Card className="border-t-4 border-t-blue-500">
           <CardHeader><CardTitle className="text-lg">Informasi Dasar</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+            {profile?.region_id && <p className="rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">Wilayah Login: otomatis sesuai akun Anda</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Hari / Tanggal</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)} />
               <FormField control={form.control} name="category" render={({ field }) => (

@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from '@/context/AuthContext';
+import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,7 @@ type SignatureMode = "with-signature" | "without-signature";
 const MonthlyRecap = () => {
   const navigate = useNavigate();
   const { session, profile, signOut } = useAuth();
+  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDriveDialogOpen, setIsDriveDialogOpen] = useState(false);
@@ -619,7 +621,7 @@ const MonthlyRecap = () => {
           </div>
           <div className="text-center mb-8 space-y-1">
             <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
-            <p className="text-xl font-bold uppercase">WILAYAH 4 MEDAN KOTA</p>
+            <p className="text-xl font-bold uppercase">{regionName}</p>
             <p className="text-xl font-bold uppercase">Bulan: {selectedMonth === 'semua' ? 'Semua Bulan' : months[parseInt(selectedMonth)-1]} {selectedYear === 'semua' ? 'Semua Tahun' : selectedYear}</p>
           </div>
         </div>

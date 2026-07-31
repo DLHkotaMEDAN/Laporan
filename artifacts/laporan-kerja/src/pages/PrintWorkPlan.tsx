@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
+import { useRegionName } from '@/hooks/useRegionName';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +33,7 @@ const PrintWorkPlan = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
+  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
   const [plan, setPlan] = useState<WorkPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
@@ -159,7 +161,7 @@ const PrintWorkPlan = () => {
         </div>
 
         <div className="text-center mb-6">
-          <h3 className="text-lg font-bold underline uppercase">RENCANA KERJA WILAYAH 4 MEDAN KOTA</h3>
+          <h3 className="text-lg font-bold underline uppercase">RENCANA KERJA {regionName}</h3>
           <p className="font-bold">Tanggal: {new Date(plan.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
 

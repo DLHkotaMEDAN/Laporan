@@ -18,6 +18,7 @@ import {
   getUniqueWorkPlanItems,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
+import { useRegionName } from '@/hooks/useRegionName';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import {
@@ -66,7 +67,8 @@ type WeeklyTableRow =
 const WorkPlanWeeklyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
+  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
@@ -314,7 +316,7 @@ const WorkPlanWeeklyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA WILAYAH 4 MEDAN KOTA</h3>
+          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA {regionName}</h3>
           <p className="text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>
         </div>
 

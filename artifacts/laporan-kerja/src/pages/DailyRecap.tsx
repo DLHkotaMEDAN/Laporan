@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from '@/context/AuthContext';
+import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ const DailyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { session, profile, signOut } = useAuth();
+  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDriveDialogOpen, setIsDriveDialogOpen] = useState(false);
@@ -668,7 +670,7 @@ const DailyRecap = () => {
           </div>
           <div className="text-center mb-8 space-y-1">
             <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
-            <p className="text-xl font-bold uppercase">WILAYAH 4 MEDAN KOTA</p>
+            <p className="text-xl font-bold uppercase">{regionName}</p>
             <p className="text-xl font-bold uppercase">Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
         </div>

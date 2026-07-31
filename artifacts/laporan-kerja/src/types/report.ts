@@ -75,4 +75,5 @@ export interface Report {
   createdAt: string;
   unit: string;
   volume: number;
+  region_id?: string | null;
 }

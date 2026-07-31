@@ -30,4 +30,5 @@ export interface WorkPlan {
   is_visible: boolean;
   has_no_activity?: boolean;
   pimpinan_note?: string; // Field baru untuk penilaian pimpinan
+  region_id?: string | null;
 }

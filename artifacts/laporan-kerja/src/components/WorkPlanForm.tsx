@@ -274,6 +274,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       }
 
       const finalValues = { 
+        region_id: profile?.region_id ?? initialData?.region_id ?? null,
         date: values.date, 
         category: values.category, 
         items: processedItems
@@ -362,6 +363,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         <Card className="border-t-4 border-t-blue-500">
           <CardHeader><CardTitle className="text-lg">Informasi Umum</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+            {profile?.region_id && <p className="rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">Wilayah Login: otomatis sesuai akun Anda</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Tanggal Rencana</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)} />
               <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Kategori / Tim</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={profile?.role === 'user'}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger></FormControl><SelectContent>{categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select></FormItem>)} />

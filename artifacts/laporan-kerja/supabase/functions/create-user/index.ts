@@ -43,7 +43,9 @@ Deno.serve(async (request) => {
     const input = await request.json() as CreateUserInput;
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
-    if (input.role === 'admin_wilayah' && !input.regionId) throw new Error('Admin wilayah wajib memiliki wilayah.');
+    if (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(input.role) && !input.regionId) {
+      throw new Error('Admin berbasis wilayah wajib memiliki wilayah.');
+    }
 
     if (input.regionId) {
       const { data: region } = await adminClient.from('regions').select('id').eq('id', input.regionId).eq('is_active', true).maybeSingle();

@@ -77,6 +77,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
+type Region = { id: string; name: string };
 
 const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
   if (!Array.isArray(plan.items)) return [];
@@ -117,6 +118,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("reports");
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState("semua");
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isDailyRecapDateOpen, setIsDailyRecapDateOpen] = useState(false);
   const [dailyRecapDate, setDailyRecapDate] = useState(new Date().toISOString().split('T')[0]);
@@ -136,7 +139,10 @@ const Index = () => {
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
+  const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja';
+  const isAdminWilayah = profile?.role === 'admin_wilayah';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const canManageReports = isLoggedIn && !isPimpinan && !isAdminRencanaKerja;
   const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
   const showExecutiveHero = isAdmin;
   const loginScopeLabel = isPimpinan
@@ -157,6 +163,10 @@ const Index = () => {
     }
   }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, authLoading, navigate]);
 
+  useEffect(() => {
+    setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
+  }, [isAdminRencanaKerja]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -166,6 +176,17 @@ const Index = () => {
       ]);
       setReports(reportsData);
       setWorkPlans(workPlansData);
+      if (isAdmin) {
+        const { data: regionsData, error: regionsError } = await supabase
+          .from('regions')
+          .select('id, name')
+          .order('name');
+        if (regionsError) throw regionsError;
+        setRegions(regionsData || []);
+      } else {
+        setRegions([]);
+        setSelectedRegion('semua');
+      }
     } catch (error) {
       console.error(error);
       showError("Gagal memuat data");
@@ -232,6 +253,7 @@ const Index = () => {
     setSelectedMonth("semua");
     setSelectedYear("semua");
     setSelectedCategory(isUserRestricted ? (profile?.category || "semua") : "semua");
+    setSelectedRegion("semua");
     setSearchQuery("");
   };
 
@@ -253,11 +275,12 @@ const Index = () => {
       const matchYear = selectedYear === "semua" || y === selectedYear;
       const matchCategory = selectedCategory === "semua" || report.category === selectedCategory;
       const restrictionMatch = !isUserRestricted || report.category === profile?.category;
+      const regionMatch = !isAdmin || selectedRegion === "semua" || report.region_id === selectedRegion;
       
-      if (selectedDate) return matchSearch && matchSpecificDate && matchCategory && restrictionMatch;
-      return matchSearch && matchMonth && matchYear && matchCategory && restrictionMatch;
+      if (selectedDate) return matchSearch && matchSpecificDate && matchCategory && restrictionMatch && regionMatch;
+      return matchSearch && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
     });
-  }, [reports, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile]);
+  }, [reports, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion]);
 
   const filteredWorkPlans = useMemo(() => {
     return workPlans.filter(plan => {
@@ -270,10 +293,11 @@ const Index = () => {
       const matchYear = selectedYear === "semua" || new Date(plan.date).getFullYear().toString() === selectedYear;
       const matchCategory = selectedCategory === "semua" || plan.category === selectedCategory;
       const restrictionMatch = !isUserRestricted || plan.category === profile?.category;
+      const regionMatch = !isAdmin || selectedRegion === "semua" || plan.region_id === selectedRegion;
       
-      return matchSearch && matchSpecificDate && matchMonth && matchYear && matchCategory && restrictionMatch;
+      return matchSearch && matchSpecificDate && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
     });
-  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile]);
+  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion]);
 
   const formatReportLocation = (report: Report) => {
     return formatLocation(report.location);
@@ -345,12 +369,12 @@ const Index = () => {
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return {
-      totalReports: reports.length,
-      totalWorkPlans: workPlans.length,
-      reportsToday: reports.filter(r => r.date === today).length,
-      plansToday: workPlans.filter(p => p.date === today).length
+      totalReports: filteredReports.length,
+      totalWorkPlans: filteredWorkPlans.length,
+      reportsToday: filteredReports.filter(r => r.date === today).length,
+      plansToday: filteredWorkPlans.filter(p => p.date === today).length
     };
-  }, [reports, workPlans]);
+  }, [filteredReports, filteredWorkPlans]);
 
   if (authLoading) {
     return (
@@ -501,7 +525,7 @@ const Index = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => navigate('/create')} disabled={!isLoggedIn || isPimpinan} className="h-11 bg-white text-slate-950 hover:bg-emerald-50">
+                <Button onClick={() => navigate('/create')} disabled={!canManageReports} className="h-11 bg-white text-slate-950 hover:bg-emerald-50">
                   <FileText className="mr-2 h-4 w-4" /> Laporan
                 </Button>
                 <Button onClick={() => navigate('/work-plans/create')} disabled={!canManageWorkPlans} className="h-11 bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
@@ -561,21 +585,21 @@ const Index = () => {
           />
         )}
 
-        <Tabs defaultValue="reports" onValueChange={setActiveTab} className="w-full space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
             <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
-              <TabsTrigger 
+              {!isAdminRencanaKerja && <TabsTrigger 
                 value="reports" 
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
                 <FileText size={16} /> Laporan Harian
-              </TabsTrigger>
-              <TabsTrigger 
+              </TabsTrigger>}
+              {!isAdminHarian && <TabsTrigger 
                 value="workplans" 
                 className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
                 <ClipboardList size={16} /> Rencana Kerja
-              </TabsTrigger>
+              </TabsTrigger>}
               {(isAdmin || isPimpinan) && !isAdminHarian && (
                 <>
                   {isAdmin && (
@@ -702,6 +726,20 @@ const Index = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {isAdmin && (
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Wilayah</label>
+                    <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                      <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
+                        <SelectValue placeholder="Pilih Wilayah" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="semua">Semua Wilayah</SelectItem>
+                        {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Tanggal</label>
                   <div className="relative">
@@ -737,7 +775,7 @@ const Index = () => {
             </div>
           )}
 
-          <TabsContent value="reports" className="mt-0">
+          {!isAdminRencanaKerja && <TabsContent value="reports" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
@@ -845,9 +883,9 @@ const Index = () => {
                 <Button variant="link" onClick={resetFilters} className="mt-4 text-blue-600 font-bold">Reset Semua Filter</Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="workplans" className="mt-0">
+          {!isAdminHarian && <TabsContent value="workplans" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />
@@ -952,7 +990,7 @@ const Index = () => {
                 <Button variant="link" onClick={resetFilters} className="mt-4 text-green-600 font-bold">Reset Semua Filter</Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {(isAdmin || isPimpinan) && (
             <>
