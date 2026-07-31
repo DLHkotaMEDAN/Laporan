@@ -14,6 +14,12 @@ type CreateUserInput = {
   teamId?: string | null;
 };
 
+type ResetPasswordInput = {
+  action: 'reset-password';
+  userId: string;
+  password: string;
+};
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -40,7 +46,19 @@ Deno.serve(async (request) => {
       .single();
     if (callerError || callerProfile?.role !== 'admin') throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
-    const input = await request.json() as CreateUserInput;
+    const input = await request.json() as CreateUserInput | ResetPasswordInput;
+    if ('action' in input && input.action === 'reset-password') {
+      if (!input.userId || !input.password) throw new Error('ID pengguna dan password baru wajib diisi.');
+      if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
+
+      const { error: passwordError } = await adminClient.auth.admin.updateUserById(input.userId, {
+        password: input.password,
+      });
+      if (passwordError) throw passwordError;
+
+      return Response.json({ id: input.userId }, { headers: corsHeaders });
+    }
+
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
     if (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(input.role) && !input.regionId) {

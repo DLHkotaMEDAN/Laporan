@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
-  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail
+  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -84,8 +84,18 @@ const UserManagement = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       showSuccess('Akun aktif berhasil dibuat tanpa konfirmasi email');
+      setProfiles(currentProfiles => [
+        {
+          id: data.id,
+          username: newUser.username.trim(),
+          role: newUser.role,
+          category: null,
+          updated_at: new Date().toISOString(),
+        },
+        ...currentProfiles.filter(profile => profile.id !== data.id),
+      ]);
       setNewUser({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
-      fetchProfiles();
+      await fetchProfiles();
     } catch (error: any) {
       showError('Gagal membuat akun: ' + error.message);
     } finally {
@@ -144,6 +154,30 @@ const UserManagement = () => {
       showSuccess("Profil dihapus");
     } catch (error: any) {
       showError("Gagal menghapus profil: " + error.message);
+    }
+  };
+
+  const handleResetPassword = async (profile: Profile) => {
+    const password = window.prompt(`Masukkan password baru untuk ${profile.username || 'pengguna'} (minimal 8 karakter):`);
+    if (password === null) return;
+    if (password.length < 8) {
+      showError('Password minimal 8 karakter.');
+      return;
+    }
+
+    setUpdatingId(profile.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: { action: 'reset-password', userId: profile.id, password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      showSuccess(`Password ${profile.username || 'pengguna'} berhasil diubah.`);
+      await fetchProfiles();
+    } catch (error: any) {
+      showError('Gagal mengubah password: ' + error.message);
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -287,10 +321,21 @@ const UserManagement = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                        disabled={updatingId === profile.id}
+                        title="Ubah password"
+                        onClick={() => handleResetPassword(profile)}
+                      >
+                        <KeyRound size={17} />
+                      </Button>
+                      <Button
                         variant="ghost" 
                         size="icon" 
                         className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                        disabled={updatingId === profile.id}
                         onClick={() => handleDeleteProfile(profile.id, profile.username || "User")}
                       >
                         <Trash2 size={18} />
