@@ -26,6 +26,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -55,14 +56,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const categories: string[] = [
-  "semua", "Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"
-];
-
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
+
+const defaultCategories = ["semua", "Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
 
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
@@ -77,7 +76,6 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-type Region = { id: string; name: string };
 
 const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
   if (!Array.isArray(plan.items)) return [];
@@ -118,7 +116,6 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("reports");
-  const [regions, setRegions] = useState<Region[]>([]);
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isDailyRecapDateOpen, setIsDailyRecapDateOpen] = useState(false);
@@ -145,6 +142,11 @@ const Index = () => {
   const canManageReports = isLoggedIn && !isPimpinan && !isAdminRencanaKerja;
   const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
   const showExecutiveHero = isAdmin;
+  const { regions, teams: regionTeams } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const categories = useMemo(
+    () => isAdmin ? ["semua", ...Array.from(new Set(regionTeams.map(team => team.name)))] : defaultCategories,
+    [isAdmin, regionTeams],
+  );
   const loginScopeLabel = isPimpinan
     ? "Pimpinan"
     : isAdminHarian
@@ -167,6 +169,12 @@ const Index = () => {
     setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
   }, [isAdminRencanaKerja]);
 
+  useEffect(() => {
+    if (selectedCategory !== 'semua' && !categories.includes(selectedCategory)) {
+      setSelectedCategory(isUserRestricted ? (profile?.category || 'semua') : 'semua');
+    }
+  }, [categories, isUserRestricted, profile?.category, selectedCategory]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -176,15 +184,7 @@ const Index = () => {
       ]);
       setReports(reportsData);
       setWorkPlans(workPlansData);
-      if (isAdmin) {
-        const { data: regionsData, error: regionsError } = await supabase
-          .from('regions')
-          .select('id, name')
-          .order('name');
-        if (regionsError) throw regionsError;
-        setRegions(regionsData || []);
-      } else {
-        setRegions([]);
+      if (!isAdmin) {
         setSelectedRegion('semua');
       }
     } catch (error) {
@@ -301,6 +301,11 @@ const Index = () => {
 
   const formatReportLocation = (report: Report) => {
     return formatLocation(report.location);
+  };
+
+  const handleRegionChange = (regionId: string) => {
+    setSelectedRegion(regionId);
+    setSelectedCategory('semua');
   };
 
   const formatWorkPlanLocation = (plan: WorkPlan) => {
@@ -729,7 +734,7 @@ const Index = () => {
                 {isAdmin && (
                   <div className="md:col-span-2 space-y-1.5">
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Wilayah</label>
-                    <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                    <Select value={selectedRegion} onValueChange={handleRegionChange}>
                       <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
                         <SelectValue placeholder="Pilih Wilayah" />
                       </SelectTrigger>

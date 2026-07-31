@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -38,6 +39,7 @@ const months = [
 ];
 
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+const defaultCategories = ["semua", "Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
 
 const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
   if (!Array.isArray(plan.items)) return [];
@@ -77,6 +79,7 @@ const WorkPlanList = () => {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("semua");
+  const [selectedRegion, setSelectedRegion] = useState("semua");
   const [selectedDate, setSelectedDate] = useState("");
   const [isWeeklyMode, setIsWeeklyMode] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("semua");
@@ -85,9 +88,15 @@ const WorkPlanList = () => {
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
+  const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
   
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && profile?.category && !isPimpinan && !isAdminHarian;
+  const { regions, teams: regionTeams } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const categories = useMemo(
+    () => isAdmin ? ["semua", ...Array.from(new Set(regionTeams.map(team => team.name)))] : defaultCategories,
+    [isAdmin, regionTeams],
+  );
 
   const loadPlans = useCallback(async () => {
     try {
@@ -111,6 +120,12 @@ const WorkPlanList = () => {
       setSelectedCategory(profile.category);
     }
   }, [profile, isUserRestricted]);
+
+  useEffect(() => {
+    if (selectedCategory !== 'semua' && !categories.includes(selectedCategory)) {
+      setSelectedCategory(isUserRestricted ? (profile?.category || 'semua') : 'semua');
+    }
+  }, [categories, isUserRestricted, profile?.category, selectedCategory]);
 
   const handleToggleVisibility = async (e: React.MouseEvent, plan: WorkPlan) => {
     e.stopPropagation();
@@ -143,10 +158,16 @@ const WorkPlanList = () => {
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedCategory(isUserRestricted ? profile?.category || "semua" : "semua");
+    setSelectedRegion("semua");
     setSelectedDate("");
     setIsWeeklyMode(false);
     setSelectedMonth("semua");
     setSelectedYear("semua");
+  };
+
+  const handleRegionChange = (regionId: string) => {
+    setSelectedRegion(regionId);
+    setSelectedCategory('semua');
   };
 
   const filteredPlans = plans.filter(plan => {
@@ -156,6 +177,7 @@ const WorkPlanList = () => {
     ));
 
     const matchCategory = selectedCategory === "semua" || plan.category === selectedCategory;
+    const matchRegion = !isAdmin || selectedRegion === "semua" || plan.region_id === selectedRegion;
 
     let matchDate = true;
     const planDate = parseISO(plan.date);
@@ -179,7 +201,7 @@ const WorkPlanList = () => {
       matchMonthYear = matchMonth && matchYear;
     }
 
-    return matchSearch && matchCategory && matchDate && matchMonthYear;
+    return matchSearch && matchCategory && matchRegion && matchDate && matchMonthYear;
   });
 
   return (
@@ -260,7 +282,7 @@ const WorkPlanList = () => {
               </div>
             </div>
 
-            <div className="md:col-span-3 space-y-1.5">
+            <div className={isAdmin ? "md:col-span-2 space-y-1.5" : "md:col-span-3 space-y-1.5"}>
               <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Kategori</label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={!!isUserRestricted}>
                 <SelectTrigger className="bg-slate-50 border-slate-200 h-10">
@@ -268,12 +290,27 @@ const WorkPlanList = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="semua">Semua Kategori</SelectItem>
-                  {["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"].map(cat => (
+                  {categories.slice(1).map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {isAdmin && (
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Wilayah</label>
+                <Select value={selectedRegion} onValueChange={handleRegionChange}>
+                  <SelectTrigger className="bg-slate-50 border-slate-200 h-10">
+                    <SelectValue placeholder="Semua Wilayah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="semua">Semua Wilayah</SelectItem>
+                    {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="md:col-span-3 space-y-1.5">
               <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Filter Tanggal / Minggu</label>

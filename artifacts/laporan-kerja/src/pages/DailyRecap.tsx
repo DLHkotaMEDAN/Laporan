@@ -339,7 +339,7 @@ const DailyRecap = () => {
   const coordinatorSignature = getRegionalCoordinatorSignature(regionName);
   const recapTitle = getReportRecapTitle('harian', reports.map(report => report.category));
 
-  const headerStyle = { backgroundColor: '#e5e7eb', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
+  const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
   const subHeaderStyle = headerStyle;
 
   const totalPertamax = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.pertamax || 0), 0) || 0), 0), 0);
@@ -767,7 +767,7 @@ const DailyRecap = () => {
           tr { page-break-inside: avoid; page-break-after: auto; }
           thead { display: table-header-group; }
           .pdf-table-header th {
-            background-color: #e5e7eb !important;
+            background-color: #42FF41 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
