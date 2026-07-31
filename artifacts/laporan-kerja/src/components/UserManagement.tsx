@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
-const roles = ['admin', 'user', 'pimpinan', 'admin_harian', 'admin_bbm', 'admin_spj_bbm'];
+const roles = ['admin', 'admin_wilayah', 'user', 'pimpinan', 'admin_harian', 'admin_bbm', 'admin_spj_bbm'];
 const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
 
 interface Profile {
@@ -30,15 +30,58 @@ interface Profile {
   updated_at: string;
 }
 
+interface Region {
+  id: string;
+  name: string;
+}
+
 const UserManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
 
   useEffect(() => {
     fetchProfiles();
+    fetchRegions();
   }, []);
+
+  const fetchRegions = async () => {
+    const { data, error } = await supabase.from('regions').select('id, name').eq('is_active', true).order('sort_order');
+    if (error) {
+      showError('Gagal memuat wilayah: ' + error.message);
+      return;
+    }
+    setRegions(data || []);
+  };
+
+  const handleCreateUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          username: newUser.username,
+          email: newUser.email,
+          password: newUser.password,
+          role: newUser.role,
+          regionId: newUser.role === 'admin_wilayah' ? newUser.regionId : null,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      showSuccess('Akun aktif berhasil dibuat tanpa konfirmasi email');
+      setNewUser({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
+      fetchProfiles();
+    } catch (error: any) {
+      showError('Gagal membuat akun: ' + error.message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const fetchProfiles = async () => {
     try {
@@ -108,6 +151,26 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
+      <form onSubmit={handleCreateUser} className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+        <div>
+          <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
+          <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-5">
+          <Input required placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
+          <Input required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
+          <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
+          <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId })} disabled={newUser.role !== 'admin_wilayah'}>
+            <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
+            <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" disabled={creating || (newUser.role === 'admin_wilayah' && !newUser.regionId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+      </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
