@@ -19,7 +19,16 @@ import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
-const roles = ['admin', 'admin_wilayah', 'user', 'pimpinan', 'admin_harian', 'admin_bbm', 'admin_spj_bbm'];
+const accessOptions = [
+  { value: 'admin', label: 'Super Admin / Administrator' },
+  { value: 'admin_wilayah', label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
+  { value: 'admin_harian', label: 'Admin Laporan Harian' },
+  { value: 'admin_bbm', label: 'Admin BBM' },
+  { value: 'admin_spj_bbm', label: 'Admin SPJ BBM' },
+  { value: 'pimpinan', label: 'Pimpinan (Lihat Rekap)' },
+  { value: 'user', label: 'Pengguna Tim' },
+];
+
 const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
 
 interface Profile {
@@ -162,7 +171,7 @@ const UserManagement = () => {
           <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
           <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent>
+            <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId })} disabled={newUser.role !== 'admin_wilayah'}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
@@ -203,7 +212,7 @@ const UserManagement = () => {
             <TableHeader className="bg-slate-50">
               <TableRow>
                 <TableHead className="w-[200px]">Username / Email</TableHead>
-                <TableHead className="w-[180px]">Role / Peran</TableHead>
+                <TableHead className="w-[220px]">Hak Akses</TableHead>
                 <TableHead className="w-[220px]">Kategori (Khusus User)</TableHead>
                 <TableHead className="w-[180px]">Update Terakhir</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
@@ -245,7 +254,7 @@ const UserManagement = () => {
                           </div>
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.map(r => <SelectItem key={r} value={r} className="text-xs uppercase font-bold">{r}</SelectItem>)}
+                          {accessOptions.map(option => <SelectItem key={option.value} value={option.value} className="text-xs font-bold">{option.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </TableCell>
