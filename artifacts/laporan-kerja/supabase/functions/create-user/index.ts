@@ -79,9 +79,10 @@ Deno.serve(async (request) => {
 
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
-    if (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(input.role) && !input.regionId) {
+    if (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(input.role) && !input.regionId) {
       throw new Error('Admin berbasis wilayah wajib memiliki wilayah.');
     }
+    if (input.role === 'user' && !input.teamId) throw new Error('Pengguna tim wajib memiliki tim.');
 
     if (input.regionId) {
       const { data: region } = await adminClient.from('regions').select('id').eq('id', input.regionId).eq('is_active', true).maybeSingle();

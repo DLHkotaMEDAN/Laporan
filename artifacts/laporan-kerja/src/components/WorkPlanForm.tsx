@@ -20,6 +20,7 @@ import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import {
   Dialog,
   DialogContent,
@@ -28,8 +29,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
 
 const toolUsageMapping: Record<string, string> = {
   "Mobil Tangga (BK 9044 J)": "Alat Bantu Untuk Menjangkau Ranting Yang Tinggi",
@@ -113,6 +112,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   });
 
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const activeRegionId = profile?.region_id ?? initialData?.region_id ?? null;
+  const { teams } = useAvailableTeams(activeRegionId);
 
   const getTomorrowDate = () => {
     const tomorrow = new Date();
@@ -152,6 +153,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
   const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({ control: form.control, name: "items" });
   const selectedCategory = form.watch("category");
+  const selectedTeamId = teams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
   const hasNoActivity = form.watch("has_no_activity");
   const isGlobalStyle = selectedCategory === "Tim Babat";
   const useWizard = selectedCategory === "Tim Siram" || selectedCategory === "Tim Pohon";
@@ -275,6 +277,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
       const finalValues = { 
         region_id: profile?.region_id ?? initialData?.region_id ?? null,
+        team_id: selectedTeamId,
         date: values.date, 
         category: values.category, 
         items: processedItems
@@ -366,7 +369,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
             {profile?.region_id && <p className="rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">Wilayah Login: otomatis sesuai akun Anda</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Tanggal Rencana</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Kategori / Tim</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={profile?.role === 'user'}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger></FormControl><SelectContent>{categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+              <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Kategori / Tim</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={profile?.role === 'user' || !activeRegionId}><FormControl><SelectTrigger><SelectValue placeholder={activeRegionId ? "Pilih tim..." : "Pilih wilayah melalui akun"} /></SelectTrigger></FormControl><SelectContent>{teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}</SelectContent></Select></FormItem>)} />
             </div>
 
             {selectedCategory === "Tim Pohon" && (

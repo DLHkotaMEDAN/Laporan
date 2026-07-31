@@ -41,11 +41,18 @@ interface Profile {
   role: string;
   category: string | null;
   region_id: string | null;
+  team_id: string | null;
   updated_at: string;
 }
 
 interface Region {
   id: string;
+  name: string;
+}
+
+interface Team {
+  id: string;
+  region_id: string;
   name: string;
 }
 
@@ -55,10 +62,11 @@ const UserManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
+  const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '', teamId: '' });
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
-  const [editUser, setEditUser] = useState({ username: '', role: '', category: 'none', regionId: '' });
+  const [editUser, setEditUser] = useState({ username: '', role: '', regionId: '', teamId: '' });
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   const [accountDetails, setAccountDetails] = useState<{ email?: string; createdAt?: string; lastSignInAt?: string | null; emailConfirmedAt?: string | null } | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -66,6 +74,7 @@ const UserManagement = () => {
   useEffect(() => {
     fetchProfiles();
     fetchRegions();
+    fetchTeams();
   }, []);
 
   const fetchRegions = async () => {
@@ -75,6 +84,15 @@ const UserManagement = () => {
       return;
     }
     setRegions(data || []);
+  };
+
+  const fetchTeams = async () => {
+    const { data, error } = await supabase.from('teams').select('id, region_id, name').eq('is_active', true).order('name');
+    if (error) {
+      showError('Gagal memuat tim: ' + error.message);
+      return;
+    }
+    setTeams(data || []);
   };
 
   const handleCreateUser = async (event: React.FormEvent) => {
@@ -87,7 +105,8 @@ const UserManagement = () => {
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
-          regionId: ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(newUser.role) ? newUser.regionId : null,
+          regionId: ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role) ? newUser.regionId : null,
+          teamId: newUser.role === 'user' ? newUser.teamId : null,
         },
       });
       if (error) throw error;
@@ -100,11 +119,12 @@ const UserManagement = () => {
           role: newUser.role,
           category: null,
           region_id: newUser.regionId || null,
+          team_id: newUser.teamId || null,
           updated_at: new Date().toISOString(),
         },
         ...currentProfiles.filter(profile => profile.id !== data.id),
       ]);
-      setNewUser({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
+      setNewUser({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '', teamId: '' });
       await fetchProfiles();
     } catch (error: any) {
       showError('Gagal membuat akun: ' + error.message);
@@ -196,28 +216,32 @@ const UserManagement = () => {
     setEditUser({
       username: profile.username || '',
       role: profile.role,
-      category: profile.category || 'none',
       regionId: profile.region_id || '',
+      teamId: profile.team_id || '',
     });
   };
 
   const handleSaveProfile = async () => {
     if (!editingProfile) return;
-    const isRegionalAdmin = ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(editUser.role);
+    const requiresRegion = ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(editUser.role);
     if (!editUser.username.trim()) {
       showError('Nama pengguna wajib diisi.');
       return;
     }
-    if (isRegionalAdmin && !editUser.regionId) {
-      showError('Admin berbasis wilayah wajib memilih wilayah.');
+    if (requiresRegion && !editUser.regionId) {
+      showError('Akun berbasis wilayah wajib memilih wilayah.');
+      return;
+    }
+    if (editUser.role === 'user' && !editUser.teamId) {
+      showError('Pengguna tim wajib memilih tim.');
       return;
     }
 
     const updates = {
       username: editUser.username.trim(),
       role: editUser.role,
-      category: editUser.role === 'user' && editUser.category !== 'none' ? editUser.category : null,
-      region_id: isRegionalAdmin ? editUser.regionId : null,
+      region_id: requiresRegion ? editUser.regionId : null,
+      team_id: editUser.role === 'user' ? editUser.teamId : null,
     };
 
     setUpdatingId(editingProfile.id);
@@ -279,7 +303,7 @@ const UserManagement = () => {
           <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-6">
           <Input required placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
           <Input required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
           <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
@@ -287,12 +311,16 @@ const UserManagement = () => {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId })} disabled={!['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(newUser.role)}>
+          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId, teamId: '' })} disabled={!['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role)}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
             <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
           </Select>
+          <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={newUser.role !== 'user' || !newUser.regionId}>
+            <SelectTrigger><SelectValue placeholder="Pilih tim" /></SelectTrigger>
+            <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent>
+          </Select>
         </div>
-        <Button type="submit" disabled={creating || (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(newUser.role) && !newUser.regionId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+        <Button type="submit" disabled={creating || (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role) && !newUser.regionId) || (newUser.role === 'user' && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -374,8 +402,11 @@ const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Select 
-                        value={profile.category || "none"} 
-                        onValueChange={(val) => handleUpdateProfile(profile.id, { category: val === "none" ? null : val })}
+                        value={profile.team_id || "none"}
+                        onValueChange={(teamId) => {
+                          const team = teams.find(item => item.id === teamId);
+                          if (team) void handleUpdateProfile(profile.id, { team_id: team.id, region_id: team.region_id });
+                        }}
                         disabled={updatingId === profile.id || profile.role !== 'user'}
                       >
                         <SelectTrigger className={cn(
@@ -389,7 +420,7 @@ const UserManagement = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Tanpa Kategori</SelectItem>
-                          {categories.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                          {teams.filter(team => !profile.region_id || team.region_id === profile.region_id).map(team => <SelectItem key={team.id} value={team.id} className="text-xs">{team.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -465,24 +496,23 @@ const UserManagement = () => {
                 <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {editUser.role === 'user' && (
+            {['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(editUser.role) && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Kategori tim</label>
-                <Select value={editUser.category} onValueChange={category => setEditUser({ ...editUser, category })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Tanpa Kategori</SelectItem>
-                    {categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
-                  </SelectContent>
+                <label className="text-sm font-medium">Wilayah</label>
+                <Select value={editUser.regionId} onValueChange={regionId => setEditUser({ ...editUser, regionId, teamId: '' })}>
+                  <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
+                  <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
-            {['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(editUser.role) && (
+            {editUser.role === 'user' && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Wilayah</label>
-                <Select value={editUser.regionId} onValueChange={regionId => setEditUser({ ...editUser, regionId })}>
-                  <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
-                  <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
+                <label className="text-sm font-medium">Kategori tim</label>
+                <Select value={editUser.teamId} onValueChange={teamId => setEditUser({ ...editUser, teamId })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {teams.filter(team => team.region_id === editUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
             )}

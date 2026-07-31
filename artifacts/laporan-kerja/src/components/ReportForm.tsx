@@ -25,6 +25,7 @@ import { auditLogService } from '@/services/auditLogService';
 import { fuelPriceService } from '@/services/fuelPriceService';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from "@/lib/utils";
+import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import {
   Dialog,
   DialogContent,
@@ -33,10 +34,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-const categories: ReportCategory[] = [
-  "Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"
-];
 
 const coordinatorMapping: Record<string, string> = {
   "Taman Kota": "Mhd. Said",
@@ -142,6 +139,8 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
   const isUserRestricted = profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const activeRegionId = profile?.region_id ?? initialData?.region_id ?? null;
+  const { teams } = useAvailableTeams(activeRegionId);
   
   const canEditPrice = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_spj_bbm' || session?.user?.email === 'admin@gmail.com';
 
@@ -165,6 +164,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   });
 
   const selectedCategory = form.watch("category");
+  const selectedTeamId = teams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
   const selectedDate = form.watch("date");
   const { fields: taskFields, append: appendTask, remove: removeTask, replace: replaceTasks } = useFieldArray({ control: form.control, name: "tasks" });
 
@@ -337,6 +337,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
 
       const reportData: Omit<Report, 'id' | 'createdAt'> = {
         region_id: profile?.region_id ?? initialData?.region_id ?? null,
+        team_id: selectedTeamId,
         date: values.date,
         category: values.category as ReportCategory,
         vehicle: finalTasks[0].heavyEquipment?.[0]?.vehicle || finalTasks[0].vehicle,
@@ -450,7 +451,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
               <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Hari / Tanggal</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)} />
               <FormField control={form.control} name="category" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center gap-2">Kategori / Tim {isUserRestricted && <Lock size={12} className="text-amber-500" />}</FormLabel>
-                  <div className="relative"><Select onValueChange={field.onChange} value={field.value} disabled={isUserRestricted}><FormControl><SelectTrigger className={isUserRestricted ? "bg-slate-50 text-slate-500" : ""}><SelectValue placeholder="Pilih kategori..." /></SelectTrigger></FormControl><SelectContent>{categories.map((cat) => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent></Select>{isUserRestricted && <div className="absolute -top-2 -right-2 bg-amber-100 text-amber-700 p-1 rounded-full border border-amber-200 shadow-sm z-10"><Lock size={10} /></div>}</div>
+                  <div className="relative"><Select onValueChange={field.onChange} value={field.value} disabled={isUserRestricted || !activeRegionId}><FormControl><SelectTrigger className={isUserRestricted ? "bg-slate-50 text-slate-500" : ""}><SelectValue placeholder={activeRegionId ? "Pilih tim..." : "Pilih wilayah melalui akun"} /></SelectTrigger></FormControl><SelectContent>{teams.map((team) => (<SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>))}</SelectContent></Select>{isUserRestricted && <div className="absolute -top-2 -right-2 bg-amber-100 text-amber-700 p-1 rounded-full border border-amber-200 shadow-sm z-10"><Lock size={10} /></div>}</div>
                 </FormItem>
               )} />
             </div>

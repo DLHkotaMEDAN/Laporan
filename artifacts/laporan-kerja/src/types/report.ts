@@ -48,13 +48,7 @@ export interface Task {
   remarks?: string;
 }
 
-export type ReportCategory = 
-  | "Taman Kota" 
-  | "Taman Amplas" 
-  | "Taman Area" 
-  | "Tim Babat" 
-  | "Tim Siram" 
-  | "Tim Pohon";
+export type ReportCategory = string;
 
 export interface Report {
   id: string;
@@ -76,4 +70,5 @@ export interface Report {
   unit: string;
   volume: number;
   region_id?: string | null;
+  team_id?: string | null;
 }
