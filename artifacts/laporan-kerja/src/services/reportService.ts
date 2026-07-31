@@ -20,7 +20,7 @@ const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
 };
 
 export const reportService = {
-  async getAllReports(categoryFilter?: string | null, includeDeleted = false) {
+  async getAllReports(categoryFilter?: string | null, includeDeleted = false, regionId?: string | null) {
     return fetchAllPages<Report>(() => {
       let query = supabase
         .from('reports')
@@ -29,6 +29,10 @@ export const reportService = {
       
       if (categoryFilter && categoryFilter !== 'semua') {
         query = query.eq('category', categoryFilter);
+      }
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
       }
 
       if (!includeDeleted) {

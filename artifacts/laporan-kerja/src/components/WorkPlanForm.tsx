@@ -19,7 +19,7 @@ import { workPlanService } from '@/services/workPlanService';
 import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import {
   Dialog,
@@ -160,8 +160,10 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
   useEffect(() => {
     const fetchHistory = async () => {
+      if (!activeRegionId) return;
+
       try {
-        const plans = await workPlanService.getAllWorkPlans();
+        const plans = await workPlanService.getAllWorkPlans(null, false, activeRegionId);
         const descs = new Set<string>();
         const streets = new Set<string>();
         const coords = new Set<string>();
@@ -191,7 +193,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       } catch (e) { console.error(e); }
     };
     fetchHistory();
-  }, []);
+  }, [activeRegionId]);
 
   useEffect(() => {
     if (!isEditing && !isDuplicateMode && selectedCategory) {
@@ -332,12 +334,12 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-5xl mx-auto pb-20">
         {/* DataLists for Autocomplete */}
-        <datalist id="wp-history-descriptions">{Array.from(history.descriptions).map(v => <option key={v} value={v} />)}</datalist>
-        <datalist id="wp-history-streets">{Array.from(history.streets).map(v => <option key={v} value={v} />)}</datalist>
-        <datalist id="wp-history-coordinators">{Array.from(history.coordinators).map(v => <option key={v} value={v} />)}</datalist>
-        <datalist id="wp-history-tools">{Array.from(history.toolNames).map(v => <option key={v} value={v} />)}</datalist>
-        <datalist id="wp-history-basis">{Array.from(history.basis).map(v => <option key={v} value={v} />)}</datalist>
-        <datalist id="wp-history-remarks">{Array.from(history.remarks).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="wp-history-descriptions">{uniqueAutocompleteValues(history.descriptions).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="wp-history-streets">{uniqueAutocompleteValues(history.streets).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="wp-history-coordinators">{uniqueAutocompleteValues(history.coordinators).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="wp-history-tools">{uniqueAutocompleteValues(history.toolNames).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="wp-history-basis">{uniqueAutocompleteValues(history.basis).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="wp-history-remarks">{uniqueAutocompleteValues(history.remarks).map(v => <option key={v} value={v} />)}</datalist>
 
         <div className="flex items-center justify-between mb-6">
           <Button type="button" variant="ghost" onClick={() => navigate(-1)} className="px-2 md:px-4">
