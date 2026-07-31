@@ -16,6 +16,7 @@ import {
   getRowsInWorkPlanItems,
   getSequentialSpans,
   getUniqueWorkPlanItems,
+  getWorkPlanBasisKey,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
@@ -142,7 +143,7 @@ const WorkPlanDailyRecap = () => {
     const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
     const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
     const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
-    const basisSpans = getSequentialSpans(displayItems, (item) => item.basis.trim());
+    const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));

@@ -10,6 +10,7 @@ export interface TeamOption {
 export const useAvailableTeams = (regionId?: string | null) => {
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loading, setLoading] = useState(Boolean(regionId));
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -19,11 +20,13 @@ export const useAvailableTeams = (regionId?: string | null) => {
         if (active) {
           setTeams([]);
           setLoading(false);
+          setError(null);
         }
         return;
       }
 
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('teams')
         .select('id, region_id, name')
@@ -33,6 +36,7 @@ export const useAvailableTeams = (regionId?: string | null) => {
 
       if (active) {
         setTeams(error ? [] : (data || []));
+        setError(error?.message ?? null);
         setLoading(false);
       }
     };
@@ -41,5 +45,5 @@ export const useAvailableTeams = (regionId?: string | null) => {
     return () => { active = false; };
   }, [regionId]);
 
-  return { teams, loading };
+  return { teams, loading, error };
 };

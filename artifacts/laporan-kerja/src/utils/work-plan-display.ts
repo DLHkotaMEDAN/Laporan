@@ -11,6 +11,10 @@ export interface WorkPlanResourceGroup {
 
 const normalizeText = (value?: string) => (value || "").trim();
 
+export const getWorkPlanBasisKey = (basis?: string) => (
+  normalizeText(basis).replace(/\s+/g, " ").toLocaleLowerCase("id-ID")
+);
+
 const getUniqueTools = (tools: WorkPlanItem["tools"]) => {
   const seen = new Set<string>();
 

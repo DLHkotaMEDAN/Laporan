@@ -17,6 +17,7 @@ import {
   getRowsInWorkPlanItems,
   getSequentialSpans,
   getUniqueWorkPlanItems,
+  getWorkPlanBasisKey,
 } from '@/utils/work-plan-display';
 
 const getLogoUrl = (fileName: string) => {
@@ -91,7 +92,7 @@ const PrintWorkPlan = () => {
   const descriptionSpans = getSequentialSpans(displayItems, (it) => it.description.trim());
   const toolSpans = getSequentialSpans(displayItems, (it) => JSON.stringify(it.tools));
   const teamSpans = getSequentialSpans(displayItems, (it) => plan.category === "Tim Pohon" ? it.coordinator : `${it.coordinator}|${it.personnel.members}`);
-  const basisSpans = getSequentialSpans(displayItems, (it) => it.basis.trim());
+  const basisSpans = getSequentialSpans(displayItems, (it) => getWorkPlanBasisKey(it.basis));
   const isTreeLayout = plan.category === "Tim Pohon";
   const getSpanRows = (itemIndex: number, span: number) => isTreeLayout ? span : getItemSpanRows(displayItems, itemIndex, span);
 

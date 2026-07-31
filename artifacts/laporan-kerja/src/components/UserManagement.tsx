@@ -303,11 +303,11 @@ const UserManagement = () => {
           <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
-        <div className="grid gap-3 md:grid-cols-6">
+        <div className={cn("grid gap-3", newUser.role === 'user' ? "md:grid-cols-6" : "md:grid-cols-5")}>
           <Input required placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
           <Input required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
           <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
-          <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role })}>
+          <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role, teamId: '' })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
@@ -315,10 +315,12 @@ const UserManagement = () => {
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
             <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={newUser.role !== 'user' || !newUser.regionId}>
-            <SelectTrigger><SelectValue placeholder="Pilih tim" /></SelectTrigger>
-            <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent>
-          </Select>
+          {newUser.role === 'user' && (
+            <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!newUser.regionId}>
+            <SelectTrigger><SelectValue placeholder={newUser.regionId ? "Pilih tim" : "Pilih wilayah dahulu"} /></SelectTrigger>
+              <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).length > 0 ? teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>) : <SelectItem value="no-team" disabled>Belum ada tim aktif untuk wilayah ini</SelectItem>}</SelectContent>
+            </Select>
+          )}
         </div>
         <Button type="submit" disabled={creating || (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role) && !newUser.regionId) || (newUser.role === 'user' && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
