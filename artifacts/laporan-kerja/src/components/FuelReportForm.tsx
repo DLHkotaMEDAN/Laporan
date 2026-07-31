@@ -32,6 +32,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+const pusatTeams = ['Tim Babat', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
+
 const usageItemSchema = z.object({
   vehicle_operator: z.string().min(1, "Wajib diisi"),
   fuel_type: z.string().min(1, "Jenis wajib dipilih"),
@@ -162,6 +164,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
   const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
   const teams = allTeams.filter(team => team.region_id === selectedRegionId);
+  const availableTeamNames = teams.length > 0 ? teams.map(team => team.name) : selectedRegion === 'Pusat' ? pusatTeams : [];
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
 
   const handleAddClick = () => {
@@ -283,7 +286,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                   <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}
+                      {availableTeamNames.map(teamName => <SelectItem key={teamName} value={teamName}>{teamName}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <FormMessage />

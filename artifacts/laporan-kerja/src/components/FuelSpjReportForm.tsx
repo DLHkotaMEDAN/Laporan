@@ -24,6 +24,8 @@ import { FuelType } from '@/types/fuelReport';
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 
+const pusatTeams = ['Tim Babat', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
+
 const locationSchema = z.object({
   street: z.string().min(1, "Wajib diisi"),
   subDistrict: z.string().optional().default(""),
@@ -98,6 +100,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
   const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
   const teams = allTeams.filter(team => team.region_id === selectedRegionId);
+  const availableTeamNames = teams.length > 0 ? teams.map(team => team.name) : selectedRegion === 'Pusat' ? pusatTeams : [];
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
 
   useEffect(() => {
@@ -249,7 +252,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
                     <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}
+                        {availableTeamNames.map(teamName => <SelectItem key={teamName} value={teamName}>{teamName}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
