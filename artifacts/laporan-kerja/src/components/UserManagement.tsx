@@ -11,8 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { 
-  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound
+  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound, Pencil
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -37,6 +40,7 @@ interface Profile {
   username: string | null;
   role: string;
   category: string | null;
+  region_id: string | null;
   updated_at: string;
 }
 
@@ -53,6 +57,8 @@ const UserManagement = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [creating, setCreating] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '' });
+  const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [editUser, setEditUser] = useState({ username: '', role: '', category: 'none', regionId: '' });
 
   useEffect(() => {
     fetchProfiles();
@@ -90,6 +96,7 @@ const UserManagement = () => {
           username: newUser.username.trim(),
           role: newUser.role,
           category: null,
+          region_id: newUser.regionId || null,
           updated_at: new Date().toISOString(),
         },
         ...currentProfiles.filter(profile => profile.id !== data.id),
@@ -176,6 +183,57 @@ const UserManagement = () => {
       await fetchProfiles();
     } catch (error: any) {
       showError('Gagal mengubah password: ' + error.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const openEditProfile = (profile: Profile) => {
+    setEditingProfile(profile);
+    setEditUser({
+      username: profile.username || '',
+      role: profile.role,
+      category: profile.category || 'none',
+      regionId: profile.region_id || '',
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editingProfile) return;
+    const isRegionalAdmin = ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(editUser.role);
+    if (!editUser.username.trim()) {
+      showError('Nama pengguna wajib diisi.');
+      return;
+    }
+    if (isRegionalAdmin && !editUser.regionId) {
+      showError('Admin berbasis wilayah wajib memilih wilayah.');
+      return;
+    }
+
+    const updates = {
+      username: editUser.username.trim(),
+      role: editUser.role,
+      category: editUser.role === 'user' && editUser.category !== 'none' ? editUser.category : null,
+      region_id: isRegionalAdmin ? editUser.regionId : null,
+    };
+
+    setUpdatingId(editingProfile.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', editingProfile.id);
+      if (error) throw error;
+
+      setProfiles(currentProfiles => currentProfiles.map(profile =>
+        profile.id === editingProfile.id
+          ? { ...profile, ...updates, updated_at: new Date().toISOString() }
+          : profile,
+      ));
+      setEditingProfile(null);
+      showSuccess('Data pengguna berhasil diperbarui.');
+    } catch (error: any) {
+      showError('Gagal memperbarui pengguna: ' + error.message);
     } finally {
       setUpdatingId(null);
     }
@@ -324,6 +382,16 @@ const UserManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                        disabled={updatingId === profile.id}
+                        title="Edit pengguna"
+                        onClick={() => openEditProfile(profile)}
+                      >
+                        <Pencil size={17} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                         disabled={updatingId === profile.id}
                         title="Ubah password"
@@ -354,6 +422,53 @@ const UserManagement = () => {
           </Table>
         </div>
       </div>
+
+      <Dialog open={!!editingProfile} onOpenChange={open => !open && setEditingProfile(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Pengguna</DialogTitle>
+            <DialogDescription>Perbarui nama, hak akses, kategori, dan wilayah akun.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Nama pengguna</label>
+              <Input value={editUser.username} onChange={event => setEditUser({ ...editUser, username: event.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Hak akses</label>
+              <Select value={editUser.role} onValueChange={role => setEditUser({ ...editUser, role })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            {editUser.role === 'user' && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Kategori tim</label>
+                <Select value={editUser.category} onValueChange={category => setEditUser({ ...editUser, category })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa Kategori</SelectItem>
+                    {categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {['admin_wilayah', 'admin_harian', 'admin_rencana_kerja'].includes(editUser.role) && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Wilayah</label>
+                <Select value={editUser.regionId} onValueChange={regionId => setEditUser({ ...editUser, regionId })}>
+                  <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
+                  <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditingProfile(null)}>Batal</Button>
+            <Button type="button" onClick={handleSaveProfile} disabled={!!updatingId}>Simpan Perubahan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
