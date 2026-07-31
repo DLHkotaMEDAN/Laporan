@@ -332,7 +332,7 @@ const WeeklyRecap = () => {
   const coordinatorSignature = getRegionalCoordinatorSignature(regionName);
   const recapTitle = getReportRecapTitle('mingguan', reports.map(report => report.category));
 
-  const headerStyle = { backgroundColor: '#f1f5f9', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
+  const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
   const subHeaderStyle = { backgroundColor: '#f8fafc', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
 
   const getTableSpans = () => {
@@ -397,7 +397,7 @@ const WeeklyRecap = () => {
             <td className="border-2 border-black p-1.5 px-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="mb-0.5">{e.quantity}</div>))}</td>
           </>
         )}
-        {visibleColumns.heavyEquipment && <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>}
+          {visibleColumns.heavyEquipment && <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>}
         {visibleColumns.fuel && (
           <>
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax || 0}</div>))}</td>
@@ -469,8 +469,8 @@ const WeeklyRecap = () => {
           {visibleColumns.photos && (<th style={headerStyle} className="border-2 border-black p-2" colSpan={3}>Dokumentasi</th>)}
           {visibleColumns.volume && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Vol</div></th>}
           {visibleColumns.equipment && <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Peralatan</th>}
-          {visibleColumns.heavyEquipment && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Alat Berat</div></th>}
-          {visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={5}>BBM (Voucher Rp & Liter)</th>)}
+          {visibleColumns.heavyEquipment && <th style={headerStyle} className="border-2 border-black p-1" colSpan={visibleColumns.fuel ? 6 : 1}>Alat Operasional</th>}
+          {!visibleColumns.heavyEquipment && visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={5}>BBM (Voucher Rp & Liter)</th>)}
           {visibleColumns.coordinator && <th style={headerStyle} className="border-2 border-black p-2" colSpan={1} rowSpan={2}><div className="flex items-center justify-center h-full">Koordinator</div></th>}
           {visibleColumns.members && <th style={headerStyle} className="border-2 border-black p-2" colSpan={1} rowSpan={2}><div className="flex items-center justify-center h-full">Anggota</div></th>}
           {visibleColumns.remarks && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Keterangan</div></th>}
@@ -478,6 +478,7 @@ const WeeklyRecap = () => {
         <tr style={{ height: '30px' }}>
           {visibleColumns.photos && (<><th style={subHeaderStyle} className="border-2 border-black p-1">0%</th><th style={subHeaderStyle} className="border-2 border-black p-1">50%</th><th style={subHeaderStyle} className="border-2 border-black p-1">100%</th></>)}
           {visibleColumns.equipment && (<><th style={subHeaderStyle} className="border-2 border-black p-1">Jenis Alat</th><th style={subHeaderStyle} className="border-2 border-black p-1 px-0">Jml</th></>)}
+          {visibleColumns.heavyEquipment && <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">Nama Alat Berat</th>}
           {visibleColumns.fuel && (
             <>
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (Rp)</th>

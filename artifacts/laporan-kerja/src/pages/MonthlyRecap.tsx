@@ -314,7 +314,7 @@ const MonthlyRecap = () => {
   const coordinatorSignature = getRegionalCoordinatorSignature(regionName);
   const recapTitle = getReportRecapTitle('bulanan', reports.map(report => report.category));
 
-  const headerStyle = { backgroundColor: '#f1f5f9', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
+  const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
   const subHeaderStyle = { backgroundColor: '#f8fafc', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
 
   const totalCols = 12 + (photoMode === "with-photo" ? 3 : 0) + (recapMode === "with-fuel" ? 6 : 0);
@@ -448,8 +448,7 @@ const MonthlyRecap = () => {
         {photoMode === "with-photo" && (<th style={headerStyle} className="border-2 border-black p-2" colSpan={3}>Dokumentasi</th>)}
         <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Vol</div></th>
         <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Peralatan</th>
-        <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Alat Berat</div></th>
-        {recapMode === "with-fuel" && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={5}>BBM (Voucher Rp & Liter)</th>)}
+        <th style={headerStyle} className="border-2 border-black p-1" colSpan={recapMode === "with-fuel" ? 6 : 1}>Alat Operasional</th>
         <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Personil</th>
         <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Keterangan</div></th>
       </tr>
@@ -457,6 +456,7 @@ const MonthlyRecap = () => {
         {photoMode === "with-photo" && (<><th style={subHeaderStyle} className="border-2 border-black p-1">0%</th><th style={subHeaderStyle} className="border-2 border-black p-1">50%</th><th style={subHeaderStyle} className="border-2 border-black p-1">100%</th></>)}
         <th style={subHeaderStyle} className="border-2 border-black p-1">Jenis Alat</th>
         <th style={subHeaderStyle} className="border-2 border-black p-1 px-0">Jml</th>
+        <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">Nama Alat Berat</th>
         {recapMode === "with-fuel" && (
           <>
             <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (Rp)</th>
