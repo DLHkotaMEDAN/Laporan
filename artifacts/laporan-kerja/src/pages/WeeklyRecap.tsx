@@ -239,7 +239,7 @@ const WeeklyRecap = () => {
         columns.push(
           { header: 'P (Rp)', key: 'fp', width: 10 }, { header: 'P (L)', key: 'fpl', width: 8 },
           { header: 'D (Rp)', key: 'fd', width: 10 }, { header: 'D (L)', key: 'fdl', width: 8 },
-          { header: 'S (Rp)', key: 'fs', width: 10 }, { header: 'S (L)', key: 'fsl', width: 8 }
+          { header: 'S (Rp)', key: 'fs', width: 10 }
         );
       }
       if (visibleColumns.coordinator) columns.push({ header: 'Koordinator', key: 'coord', width: 20 });
@@ -300,7 +300,6 @@ const WeeklyRecap = () => {
             rowData.fd = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
             rowData.fdl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
             rowData.fs = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar || 0), 0) || 0;
-            rowData.fsl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar_liter || 0), 0) || 0;
           }
           const row = worksheet.addRow(rowData);
           if (visibleColumns.photos) row.height = 100;
@@ -406,7 +405,6 @@ const WeeklyRecap = () => {
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite || 0}</div>))}</td>
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || 0}</div>))}</td>
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-slate-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar_liter || 0}</div>))}</td>
           </>
         )}
         {visibleColumns.coordinator && <td className="border-2 border-black p-2 text-center align-top font-medium">{task.personnel.coordinator}</td>}
@@ -452,7 +450,6 @@ const WeeklyRecap = () => {
       cols.push(<col key="fd_r" style={{ width: '45px' }} />);
       cols.push(<col key="fd_l" style={{ width: '35px' }} />);
       cols.push(<col key="fs_r" style={{ width: '45px' }} />);
-      cols.push(<col key="fs_l" style={{ width: '35px' }} />);
     }
     if (visibleColumns.coordinator) cols.push(<col key="coord" style={{ width: '90px' }} />);
     if (visibleColumns.members) cols.push(<col key="mem" style={{ width: '50px' }} />);
@@ -473,7 +470,7 @@ const WeeklyRecap = () => {
           {visibleColumns.volume && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Vol</div></th>}
           {visibleColumns.equipment && <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Peralatan</th>}
           {visibleColumns.heavyEquipment && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Alat Berat</div></th>}
-          {visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={6}>BBM (Voucher Rp & Liter)</th>)}
+          {visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={5}>BBM (Voucher Rp & Liter)</th>)}
           {visibleColumns.coordinator && <th style={headerStyle} className="border-2 border-black p-2" colSpan={1} rowSpan={2}><div className="flex items-center justify-center h-full">Koordinator</div></th>}
           {visibleColumns.members && <th style={headerStyle} className="border-2 border-black p-2" colSpan={1} rowSpan={2}><div className="flex items-center justify-center h-full">Anggota</div></th>}
           {visibleColumns.remarks && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Keterangan</div></th>}
@@ -488,7 +485,6 @@ const WeeklyRecap = () => {
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (Rp)</th>
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (L)</th>
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">S (Rp)</th>
-              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">S (L)</th>
             </>
           )}
         </tr>
@@ -567,7 +563,7 @@ const WeeklyRecap = () => {
                       volume: "Volume",
                       equipment: "Peralatan",
                       heavyEquipment: "Alat Berat",
-                      fuel: "BBM & Oli",
+                      fuel: "BBM",
                       coordinator: "Koordinator",
                       members: "Anggota",
                       remarks: "Keterangan"

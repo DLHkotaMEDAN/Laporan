@@ -176,7 +176,6 @@ const buildColumns = (visible: RecapPdfVisibleColumns, fuelMode: RecapPdfFuelMod
       { key: 'pertamaxL', header: 'P (L)', width: 12, align: 'center' },
       { key: 'dexliteRp', header: 'D (Rp)', width: 14, align: 'right' },
       { key: 'dexliteL', header: 'D (L)', width: 12, align: 'center' },
-      { key: 'oliL', header: 'Oli (L)', width: 12, align: 'center' },
     );
   }
   if (visible.fuel && fuelMode === 'voucher') {
@@ -186,7 +185,6 @@ const buildColumns = (visible: RecapPdfVisibleColumns, fuelMode: RecapPdfFuelMod
       { key: 'dexliteRp', header: 'D (Rp)', width: 14, align: 'right' },
       { key: 'dexliteL', header: 'D (L)', width: 12, align: 'center' },
       { key: 'solarRp', header: 'S (Rp)', width: 14, align: 'right' },
-      { key: 'solarL', header: 'S (L)', width: 12, align: 'center' },
     );
   }
   if (visible.coordinator) columns.push({ key: 'coordinator', header: 'Koordinator', width: 24, align: 'center' });
@@ -225,9 +223,6 @@ const getRowValue = (task: FlatTask, key: string, rowNo: number) => {
       return numberText(sumFuel(task, 'dexlite_liter'));
     case 'solarRp':
       return numberText(sumFuel(task, 'solar'));
-    case 'solarL':
-    case 'oliL':
-      return numberText(sumFuel(task, 'solar_liter'));
     case 'coordinator':
       return task.personnel?.coordinator || '-';
     case 'members':
@@ -433,7 +428,6 @@ export const generateRecapDrivePdfBase64 = async (options: GenerateRecapDrivePdf
       pertamaxL: tasks.reduce((sum, task) => sum + sumFuel(task, 'pertamax_liter'), 0),
       dexliteRp: tasks.reduce((sum, task) => sum + sumFuel(task, 'dexlite'), 0),
       dexliteL: tasks.reduce((sum, task) => sum + sumFuel(task, 'dexlite_liter'), 0),
-      oliL: tasks.reduce((sum, task) => sum + sumFuel(task, 'solar_liter'), 0),
     } as Record<string, number>;
     const totalHeight = 9;
     if (y + totalHeight > pageHeight - margin) {
@@ -445,7 +439,7 @@ export const generateRecapDrivePdfBase64 = async (options: GenerateRecapDrivePdf
     columns.forEach(column => {
       pdf.rect(x, y, column.width, totalHeight, 'S');
       if (column.key === 'remarks') {
-        drawCellText(pdf, 'TOTAL PEMAKAIAN BBM & OLI', column, x, y, column.width, totalHeight);
+        drawCellText(pdf, 'TOTAL PEMAKAIAN BBM', column, x, y, column.width, totalHeight);
       }
       if (totals[column.key] !== undefined) {
         drawCellText(pdf, numberText(totals[column.key]), column, x, y, column.width, totalHeight);

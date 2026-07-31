@@ -9,7 +9,7 @@ import {
   ArrowLeft, Printer, Fuel, FileText, ChevronsUpDown, 
   Table, LogOut, LogIn, CloudUpload, 
   Loader2, Lock, ChevronDown,
-  Image as ImageIcon, ImageOff, PenTool, Calendar, Settings2
+  Image as ImageIcon, ImageOff, PenTool, Calendar, Settings2, Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -231,8 +231,7 @@ const DailyRecap = () => {
       if (visibleColumns.fuel) {
         columns.push(
           { header: 'P (Rp)', key: 'fp', width: 10 }, { header: 'P (L)', key: 'fpl', width: 8 },
-          { header: 'D (Rp)', key: 'fd', width: 10 }, { header: 'D (L)', key: 'fdl', width: 8 },
-          { header: 'Oli (L)', key: 'fsl', width: 8 }
+          { header: 'D (Rp)', key: 'fd', width: 10 }, { header: 'D (L)', key: 'fdl', width: 8 }
         );
       }
       if (visibleColumns.coordinator) columns.push({ header: 'Koordinator', key: 'coord', width: 20 });
@@ -283,7 +282,6 @@ const DailyRecap = () => {
             rowData.fpl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax_liter || 0), 0) || 0;
             rowData.fd = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
             rowData.fdl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
-            rowData.fsl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar_liter || 0), 0) || 0;
           }
           const row = worksheet.addRow(rowData);
           if (visibleColumns.photos) row.height = 100;
@@ -345,7 +343,6 @@ const DailyRecap = () => {
   const totalPertamaxLtr = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.pertamax_liter || 0), 0) || 0), 0), 0);
   const totalDexlite = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.dexlite || 0), 0) || 0), 0), 0);
   const totalDexliteLtr = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.dexlite_liter || 0), 0) || 0), 0), 0);
-  const totalOliLtr = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.solar_liter || 0), 0) || 0), 0), 0);
 
   const renderReportRows = (report: Report, reportIdx: number) => {
     return report.tasks.map((task, taskIdx) => {
@@ -387,7 +384,6 @@ const DailyRecap = () => {
               <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-blue-50/30">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax_liter || 0}</div>))}</td>
               <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite || 0}</div>))}</td>
               <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || 0}</div>))}</td>
-              <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-purple-50/30">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.solar_liter || 0}</div>))}</td>
             </>
           )}
           {visibleColumns.coordinator && <td className="border-2 border-black p-2 text-center align-top font-medium">{task.personnel.coordinator}</td>}
@@ -432,7 +428,6 @@ const DailyRecap = () => {
       cols.push(<col key="fp_l" style={{ width: '35px' }} />);
       cols.push(<col key="fd_r" style={{ width: '45px' }} />);
       cols.push(<col key="fd_l" style={{ width: '35px' }} />);
-      cols.push(<col key="fo_l" style={{ width: '40px' }} />);
     }
     if (visibleColumns.coordinator) cols.push(<col key="coord" style={{ width: '90px' }} />);
     if (visibleColumns.members) cols.push(<col key="mem" style={{ width: '50px' }} />);
@@ -452,7 +447,7 @@ const DailyRecap = () => {
           {visibleColumns.volume && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Vol</div></th>}
           {visibleColumns.equipment && <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Peralatan</th>}
           {visibleColumns.heavyEquipment && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Alat Berat</div></th>}
-          {visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={5}>BBM & Oli (Liter)</th>)}
+          {visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={4}>BBM (Voucher Rp & Liter)</th>)}
           {visibleColumns.coordinator && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Koordinator</div></th>}
           {visibleColumns.members && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Anggota</div></th>}
           {visibleColumns.remarks && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Keterangan</div></th>}
@@ -466,7 +461,6 @@ const DailyRecap = () => {
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (L)</th>
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (Rp)</th>
               <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (L)</th>
-              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">Oli (L)</th>
             </>
           )}
         </tr>
@@ -567,7 +561,7 @@ const DailyRecap = () => {
                       volume: "Volume",
                       equipment: "Peralatan",
                       heavyEquipment: "Alat Berat",
-                      fuel: "BBM & Oli",
+                      fuel: "BBM",
                       coordinator: "Koordinator",
                       members: "Anggota",
                       remarks: "Keterangan"
@@ -598,6 +592,24 @@ const DailyRecap = () => {
                 <SelectItem value="without-logo"><div className="flex items-center gap-2"><ImageOff size={14} /> Tanpa Logo</div></SelectItem>
               </SelectContent>
             </Select>
+
+            {isLoggedIn && reports.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 h-10">
+                    <Edit className="mr-2 h-4 w-4" /> Edit Data
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-72 w-80 overflow-y-auto">
+                  {reports.map((report) => (
+                    <DropdownMenuItem key={report.id} onClick={() => navigate(`/edit/${report.id}`)} className="cursor-pointer">
+                      {report.category} — {report.description || "Laporan Harian"}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
               <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
@@ -695,12 +707,11 @@ const DailyRecap = () => {
                     
                     {visibleColumns.fuel && (
                       <tr className="bg-slate-50 font-black">
-                        <td className="border-2 border-black p-2 text-right" colSpan={getTotalColSpan()}>TOTAL PEMAKAIAN BBM & OLI:</td>
+                        <td className="border-2 border-black p-2 text-right" colSpan={getTotalColSpan()}>TOTAL PEMAKAIAN BBM:</td>
                         <td className="border-2 border-black p-1 text-center text-[9px]">{totalPertamax.toLocaleString('id-ID')}</td>
                         <td className="border-2 border-black p-1 text-center text-[9px] bg-blue-50/50">{totalPertamaxLtr.toFixed(2)}</td>
                         <td className="border-2 border-black p-1 text-center text-[9px]">{totalDexlite.toLocaleString('id-ID')}</td>
                         <td className="border-2 border-black p-1 text-center text-[9px] bg-green-50/50">{totalDexliteLtr.toFixed(2)}</td>
-                        <td className="border-2 border-black p-1 text-center text-[9px] bg-purple-50/50">{totalOliLtr.toFixed(2)}</td>
                         <td className="border-2 border-black p-2" colSpan={(visibleColumns.coordinator?1:0) + (visibleColumns.members?1:0) + (visibleColumns.remarks?1:0)}></td>
                       </tr>
                     )}

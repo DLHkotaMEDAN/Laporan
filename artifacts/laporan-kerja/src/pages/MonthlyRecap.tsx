@@ -222,7 +222,7 @@ const MonthlyRecap = () => {
         columns.push(
           { header: 'P (Rp)', key: 'fp', width: 10 }, { header: 'P (L)', key: 'fpl', width: 8 },
           { header: 'D (Rp)', key: 'fd', width: 10 }, { header: 'D (L)', key: 'fdl', width: 8 },
-          { header: 'S (Rp)', key: 'fs', width: 10 }, { header: 'S (L)', key: 'fsl', width: 8 }
+          { header: 'S (Rp)', key: 'fs', width: 10 }
         );
       }
       columns.push({ header: 'Koordinator', key: 'coord', width: 20 }, { header: 'Anggota', key: 'members', width: 10 }, { header: 'Keterangan', key: 'rem', width: 35 });
@@ -282,7 +282,6 @@ const MonthlyRecap = () => {
             rowData.fd = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
             rowData.fdl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
             rowData.fs = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar || 0), 0) || 0;
-            rowData.fsl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar_liter || 0), 0) || 0;
           }
           const row = worksheet.addRow(rowData);
           if (photoMode === "with-photo") row.height = 100;
@@ -386,7 +385,6 @@ const MonthlyRecap = () => {
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite || 0}</div>))}</td>
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || 0}</div>))}</td>
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-slate-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar_liter || 0}</div>))}</td>
           </>
         )}
         <td className="border-2 border-black p-2 text-center align-top font-medium">{task.personnel.coordinator}</td>
@@ -427,7 +425,6 @@ const MonthlyRecap = () => {
       {recapMode === "with-fuel" && (
         <>
           <col style={{ width: '45px' }} />
-          <col style={{ width: '35px' }} />
           <col style={{ width: '45px' }} />
           <col style={{ width: '35px' }} />
           <col style={{ width: '45px' }} />
@@ -452,7 +449,7 @@ const MonthlyRecap = () => {
         <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Vol</div></th>
         <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Peralatan</th>
         <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Alat Berat</div></th>
-        {recapMode === "with-fuel" && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={6}>BBM (Voucher Rp & Liter)</th>)}
+        {recapMode === "with-fuel" && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={5}>BBM (Voucher Rp & Liter)</th>)}
         <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Personil</th>
         <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Keterangan</div></th>
       </tr>
@@ -467,7 +464,6 @@ const MonthlyRecap = () => {
             <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (Rp)</th>
             <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (L)</th>
             <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">S (Rp)</th>
-            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">S (L)</th>
           </>
         )}
         <th style={subHeaderStyle} className="border-2 border-black p-1">Koordinator</th>

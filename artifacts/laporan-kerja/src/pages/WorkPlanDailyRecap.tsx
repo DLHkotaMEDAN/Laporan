@@ -7,7 +7,7 @@ import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image, Edit } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -293,6 +293,24 @@ const WorkPlanDailyRecap = () => {
                 <SelectItem value="without-logo">Tanpa Logo</SelectItem>
               </SelectContent>
             </Select>
+
+            {isLoggedIn && plans.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 h-10">
+                    <Edit className="mr-2 h-4 w-4" /> Edit Data
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-72 w-80 overflow-y-auto">
+                  {plans.map((plan) => (
+                    <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer">
+                      {plan.category} — {plan.items[0]?.description || "Rencana Kerja"}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
               <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
