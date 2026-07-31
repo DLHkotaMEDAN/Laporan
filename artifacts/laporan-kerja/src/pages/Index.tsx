@@ -826,7 +826,7 @@ const Index = () => {
                         <tr
                           key={report.id}
                           className={cn(index % 2 === 0 ? "bg-white" : "bg-slate-50/70", "hover:bg-blue-50/50 transition-colors cursor-pointer border-b border-slate-100")}
-                          onClick={() => navigate(`/report/${report.id}`)}
+                          onClick={() => navigate(`/daily-rekap?date=${report.date}&categories=${encodeURIComponent(report.category)}`)}
                         >
                           <td className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-100">{index + 1}</td>
                           <td className="px-3 py-3 text-center font-medium text-slate-700 border-r border-slate-100 whitespace-nowrap">{report.date}</td>
@@ -850,7 +850,7 @@ const Index = () => {
                           {isLoggedIn && (
                             <td className="px-2 py-3 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/report/${report.id}`); }}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/daily-rekap?date=${report.date}&categories=${encodeURIComponent(report.category)}`); }}>
                                   <Eye size={13} />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/edit/${report.id}`); }}>
@@ -933,7 +933,7 @@ const Index = () => {
                           <tr
                             key={plan.id}
                             className={cn(index % 2 === 0 ? "bg-white" : "bg-slate-50/70", isHidden && "opacity-70", "hover:bg-emerald-50/50 transition-colors cursor-pointer border-b border-slate-100")}
-                            onClick={() => navigate(`/work-plans/print/${plan.id}`)}
+                            onClick={() => navigate(`/work-plans/daily-rekap?date=${plan.date}&category=${encodeURIComponent(plan.category)}`)}
                           >
                             <td className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-100">{index + 1}</td>
                             <td className="px-3 py-3 text-center font-medium text-slate-700 border-r border-slate-100 whitespace-nowrap">{plan.date}</td>

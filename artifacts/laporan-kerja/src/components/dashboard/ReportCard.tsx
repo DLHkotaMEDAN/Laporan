@@ -23,7 +23,7 @@ const ReportCard = ({ report, isLoggedIn, isPimpinan, onDelete }: ReportCardProp
   return (
     <Card 
       className="group hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden border-none bg-white/80 backdrop-blur-sm ring-1 ring-slate-200/50 relative"
-      onClick={() => navigate(`/report/${report.id}`)}
+      onClick={() => navigate(`/daily-rekap?date=${report.date}&categories=${encodeURIComponent(report.category)}`)}
     >
       {/* Decorative element */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-70 group-hover:h-1.5 transition-all" />
@@ -84,7 +84,7 @@ const ReportCard = ({ report, isLoggedIn, isPimpinan, onDelete }: ReportCardProp
             <span className="text-sm font-black text-slate-700">{report.volume} {getUnitByCategory(report.category)}</span>
           </div>
           <div className="flex items-center gap-2 text-blue-600 font-black text-[11px] uppercase tracking-wider group-hover:gap-3 transition-all">
-            Lihat Detail <ArrowRight className="h-3.5 w-3.5" />
+            Lihat Rekap Tim <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </div>
       </CardContent>

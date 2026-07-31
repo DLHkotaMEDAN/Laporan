@@ -28,7 +28,7 @@ const WorkPlanCard = ({ plan, isLoggedIn, isPimpinan, onDelete, onToggleVisibili
         "group hover:shadow-2xl transition-all duration-500 cursor-pointer border-none bg-white/80 backdrop-blur-sm ring-1 ring-slate-200/50 relative overflow-hidden",
         isHidden ? "opacity-75 grayscale-[0.3]" : ""
       )} 
-      onClick={() => navigate(`/work-plans/print/${plan.id}`)}
+      onClick={() => navigate(`/work-plans/daily-rekap?date=${plan.date}&category=${encodeURIComponent(plan.category)}`)}
     >
       {/* Decorative element */}
       <div className={cn(
@@ -120,7 +120,7 @@ const WorkPlanCard = ({ plan, isLoggedIn, isPimpinan, onDelete, onToggleVisibili
             <span className="text-sm font-black text-slate-700">{plan.items?.length || 0} Titik Kerja</span>
           </div>
           <div className="flex items-center gap-2 text-emerald-600 font-black text-[11px] uppercase tracking-wider group-hover:gap-3 transition-all">
-            Lihat Rencana <ArrowRight className="h-3.5 w-3.5" />
+            Lihat Rekap Tim <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </div>
       </CardContent>

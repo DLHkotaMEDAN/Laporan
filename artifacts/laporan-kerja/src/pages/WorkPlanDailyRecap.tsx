@@ -49,6 +49,7 @@ const WorkPlanDailyRecap = () => {
   const [loading, setLoading] = useState(true);
   
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
+  const selectedCategory = searchParams.get('category') || "semua";
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   
@@ -57,7 +58,7 @@ const WorkPlanDailyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate]);
+  }, [selectedDate, selectedCategory]);
 
   const loadData = async () => {
     try {
@@ -75,8 +76,9 @@ const WorkPlanDailyRecap = () => {
         setSelectedDate("semua");
       }
 
-      const filtered = data.filter(p => 
-        (targetDate === "semua" || p.date === targetDate) && 
+      const filtered = data.filter(p =>
+        (targetDate === "semua" || p.date === targetDate) &&
+        (selectedCategory === "semua" || p.category === selectedCategory) &&
         p.is_visible !== false
       );
       
@@ -355,7 +357,8 @@ const WorkPlanDailyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">REKAP RENCANA KERJA HARIAN {regionName}</h3>
+          {selectedCategory !== "semua" && <p className="text-lg font-bold uppercase">Tim: {selectedCategory}</p>}
           <p className="text-lg font-bold">
             Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
           </p>
