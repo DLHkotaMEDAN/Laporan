@@ -65,6 +65,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   });
 
   const canEditPrice = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_spj_bbm' || session?.user?.email === 'admin@gmail.com';
+  const isSpjBbmAdmin = profile?.role === 'admin_spj_bbm';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,6 +99,13 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
   const teams = allTeams.filter(team => team.region_id === selectedRegionId);
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
+
+  useEffect(() => {
+    if (!isEditing && isSpjBbmAdmin) {
+      form.setValue('region', 'Pusat');
+      form.setValue('team', 'Tim Babat');
+    }
+  }, [form, isEditing, isSpjBbmAdmin]);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -221,22 +229,30 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
               )} />
               <FormField control={form.control} name="region" render={({ field }) => (
                 <FormItem><FormLabel>Wilayah</FormLabel>
-                  <Select onValueChange={(val) => { field.onChange(val); form.setValue("team", ""); }} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger></FormControl>
-                    <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  {isSpjBbmAdmin && !isEditing ? (
+                    <FormControl><Input {...field} readOnly className="bg-slate-100 text-slate-600" /></FormControl>
+                  ) : (
+                    <Select onValueChange={(val) => { field.onChange(val); form.setValue("team", ""); }} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger></FormControl>
+                      <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )}
                 </FormItem>
               )} />
 
               <FormField control={form.control} name="team" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2"><Users size={14} /> Tim / Operator</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {isSpjBbmAdmin && !isEditing ? (
+                    <FormControl><Input {...field} readOnly className="bg-slate-100 text-slate-600" /></FormControl>
+                  ) : (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <FormMessage />
                 </FormItem>
               )} />

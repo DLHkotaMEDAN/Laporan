@@ -10,7 +10,8 @@ cross join (values
   ('Mobil Tangga 30m'),
   ('Beco Loader'),
   ('Dump Truck'),
-  ('PickUp')
+  ('PickUp'),
+  ('Tim Babat')
 ) as seeded_team(name)
 where region.code = 'pusat'
 on conflict (region_id, name) do update set is_active = true;
