@@ -1,17 +1,29 @@
 -- Samakan data lama BBM dan SPJ dengan master wilayah/tim yang dipakai
 -- Laporan Harian dan Rencana Kerja.
 
+update public.teams team
+set name = case team.name
+  when 'Dump Truck' then 'Dumb Truck'
+  when 'PickUp' then 'Pickup'
+  when 'Mobil Tangga 30m' then 'Mobil Tangga 30M'
+  else team.name
+end
+from public.regions region
+where team.region_id = region.id
+  and region.code = 'pusat'
+  and team.name in ('Dump Truck', 'PickUp', 'Mobil Tangga 30m');
+
 insert into public.teams (region_id, name)
 select region.id, seeded_team.name
 from public.regions region
 cross join (values
+  ('Tim Babat'),
+  ('Dumb Truck'),
   ('Mobil Crane'),
   ('Mobil Tangga'),
-  ('Mobil Tangga 30m'),
+  ('Mobil Tangga 30M'),
   ('Beco Loader'),
-  ('Dump Truck'),
-  ('PickUp'),
-  ('Tim Babat')
+  ('Pickup')
 ) as seeded_team(name)
 where region.code = 'pusat'
 on conflict (region_id, name) do update set is_active = true;
