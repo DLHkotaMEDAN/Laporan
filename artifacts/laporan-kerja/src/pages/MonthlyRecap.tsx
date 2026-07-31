@@ -220,8 +220,8 @@ const MonthlyRecap = () => {
       columns.push({ header: 'Vol', key: 'vol', width: 10 }, { header: 'Jenis Alat', key: 'eq_type', width: 20 }, { header: 'Jumlah Alat', key: 'eq_qty', width: 10 }, { header: 'Alat Berat', key: 'he', width: 25 });
       if (recapMode === "with-fuel") {
         columns.push(
-          { header: 'P (Rp)', key: 'fp', width: 10 }, { header: 'P (L)', key: 'fpl', width: 8 },
-          { header: 'D (Rp)', key: 'fd', width: 10 }, { header: 'D (L)', key: 'fdl', width: 8 },
+          { header: 'Pertamax (Rp)', key: 'fp', width: 14 }, { header: 'Pertamax (L)', key: 'fpl', width: 12 },
+          { header: 'Dexlite (Rp)', key: 'fd', width: 14 }, { header: 'Dexlite (L)', key: 'fdl', width: 12 },
           { header: 'S (Rp)', key: 'fs', width: 10 }
         );
       }
@@ -314,7 +314,7 @@ const MonthlyRecap = () => {
   const coordinatorSignature = getRegionalCoordinatorSignature(regionName);
   const recapTitle = getReportRecapTitle('bulanan', reports.map(report => report.category));
 
-  const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
+  const headerStyle = { backgroundColor: '#e5e7eb', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
   const subHeaderStyle = { backgroundColor: '#f8fafc', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const };
 
   const totalCols = 12 + (photoMode === "with-photo" ? 3 : 0) + (recapMode === "with-fuel" ? 6 : 0);
@@ -375,15 +375,15 @@ const MonthlyRecap = () => {
           </>
         )}
         <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {getUnitByCategory(task.category)}</td>
-        <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {e.type}</div>))}</td>
-        <td className="border-2 border-black p-1.5 px-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="mb-0.5">{e.quantity}</div>))}</td>
-        <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>
+        <td className="border border-black p-0 align-top text-[10px] leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {e.type}</div>))}</td>
+        <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{e.quantity}</div>))}</td>
+        <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>
         {recapMode === "with-fuel" && (
           <>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax || 0}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-blue-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax_liter || 0}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite || 0}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || 0}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.pertamax ? he.fuel.pertamax.toLocaleString('id-ID') : ''}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.pertamax_liter || ''}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.dexlite ? he.fuel.dexlite.toLocaleString('id-ID') : ''}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.dexlite_liter || ''}</div>))}</td>
             <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
           </>
         )}
@@ -459,10 +459,10 @@ const MonthlyRecap = () => {
         <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">Nama Alat Berat</th>
         {recapMode === "with-fuel" && (
           <>
-            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (Rp)</th>
-            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (L)</th>
-            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (Rp)</th>
-            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (L)</th>
+            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Pertamax (Rp)</th>
+            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Pertamax (L)</th>
+            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Dexlite (Rp)</th>
+            <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Dexlite (L)</th>
             <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">S (Rp)</th>
           </>
         )}

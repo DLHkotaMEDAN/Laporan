@@ -229,8 +229,8 @@ const DailyRecap = () => {
       if (visibleColumns.heavyEquipment) columns.push({ header: 'Alat Berat', key: 'he', width: 25 });
       if (visibleColumns.fuel) {
         columns.push(
-          { header: 'P (Rp)', key: 'fp', width: 10 }, { header: 'P (L)', key: 'fpl', width: 8 },
-          { header: 'D (Rp)', key: 'fd', width: 10 }, { header: 'D (L)', key: 'fdl', width: 8 }
+          { header: 'Pertamax (Rp)', key: 'fp', width: 14 }, { header: 'Pertamax (L)', key: 'fpl', width: 12 },
+          { header: 'Dexlite (Rp)', key: 'fd', width: 14 }, { header: 'Dexlite (L)', key: 'fdl', width: 12 }
         );
       }
       if (visibleColumns.coordinator) columns.push({ header: 'Koordinator', key: 'coord', width: 20 });
@@ -277,10 +277,14 @@ const DailyRecap = () => {
             rem: [task.remarks, i === 0 ? report.remarks : ""].filter(Boolean).join(" | ")
           };
           if (visibleColumns.fuel) {
-            rowData.fp = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax || 0), 0) || 0;
-            rowData.fpl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax_liter || 0), 0) || 0;
-            rowData.fd = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
-            rowData.fdl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
+            const pertamax = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax || 0), 0) || 0;
+            const pertamaxLiter = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax_liter || 0), 0) || 0;
+            const dexlite = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
+            const dexliteLiter = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
+            rowData.fp = pertamax ? pertamax.toLocaleString('id-ID') : '';
+            rowData.fpl = pertamaxLiter || '';
+            rowData.fd = dexlite ? dexlite.toLocaleString('id-ID') : '';
+            rowData.fdl = dexliteLiter || '';
           }
           const row = worksheet.addRow(rowData);
           if (visibleColumns.photos) row.height = 100;
@@ -335,13 +339,14 @@ const DailyRecap = () => {
   const coordinatorSignature = getRegionalCoordinatorSignature(regionName);
   const recapTitle = getReportRecapTitle('harian', reports.map(report => report.category));
 
-  const headerStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
-  const subHeaderStyle = { backgroundColor: '#42FF41', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
+  const headerStyle = { backgroundColor: '#e5e7eb', color: '#000000', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle' as const, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const };
+  const subHeaderStyle = headerStyle;
 
   const totalPertamax = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.pertamax || 0), 0) || 0), 0), 0);
   const totalPertamaxLtr = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.pertamax_liter || 0), 0) || 0), 0), 0);
   const totalDexlite = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.dexlite || 0), 0) || 0), 0), 0);
   const totalDexliteLtr = reports.reduce((acc, r) => acc + r.tasks.reduce((tAcc, t) => tAcc + (t.heavyEquipment?.reduce((heAcc, he) => heAcc + (he.fuel?.dexlite_liter || 0), 0) || 0), 0), 0);
+  const displayFuel = (value?: number, currency = false) => value ? (currency ? value.toLocaleString('id-ID') : value) : '';
 
   const renderReportRows = (report: Report, reportIdx: number) => {
     return report.tasks.map((task, taskIdx) => {
@@ -372,17 +377,17 @@ const DailyRecap = () => {
           {visibleColumns.volume && <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {getUnitByCategory(report.category)}</td>}
           {visibleColumns.equipment && (
             <>
-              <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight">{task.equipment?.map((e, i) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {e.type}</div>))}</td>
-              <td className="border-2 border-black p-1.5 px-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e, i) => (<div key={i} className="mb-0.5">{e.quantity}</div>))}</td>
+              <td className="border border-black p-0 align-top text-[10px] leading-tight">{task.equipment?.map((e, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {e.type}</div>))}</td>
+              <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{e.quantity}</div>))}</td>
             </>
           )}
-          {visibleColumns.heavyEquipment && <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>}
+          {visibleColumns.heavyEquipment && <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>}
           {visibleColumns.fuel && (
             <>
-              <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax || 0}</div>))}</td>
-              <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-blue-50/30">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax_liter || 0}</div>))}</td>
-              <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite || 0}</div>))}</td>
-              <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he, i) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || 0}</div>))}</td>
+              <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{displayFuel(he.fuel?.pertamax, true)}</div>))}</td>
+              <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{displayFuel(he.fuel?.pertamax_liter)}</div>))}</td>
+              <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{displayFuel(he.fuel?.dexlite, true)}</div>))}</td>
+              <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he, i) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{displayFuel(he.fuel?.dexlite_liter)}</div>))}</td>
             </>
           )}
           {visibleColumns.coordinator && <td className="border-2 border-black p-2 text-center align-top font-medium">{task.personnel.coordinator}</td>}
@@ -445,8 +450,8 @@ const DailyRecap = () => {
           {visibleColumns.photos && (<th style={headerStyle} className="border-2 border-black p-2" colSpan={3}>Dokumentasi</th>)}
           {visibleColumns.volume && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Vol</div></th>}
           {visibleColumns.equipment && <th style={headerStyle} className="border-2 border-black p-2" colSpan={2}>Peralatan</th>}
-          {visibleColumns.heavyEquipment && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Alat Berat</div></th>}
-          {visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={4}>BBM (Voucher Rp & Liter)</th>)}
+          {visibleColumns.heavyEquipment && <th style={headerStyle} className="border-2 border-black p-1" colSpan={visibleColumns.fuel ? 5 : 1}>Alat Operasional</th>}
+          {!visibleColumns.heavyEquipment && visibleColumns.fuel && (<th style={headerStyle} className="border-2 border-black p-1" colSpan={4}>BBM (Voucher Rp & Liter)</th>)}
           {visibleColumns.coordinator && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Koordinator</div></th>}
           {visibleColumns.members && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Anggota</div></th>}
           {visibleColumns.remarks && <th style={headerStyle} className="border-2 border-black p-2" rowSpan={2}><div className="flex items-center justify-center h-full">Keterangan</div></th>}
@@ -454,12 +459,13 @@ const DailyRecap = () => {
         <tr style={{ height: '30px' }}>
           {visibleColumns.photos && (<><th style={subHeaderStyle} className="border-2 border-black p-1">0%</th><th style={subHeaderStyle} className="border-2 border-black p-1">50%</th><th style={subHeaderStyle} className="border-2 border-black p-1">100%</th></>)}
           {visibleColumns.equipment && (<><th style={subHeaderStyle} className="border-2 border-black p-1">Jenis Alat</th><th style={subHeaderStyle} className="border-2 border-black p-1 px-0">Jml</th></>)}
+          {visibleColumns.heavyEquipment && <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">Nama Alat Berat</th>}
           {visibleColumns.fuel && (
             <>
-              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (Rp)</th>
-              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">P (L)</th>
-              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (Rp)</th>
-              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[8px]">D (L)</th>
+              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Pertamax (Rp)</th>
+              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Pertamax (L)</th>
+              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Dexlite (Rp)</th>
+              <th style={subHeaderStyle} className="border-2 border-black p-1 text-[7px] leading-tight">Dexlite (L)</th>
             </>
           )}
         </tr>
@@ -668,21 +674,10 @@ const DailyRecap = () => {
       />
 
       <div ref={printRef} className="print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
-        <div className="pdf-header">
-          <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
-            {logoMode === "with-logo" && <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_MEDAN_URL} className="max-h-full max-w-full object-contain" alt="Logo Medan" /></div>}
-            <div className="text-center px-4">
-              <h1 className="text-2xl font-bold uppercase">Pemerintah Kota Medan</h1>
-              <h2 className="text-3xl font-black uppercase">Dinas LIngkungan Hidup</h2>
-              <p className="text-sm italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p>
-            </div>
-            {logoMode === "with-logo" && <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_DLH_URL} className="max-h-full max-w-full object-contain" alt="Logo DLH" /></div>}
-          </div>
-          <div className="text-center mb-8 space-y-1">
-            <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
-            <p className="text-xl font-bold uppercase">{regionName}</p>
-            <p className="text-xl font-bold uppercase">Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          </div>
+        <div className="pdf-header text-center mb-5 leading-tight">
+          <h1 className="text-[11px] font-bold uppercase">Pemerintah Kota Medan</h1>
+          <h2 className="text-[13px] font-black uppercase">Dinas Lingkungan Hidup</h2>
+          <h3 className="text-[10px] font-bold uppercase mt-1">Laporan Harian Kegiatan</h3>
         </div>
 
         <div className="overflow-x-auto print:overflow-visible">
@@ -772,7 +767,7 @@ const DailyRecap = () => {
           tr { page-break-inside: avoid; page-break-after: auto; }
           thead { display: table-header-group; }
           .pdf-table-header th {
-            background-color: #42FF41 !important;
+            background-color: #e5e7eb !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }

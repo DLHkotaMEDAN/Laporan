@@ -172,18 +172,18 @@ const buildColumns = (visible: RecapPdfVisibleColumns, fuelMode: RecapPdfFuelMod
   if (visible.heavyEquipment) columns.push({ key: 'heavyEquipment', header: 'Alat Berat', width: 28 });
   if (visible.fuel && fuelMode === 'daily') {
     columns.push(
-      { key: 'pertamaxRp', header: 'P (Rp)', width: 14, align: 'right' },
-      { key: 'pertamaxL', header: 'P (L)', width: 12, align: 'center' },
-      { key: 'dexliteRp', header: 'D (Rp)', width: 14, align: 'right' },
-      { key: 'dexliteL', header: 'D (L)', width: 12, align: 'center' },
+      { key: 'pertamaxRp', header: 'Pertamax (Rp)', width: 18, align: 'right' },
+      { key: 'pertamaxL', header: 'Pertamax (L)', width: 15, align: 'center' },
+      { key: 'dexliteRp', header: 'Dexlite (Rp)', width: 18, align: 'right' },
+      { key: 'dexliteL', header: 'Dexlite (L)', width: 15, align: 'center' },
     );
   }
   if (visible.fuel && fuelMode === 'voucher') {
     columns.push(
-      { key: 'pertamaxRp', header: 'P (Rp)', width: 14, align: 'right' },
-      { key: 'pertamaxL', header: 'P (L)', width: 12, align: 'center' },
-      { key: 'dexliteRp', header: 'D (Rp)', width: 14, align: 'right' },
-      { key: 'dexliteL', header: 'D (L)', width: 12, align: 'center' },
+      { key: 'pertamaxRp', header: 'Pertamax (Rp)', width: 18, align: 'right' },
+      { key: 'pertamaxL', header: 'Pertamax (L)', width: 15, align: 'center' },
+      { key: 'dexliteRp', header: 'Dexlite (Rp)', width: 18, align: 'right' },
+      { key: 'dexliteL', header: 'Dexlite (L)', width: 15, align: 'center' },
       { key: 'solarRp', header: 'S (Rp)', width: 14, align: 'right' },
     );
   }
