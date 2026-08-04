@@ -25,6 +25,8 @@ const Login = () => {
         navigate('/fuel-reports');
       } else if (profile.role === 'admin_spj_bbm') {
         navigate('/fuel-reports/spj');
+      } else if (profile.role === 'admin_rencana_kerja') {
+        navigate('/work-plans');
       } else {
         navigate('/');
       }

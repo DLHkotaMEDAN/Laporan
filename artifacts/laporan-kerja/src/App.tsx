@@ -52,6 +52,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (profile?.role === 'admin_bbm') return <Navigate to="/fuel-reports" />;
   if (profile?.role === 'admin_spj_bbm') return <Navigate to="/fuel-reports/spj" />;
+  if (profile?.role === 'admin_rencana_kerja') return <Navigate to="/work-plans" />;
   
   return <>{children}</>;
 };
