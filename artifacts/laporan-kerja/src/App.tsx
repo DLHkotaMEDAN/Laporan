@@ -66,7 +66,10 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
   const isAdminHarian = profile?.role === 'admin_harian' || session.user.email === 'sakinah@gmail.com' || session.user.email === 'admin.laporan@gmail.com';
   if (isAdminHarian) return <Navigate to="/" replace />;
 
-  return <ProtectedRoute>{children}</ProtectedRoute>;
+  if (profile?.role === 'admin_bbm') return <Navigate to="/fuel-reports" replace />;
+  if (profile?.role === 'admin_spj_bbm') return <Navigate to="/fuel-reports/spj" replace />;
+
+  return <>{children}</>;
 };
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
