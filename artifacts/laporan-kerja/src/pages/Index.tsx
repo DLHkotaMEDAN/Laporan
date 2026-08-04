@@ -581,14 +581,12 @@ const Index = () => {
           />
         )}
 
-        {showExecutiveHero && (
-          <QuickActions
-            isPimpinan={isPimpinan}
-            isLoggedIn={isLoggedIn}
-            activeTab={activeTab}
-            canManageWorkPlans={canManageWorkPlans}
-          />
-        )}
+        <QuickActions
+          isPimpinan={isPimpinan}
+          isLoggedIn={isLoggedIn}
+          canManageReports={canManageReports}
+          canManageWorkPlans={canManageWorkPlans}
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">

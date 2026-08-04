@@ -9,18 +9,18 @@ import { cn } from "@/lib/utils";
 interface QuickActionsProps {
   isPimpinan: boolean;
   isLoggedIn: boolean;
-  activeTab: string;
+  canManageReports?: boolean;
   canManageWorkPlans?: boolean;
 }
 
-const QuickActions = ({ isPimpinan, isLoggedIn, canManageWorkPlans = true }: QuickActionsProps) => {
+const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canManageWorkPlans = true }: QuickActionsProps) => {
   const navigate = useNavigate();
 
-  if (!isLoggedIn || isPimpinan) return null;
+  if (!isLoggedIn || isPimpinan || (!canManageReports && !canManageWorkPlans)) return null;
 
   return (
-    <div className={cn("grid gap-4 mb-8", canManageWorkPlans ? "md:grid-cols-2" : "md:grid-cols-1")}>
-      <Button 
+    <div className={cn("grid gap-4 mb-8", canManageReports && canManageWorkPlans ? "md:grid-cols-2" : "md:grid-cols-1")}>
+      {canManageReports && <Button 
         onClick={() => navigate('/create')}
         className={cn(
           "group h-auto justify-between rounded-2xl p-5 text-left shadow-lg shadow-sky-900/10 transition-all hover:-translate-y-1 active:scale-[0.99]",
@@ -37,7 +37,7 @@ const QuickActions = ({ isPimpinan, isLoggedIn, canManageWorkPlans = true }: Qui
           </div>
         </div>
         <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />
-      </Button>
+      </Button>}
       
       {canManageWorkPlans && (
         <Button 
@@ -52,7 +52,7 @@ const QuickActions = ({ isPimpinan, isLoggedIn, canManageWorkPlans = true }: Qui
               <ClipboardList className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-base font-black">Buat Rencana Kerja</p>
+            <p className="text-base font-black">Rencana Kerja Baru</p>
               <p className="mt-1 text-xs font-medium text-white/75">Susun agenda tim dan lokasi kerja</p>
             </div>
           </div>
