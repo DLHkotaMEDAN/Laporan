@@ -89,6 +89,23 @@ const DailyRecap = () => {
   const regionId = !isPimpinan && profile?.role !== 'admin' ? profile?.region_id : null;
   const availableCategories = Array.from(new Set(reports.map((report) => report.category))).sort((first, second) => first.localeCompare(second));
 
+  // Check permission for printing daily recap
+  const canPrintDailyRecap = () => {
+    if (!profile?.role) return false;
+    const printAllowedRoles = [
+      'admin',
+      'admin_harian',
+      'admin_laporan_harian_mingguan',
+      'admin_laporan_harian_bulanan',
+    ];
+    return printAllowedRoles.includes(profile.role);
+  };
+
+  const printAccessDeniedMessage = () => {
+    if (!profile?.role) return "Anda harus login untuk mencetak laporan";
+    return `Hak akses "${profile.role}" tidak diizinkan untuk mencetak rekap harian. Hubungi admin untuk mendapatkan akses.`;
+  };
+
   useEffect(() => {
     if (profile && !hasSetDefaults) {
       if (isAdminHarian) {
@@ -637,11 +654,25 @@ const DailyRecap = () => {
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4">
-                  <Printer className="h-4 w-4 md:mr-2" /> 
-                  <span className="hidden md:inline">Cetak Rekap</span>
-                  <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        disabled={!canPrintDailyRecap()}
+                      >
+                        <Printer className="h-4 w-4 md:mr-2" /> 
+                        <span className="hidden md:inline">Cetak Rekap</span>
+                        <ChevronDown className="ml-1 h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    {!canPrintDailyRecap() && (
+                      <TooltipContent side="left" className="bg-red-600 text-white border-red-700">
+                        <p className="max-w-xs">{printAccessDeniedMessage()}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={handlePrint} className="cursor-pointer py-2">

@@ -95,6 +95,23 @@ const WeeklyRecap = () => {
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
 
+  // Check permission for printing weekly recap
+  const canPrintWeeklyRecap = () => {
+    if (!profile?.role) return false;
+    const printAllowedRoles = [
+      'admin',
+      'admin_laporan_mingguan',
+      'admin_laporan_mingguan_bulanan',
+      'admin_laporan_harian_mingguan',
+    ];
+    return printAllowedRoles.includes(profile.role);
+  };
+
+  const printAccessDeniedMessage = () => {
+    if (!profile?.role) return "Anda harus login untuk mencetak laporan";
+    return `Hak akses "${profile.role}" tidak diizinkan untuk mencetak rekap mingguan. Hubungi admin untuk mendapatkan akses.`;
+  };
+
   useEffect(() => {
     if (profile && !hasSetDefaults) {
       if (isAdminHarian) {
@@ -608,11 +625,25 @@ const WeeklyRecap = () => {
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4">
-                  <Printer className="h-4 w-4 md:mr-2" /> 
-                  <span className="hidden md:inline">Cetak Rekap</span>
-                  <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        disabled={!canPrintWeeklyRecap()}
+                      >
+                        <Printer className="h-4 w-4 md:mr-2" /> 
+                        <span className="hidden md:inline">Cetak Rekap</span>
+                        <ChevronDown className="ml-1 h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    {!canPrintWeeklyRecap() && (
+                      <TooltipContent side="left" className="bg-red-600 text-white border-red-700">
+                        <p className="max-w-xs">{printAccessDeniedMessage()}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={handlePrint} className="cursor-pointer py-2">

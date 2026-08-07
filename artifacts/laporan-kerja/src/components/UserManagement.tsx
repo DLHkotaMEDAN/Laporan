@@ -26,6 +26,11 @@ const accessOptions = [
   { value: 'admin', label: 'Super Admin / Administrator' },
   { value: 'admin_wilayah', label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
   { value: 'admin_harian', label: 'Admin Laporan Harian' },
+  { value: 'admin_laporan_mingguan', label: 'Admin Laporan Mingguan' },
+  { value: 'admin_laporan_bulanan', label: 'Admin Laporan Bulanan' },
+  { value: 'admin_laporan_mingguan_bulanan', label: 'Admin Laporan Mingguan dan Bulanan' },
+  { value: 'admin_laporan_harian_mingguan', label: 'Admin Laporan Harian dan Mingguan' },
+  { value: 'admin_laporan_harian_bulanan', label: 'Admin Laporan Harian dan Bulanan' },
   { value: 'admin_rencana_kerja', label: 'Admin Rencana Kerja' },
   { value: 'admin_bbm', label: 'Admin BBM' },
   { value: 'admin_spj_bbm', label: 'Admin SPJ BBM' },
@@ -388,6 +393,11 @@ const UserManagement = () => {
                           profile.role === 'admin' ? "text-red-600 border-red-200 bg-red-50" :
                           profile.role === 'pimpinan' ? "text-amber-600 border-amber-200 bg-amber-50" :
                           profile.role === 'admin_harian' ? "text-purple-600 border-purple-200 bg-purple-50" :
+                          profile.role === 'admin_laporan_mingguan' ? "text-indigo-600 border-indigo-200 bg-indigo-50" :
+                          profile.role === 'admin_laporan_bulanan' ? "text-violet-600 border-violet-200 bg-violet-50" :
+                          profile.role === 'admin_laporan_mingguan_bulanan' ? "text-pink-600 border-pink-200 bg-pink-50" :
+                          profile.role === 'admin_laporan_harian_mingguan' ? "text-rose-600 border-rose-200 bg-rose-50" :
+                          profile.role === 'admin_laporan_harian_bulanan' ? "text-fuchsia-600 border-fuchsia-200 bg-fuchsia-50" :
                           profile.role === 'admin_bbm' ? "text-orange-600 border-orange-200 bg-orange-50" :
                           profile.role === 'admin_spj_bbm' ? "text-blue-800 border-blue-300 bg-blue-100" :
                           "text-blue-600 border-blue-200 bg-blue-50"
