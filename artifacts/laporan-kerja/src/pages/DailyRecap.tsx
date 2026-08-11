@@ -27,6 +27,7 @@ import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
 import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
+import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import {
   Tooltip,
   TooltipContent,
@@ -91,20 +92,10 @@ const DailyRecap = () => {
 
   // Check permission for printing daily recap
   const canPrintDailyRecap = () => {
-    if (!profile?.role) return false;
-    const printAllowedRoles = [
-      'admin',
-      'admin_harian',
-      'admin_laporan_harian_mingguan',
-      'admin_laporan_harian_bulanan',
-    ];
-    return printAllowedRoles.includes(profile.role);
+    return canPrintReportRecap(profile?.role, 'daily');
   };
 
-  const printAccessDeniedMessage = () => {
-    if (!profile?.role) return "Anda harus login untuk mencetak laporan";
-    return `Hak akses "${profile.role}" tidak diizinkan untuk mencetak rekap harian. Hubungi admin untuk mendapatkan akses.`;
-  };
+  const printAccessDeniedMessage = () => getRecapPrintDeniedMessage(profile?.role, 'daily');
 
   useEffect(() => {
     if (profile && !hasSetDefaults) {
@@ -183,12 +174,20 @@ const DailyRecap = () => {
   };
 
   const handlePrint = () => {
+    if (!canPrintDailyRecap()) {
+      showError(printAccessDeniedMessage());
+      return;
+    }
     setTimeout(() => {
       window.print();
     }, 150);
   };
 
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
+    if (!canPrintDailyRecap()) {
+      showError(printAccessDeniedMessage());
+      throw new Error('Akses cetak rekap harian ditolak');
+    }
     const toastId = showLoading("Menyiapkan PDF A3...");
     try {
       const pdfBase64 = await generateRecapDrivePdfBase64({
@@ -224,6 +223,10 @@ const DailyRecap = () => {
   };
 
   const handleExportExcel = async () => {
+    if (!canPrintDailyRecap()) {
+      showError(printAccessDeniedMessage());
+      return;
+    }
     if (reports.length === 0) {
       showError("Tidak ada data untuk diekspor");
       return;
@@ -648,7 +651,7 @@ const DailyRecap = () => {
           </div>
           <div className="flex items-center gap-2">
             {isLoggedIn && (
-              <Button onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-10 px-2 md:px-4">
+              <Button onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0 || !canPrintDailyRecap()} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-10 px-2 md:px-4">
                 <CloudUpload className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Simpan ke Drive</span>
               </Button>
             )}
@@ -682,15 +685,15 @@ const DailyRecap = () => {
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
-                <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
+                {canPrintDailyRecap() && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
+                </DropdownMenuItem>}
+                {canPrintReportRecap(profile?.role, 'weekly') && <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-purple-500" /> Rekap Mingguan
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
+                </DropdownMenuItem>}
+                {canPrintReportRecap(profile?.role, 'monthly') && <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
                   <FileText className="mr-2 h-4 w-4 text-orange-500" /> Rekap Bulanan
-                </DropdownMenuItem>
+                </DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

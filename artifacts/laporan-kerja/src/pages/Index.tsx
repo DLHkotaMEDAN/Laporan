@@ -26,6 +26,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
+import { canPrintReportRecap } from '@/utils/recap-print-permissions';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -141,6 +142,10 @@ const Index = () => {
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && !isAdminRencanaKerja;
   const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
+  const canPrintDailyRecap = canPrintReportRecap(profile?.role, 'daily');
+  const canPrintWeeklyRecap = canPrintReportRecap(profile?.role, 'weekly');
+  const canPrintMonthlyRecap = canPrintReportRecap(profile?.role, 'monthly');
+  const canPrintAnyReportRecap = canPrintDailyRecap || canPrintWeeklyRecap || canPrintMonthlyRecap;
   const showExecutiveHero = isAdmin;
   const { regions, teams: regionTeams } = useRegionFilterOptions(isAdmin, selectedRegion);
   const categories = useMemo(
@@ -627,7 +632,7 @@ const Index = () => {
                   <Plus className="mr-2 h-4 w-4" /> Tambah Laporan Harian
                 </Button>
               )}
-              <DropdownMenu>
+              {(activeTab !== 'reports' || canPrintAnyReportRecap) && <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700 border-slate-200 h-10 px-4 font-bold rounded-xl">
                     <Printer className="h-4 w-4 mr-2 text-blue-600" /> Cetak Rekap <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
@@ -641,15 +646,15 @@ const Index = () => {
                           <Printer className="mr-3 h-4 w-4 text-blue-600" /> Cetak Harian Laporan
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onSelect={() => setIsDailyRecapDateOpen(true)} className="py-3 cursor-pointer">
+                      {canPrintDailyRecap && <DropdownMenuItem onSelect={() => setIsDailyRecapDateOpen(true)} className="py-3 cursor-pointer">
                         <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Harian Laporan
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/weekly-rekap?categories=semua&date=${new Date().toISOString().split('T')[0]}`)} className="py-3 cursor-pointer">
+                      </DropdownMenuItem>}
+                      {canPrintWeeklyRecap && <DropdownMenuItem onClick={() => navigate(`/weekly-rekap?categories=semua&date=${new Date().toISOString().split('T')[0]}`)} className="py-3 cursor-pointer">
                         <CalendarDays className="mr-3 h-4 w-4 text-purple-600" /> Rekap Mingguan Laporan
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/monthly-rekap`)} className="py-3 cursor-pointer">
+                      </DropdownMenuItem>}
+                      {canPrintMonthlyRecap && <DropdownMenuItem onClick={() => navigate(`/monthly-rekap`)} className="py-3 cursor-pointer">
                         <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan Laporan
-                      </DropdownMenuItem>
+                      </DropdownMenuItem>}
                     </>
                   )}
                   {activeTab === 'workplans' && (
@@ -698,7 +703,7 @@ const Index = () => {
                     </>
                   )}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu>}
             </div>
           </div>
 

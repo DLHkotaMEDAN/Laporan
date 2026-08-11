@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
 import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
+import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import {
   Tooltip,
   TooltipContent,
@@ -84,20 +85,10 @@ const MonthlyRecap = () => {
 
   // Check permission for printing monthly recap
   const canPrintMonthlyRecap = () => {
-    if (!profile?.role) return false;
-    const printAllowedRoles = [
-      'admin',
-      'admin_laporan_bulanan',
-      'admin_laporan_mingguan_bulanan',
-      'admin_laporan_harian_bulanan',
-    ];
-    return printAllowedRoles.includes(profile.role);
+    return canPrintReportRecap(profile?.role, 'monthly');
   };
 
-  const printAccessDeniedMessage = () => {
-    if (!profile?.role) return "Anda harus login untuk mencetak laporan";
-    return `Hak akses "${profile.role}" tidak diizinkan untuk mencetak rekap bulanan. Hubungi admin untuk mendapatkan akses.`;
-  };
+  const printAccessDeniedMessage = () => getRecapPrintDeniedMessage(profile?.role, 'monthly');
 
   useEffect(() => {
     if (isLoggedIn && profile) {
@@ -162,12 +153,20 @@ const MonthlyRecap = () => {
   };
 
   const handlePrint = () => {
+    if (!canPrintMonthlyRecap()) {
+      showError(printAccessDeniedMessage());
+      return;
+    }
     setTimeout(() => {
       window.print();
     }, 150);
   };
 
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
+    if (!canPrintMonthlyRecap()) {
+      showError(printAccessDeniedMessage());
+      throw new Error('Akses cetak rekap bulanan ditolak');
+    }
     const toastId = showLoading("Menyiapkan PDF A3...");
     try {
       const pdfBase64 = await generateRecapDrivePdfBase64({
@@ -216,6 +215,10 @@ const MonthlyRecap = () => {
   };
 
   const handleExportExcel = async () => {
+    if (!canPrintMonthlyRecap()) {
+      showError(printAccessDeniedMessage());
+      return;
+    }
     if (reports.length === 0) {
       showError("Tidak ada data untuk diekspor");
       return;
@@ -578,7 +581,7 @@ const MonthlyRecap = () => {
           </div>
           <div className="flex items-center gap-2">
             {isLoggedIn && (
-              <Button onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-10 px-2 md:px-4">
+              <Button onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0 || !canPrintMonthlyRecap()} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-10 px-2 md:px-4">
                 <CloudUpload className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Simpan ke Drive</span>
               </Button>
             )}
@@ -612,15 +615,15 @@ const MonthlyRecap = () => {
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
-                <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
+                {canPrintReportRecap(profile?.role, 'daily') && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
+                </DropdownMenuItem>}
+                {canPrintReportRecap(profile?.role, 'weekly') && <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-purple-500" /> Rekap Mingguan
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
+                </DropdownMenuItem>}
+                {canPrintMonthlyRecap() && <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
                   <FileText className="mr-2 h-4 w-4 text-orange-500" /> Rekap Bulanan
-                </DropdownMenuItem>
+                </DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
