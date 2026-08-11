@@ -257,19 +257,13 @@ const WorkPlanDailyRecap = () => {
     });
   };
 
+  const columnWidths = hasRemarks
+    ? ['3%', '6.5%', '13.5%', '15%', '13%', '3%', '11.5%', '3.5%', '9.5%', '10.5%', '11%']
+    : ['3.5%', '7.5%', '15%', '16.5%', '14.5%', '3.5%', '13%', '4%', '10.5%', '12%'];
+
   const colGroup = (
     <colgroup>
-      <col style={{ width: '30px' }} />
-      <col style={{ width: '60px' }} />
-      <col style={{ width: '120px' }} />
-      <col style={{ width: '130px' }} />
-      <col style={{ width: '120px' }} />
-      <col style={{ width: '30px' }} />
-      <col style={{ width: '100px' }} />
-      <col style={{ width: '40px' }} />
-      <col style={{ width: '80px' }} />
-      <col style={{ width: '100px' }} />
-      {hasRemarks && <col style={{ width: '100px' }} />}
+      {columnWidths.map((width, index) => <col key={index} style={{ width }} />)}
     </colgroup>
   );
 
@@ -385,8 +379,8 @@ const WorkPlanDailyRecap = () => {
         </div>
       </div>
 
-      <div ref={printRef} className="print-area bg-white p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
-        <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
+      <div ref={printRef} className="print-area bg-white p-8 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
+        <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-3 mb-4">
           {logoMode === "with-logo" && <img src={LOGO_MEDAN_URL} className="h-20 w-20 object-contain" alt="Logo Medan" />}
           <div className="text-center">
             <h1 className="text-xl font-bold uppercase">Pemerintah Kota Medan</h1>
@@ -396,7 +390,7 @@ const WorkPlanDailyRecap = () => {
           {logoMode === "with-logo" && <img src={LOGO_DLH_URL} className="h-20 w-20 object-contain" alt="Logo DLH" />}
         </div>
 
-        <div className="text-center mb-8">
+        <div className="text-center mb-5">
           <h3 className="text-xl font-bold underline uppercase">REKAP RENCANA KERJA HARIAN {regionName}</h3>
           {selectedCategory !== "semua" && <p className="text-lg font-bold uppercase">Tim: {selectedCategory}</p>}
           <p className="text-lg font-bold">
@@ -407,7 +401,7 @@ const WorkPlanDailyRecap = () => {
         <div className="overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
+              <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
@@ -430,7 +424,7 @@ const WorkPlanDailyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0 border-t-0">
+                <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0 border-t-0">
                   {colGroup}
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
@@ -468,7 +462,7 @@ const WorkPlanDailyRecap = () => {
               </div>
             </>
           ) : (
-            <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed">
+            <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed">
               <tbody>
                 <tr><td colSpan={hasRemarks ? 11 : 10} className="border-2 border-black p-8 text-center italic text-slate-400">Tidak ada rencana kerja untuk periode ini</td></tr>
               </tbody>
@@ -478,7 +472,21 @@ const WorkPlanDailyRecap = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
+        .work-plan-table {
+          border-width: 2px !important;
+        }
+        .work-plan-table th {
+          padding: 6px 5px !important;
+          border-width: 1.5px !important;
+          font-weight: 700;
+          line-height: 1.2 !important;
+        }
+        .work-plan-table td {
+          padding: 5px 6px !important;
+          border-width: 1.25px !important;
+          line-height: 1.35 !important;
+        }
+        .print-area td > div.border-t.border-black { border-top-width: 1.5px !important; }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster { 
