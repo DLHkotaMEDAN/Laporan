@@ -48,3 +48,7 @@ Thumbs.db
 .cache/
 .local/
 .dyad/
+
+# Local migration backups / database dumps
+.migration-backup/
+**/supabase/.temp/
