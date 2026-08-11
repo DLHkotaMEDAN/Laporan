@@ -157,10 +157,10 @@ const WorkPlanDailyRecap = () => {
 
       return `${teamKey}|${toolKey}`;
     });
-    // Untuk Taman Amplas dan Taman Area, tampilkan satu sel koordinator
-    // untuk seluruh kegiatan/lokasi berurutan dengan koordinator yang sama.
+    // Untuk Taman Amplas, Taman Area, dan Tim Siram, tampilkan satu sel
+    // koordinator untuk seluruh kegiatan/lokasi berurutan dengan nama sama.
     // Kategori lain mempertahankan aturan span personil yang berlaku.
-    const coordinatorSpans = ["Taman Amplas", "Taman Area"].includes(plan.category)
+    const coordinatorSpans = ["Taman Amplas", "Taman Area", "Tim Siram"].includes(plan.category)
       ? getSequentialSpans(displayItems, (item) => item.coordinator.trim())
       : teamSpans;
     // Jumlah personil pada Taman Amplas dan Taman Area mengikuti tiap
