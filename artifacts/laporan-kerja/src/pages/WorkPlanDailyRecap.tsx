@@ -144,7 +144,30 @@ const WorkPlanDailyRecap = () => {
     const displayItems = getUniqueWorkPlanItems(plan.items);
     const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
     const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
-    const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
+    const teamSpans = getSequentialSpans(displayItems, (item) => {
+      const teamKey = plan.category === "Tim Pohon"
+        ? item.coordinator
+        : `${item.coordinator}|${item.personnel.members}`;
+
+      // Tim Siram dapat memiliki personil yang sama pada beberapa kegiatan,
+      // tetapi personil harus tetap berada pada baris alatnya bila nama alat berbeda.
+      const toolKey = plan.category === "Tim Siram"
+        ? item.tools.map((tool) => tool.name.trim()).join("|")
+        : "";
+
+      return `${teamKey}|${toolKey}`;
+    });
+    // Untuk Taman Amplas dan Taman Area, tampilkan satu sel koordinator
+    // untuk seluruh kegiatan/lokasi berurutan dengan koordinator yang sama.
+    // Kategori lain mempertahankan aturan span personil yang berlaku.
+    const coordinatorSpans = ["Taman Amplas", "Taman Area"].includes(plan.category)
+      ? getSequentialSpans(displayItems, (item) => item.coordinator.trim())
+      : teamSpans;
+    // Jumlah personil pada Taman Amplas dan Taman Area mengikuti tiap
+    // detail kegiatan/lokasi, sehingga tidak digabung antar-item.
+    const personnelSpans = ["Taman Amplas", "Taman Area"].includes(plan.category)
+      ? displayItems.map(() => 1)
+      : teamSpans;
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
@@ -160,7 +183,6 @@ const WorkPlanDailyRecap = () => {
       const toolsToRender = isTreeLayout ? [alignedTreeTool || item.tools[0] || { name: "", unit: 0, usage: "", members: 0 }] : (item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }]);
       const descriptionSpan = descriptionSpans[itemIdx];
       const toolSpan = toolSpans[itemIdx];
-      const teamSpan = teamSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
 
       return toolsToRender.map((tool, toolIdx) => (
@@ -218,11 +240,11 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle">{tool.members ?? 0}</td>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
-          ) : null) : teamSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
+          ) : null) : personnelSpans[itemIdx] > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + personnelSpans[itemIdx]))}>{item.personnel.members}</td>
           )}
-          {teamSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.coordinator}</td>
+          {coordinatorSpans[itemIdx] > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, coordinatorSpans[itemIdx])}>{item.coordinator}</td>
           )}
           {basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
