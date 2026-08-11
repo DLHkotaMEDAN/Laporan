@@ -344,7 +344,7 @@ const WorkPlanMonthlyRecap = () => {
         <div className="overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
+              <table className="split-table-before-footer w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
@@ -368,7 +368,7 @@ const WorkPlanMonthlyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0 border-t-0">
+                <table className="continuation-table w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0 border-t-0">
                   {colGroup}
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
@@ -416,6 +416,15 @@ const WorkPlanMonthlyRecap = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .split-table-before-footer {
+          border-bottom-width: 0 !important;
+        }
+        .continuation-table {
+          border-top-width: 0 !important;
+        }
+        .continuation-table tbody tr:first-child > td {
+          border-top-width: 0 !important;
+        }
         .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }

@@ -401,7 +401,7 @@ const WorkPlanDailyRecap = () => {
         <div className="overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
+              <table className="work-plan-table split-table-before-footer w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
@@ -424,7 +424,7 @@ const WorkPlanDailyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0 border-t-0">
+                <table className="work-plan-table continuation-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0 border-t-0">
                   {colGroup}
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
@@ -485,6 +485,15 @@ const WorkPlanDailyRecap = () => {
           padding: 5px 6px !important;
           border-width: 1.25px !important;
           line-height: 1.35 !important;
+        }
+        .work-plan-table.split-table-before-footer {
+          border-bottom-width: 0 !important;
+        }
+        .work-plan-table.continuation-table {
+          border-top-width: 0 !important;
+        }
+        .work-plan-table.continuation-table tbody tr:first-child > td {
+          border-top-width: 0 !important;
         }
         .print-area td > div.border-t.border-black { border-top-width: 1.5px !important; }
         @media print {
