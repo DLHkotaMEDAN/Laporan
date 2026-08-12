@@ -353,6 +353,13 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     : [];
   const selectedSourcePlan = matchingSourcePlans.find(plan => plan.id === sourcePlanId);
 
+  const formatSourceLocation = (plan: WorkPlan) => {
+    const location = plan.items?.[0]?.location;
+    if (!location) return "Lokasi tidak ditentukan";
+    const village = Array.isArray(location.village) ? location.village.filter(Boolean).join(", ") : "";
+    return [location.street, village, location.subDistrict].filter(Boolean).join(", ") || "Lokasi tidak ditentukan";
+  };
+
   const openCopyDialog = () => {
     if (!selectedCategory) {
       showError("Pilih Tim/Kategori terlebih dahulu");
@@ -605,8 +612,16 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               <FormLabel>Rencana Kerja Sumber</FormLabel>
               <Select value={sourcePlanId} onValueChange={handleSourcePlanChange}>
                 <SelectTrigger><SelectValue placeholder={matchingSourcePlans.length ? "Pilih rencana kerja..." : "Belum ada riwayat untuk tim ini"} /></SelectTrigger>
-                <SelectContent>
-                  {matchingSourcePlans.map(plan => <SelectItem key={plan.id} value={plan.id}>{plan.date} - {plan.category} - {plan.items?.[0]?.description || "Tanpa uraian"}{(plan.items?.length || 0) > 1 ? ` (+${plan.items.length - 1} kegiatan)` : ""}</SelectItem>)}
+                <SelectContent className="w-[min(760px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)]">
+                  {matchingSourcePlans.map(plan => (
+                    <SelectItem key={plan.id} value={plan.id} className="items-start whitespace-normal py-2">
+                      <span className="block min-w-0 whitespace-normal break-words leading-snug">
+                        <span className="block font-medium">{plan.date} - {plan.category}</span>
+                        <span className="block text-xs text-slate-600">{plan.items?.[0]?.description || "Tanpa uraian"}{(plan.items?.length || 0) > 1 ? ` (+${plan.items.length - 1} kegiatan)` : ""}</span>
+                        <span className="block text-xs text-slate-500">Jalan/Lokasi: {formatSourceLocation(plan)}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
