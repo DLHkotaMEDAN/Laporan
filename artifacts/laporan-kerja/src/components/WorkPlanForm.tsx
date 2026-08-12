@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Save, ArrowLeft, Loader2, MapPin, Users, Wrench, FileText, MessageSquare, ClipboardList, ShieldAlert, Check, HelpCircle, Copy, AlertCircle, Info } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Loader2, MapPin, Users, Wrench, FileText, MessageSquare, ClipboardList, ShieldAlert, Check, HelpCircle, Copy, AlertCircle, Info, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { WorkPlan } from '@/types/workPlan';
@@ -57,6 +57,55 @@ const defaultActivityMapping: Record<string, string> = {
 const toolCoordinatorMapping: Record<string, string> = {
   "Truk Siram (BK 8128 A)": "M. Irwan Syahputra, SE",
   "Truk Siram (BK 9031 J)": "Aluddin Gultom",
+};
+
+const collectSearchValues = (value: unknown, values: string[] = []): string[] => {
+  if (typeof value === "string" || typeof value === "number") {
+    values.push(String(value));
+  } else if (Array.isArray(value)) {
+    value.forEach(entry => collectSearchValues(entry, values));
+  } else if (value && typeof value === "object") {
+    Object.values(value).forEach(entry => collectSearchValues(entry, values));
+  }
+  return values;
+};
+
+const normalizeSearchText = (value: string) => value
+  .toLocaleLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "");
+
+const levenshteinDistance = (left: string, right: string) => {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= left.length; row += 1) {
+    let diagonal = previous[0];
+    previous[0] = row;
+    for (let column = 1; column <= right.length; column += 1) {
+      const above = previous[column];
+      previous[column] = left[row - 1] === right[column - 1]
+        ? diagonal
+        : Math.min(previous[column] + 1, previous[column - 1] + 1, diagonal + 1);
+      diagonal = above;
+    }
+  }
+  return previous[right.length];
+};
+
+const matchesGlobalSearch = (query: string, searchableValues: string[]) => {
+  const normalizedQuery = normalizeSearchText(query.trim());
+  if (!normalizedQuery) return true;
+
+  const searchableText = normalizeSearchText(searchableValues.join(" "));
+  const searchableTokens = searchableText.split(/[^a-z0-9]+/).filter(Boolean);
+  return normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean).every(queryToken => {
+    if (searchableText.includes(queryToken)) return true;
+    if (queryToken.length < 4) return false;
+    const tolerance = queryToken.length >= 8 ? 2 : 1;
+    return searchableTokens.some(token =>
+      Math.abs(token.length - queryToken.length) <= tolerance
+      && levenshteinDistance(queryToken, token) <= tolerance,
+    );
+  });
 };
 
 const toolSchema = z.object({
@@ -106,6 +155,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const [sourcePlans, setSourcePlans] = useState<WorkPlan[]>([]);
   const [sourcePlanId, setSourcePlanId] = useState("");
   const [selectedSourceItemIds, setSelectedSourceItemIds] = useState<number[]>([]);
+  const [sourceSearchQuery, setSourceSearchQuery] = useState("");
 
   // Autocomplete States
   const [history, setHistory] = useState({
@@ -353,6 +403,12 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     : [];
   const selectedSourcePlan = matchingSourcePlans.find(plan => plan.id === sourcePlanId);
 
+  const sourceSearch = sourceSearchQuery.trim().toLowerCase();
+  const filteredSourcePlans = matchingSourcePlans.filter(plan => {
+    if (!sourceSearch) return true;
+    return matchesGlobalSearch(sourceSearch, collectSearchValues(plan));
+  });
+
   const formatSourceLocation = (plan: WorkPlan) => {
     const location = plan.items?.[0]?.location;
     if (!location) return "Lokasi tidak ditentukan";
@@ -367,6 +423,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     }
     setSourcePlanId("");
     setSelectedSourceItemIds([]);
+    setSourceSearchQuery("");
     setShowCopyDialog(true);
   };
 
@@ -609,11 +666,24 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div className="space-y-2">
+              <FormLabel>Pencarian Global</FormLabel>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={sourceSearchQuery}
+                  onChange={(event) => setSourceSearchQuery(event.target.value)}
+                  placeholder="Cari tanggal, kegiatan, jalan, kelurahan, kecamatan..."
+                  className="pl-9"
+                />
+              </div>
+              {sourceSearchQuery.trim() && <p className="text-xs text-slate-500">Menampilkan {filteredSourcePlans.length} dari {matchingSourcePlans.length} rencana Tim/Kategori {selectedCategory}.</p>}
+            </div>
+            <div className="space-y-2">
               <FormLabel>Rencana Kerja Sumber</FormLabel>
               <Select value={sourcePlanId} onValueChange={handleSourcePlanChange}>
-                <SelectTrigger><SelectValue placeholder={matchingSourcePlans.length ? "Pilih rencana kerja..." : "Belum ada riwayat untuk tim ini"} /></SelectTrigger>
-                <SelectContent className="w-[min(760px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)]">
-                  {matchingSourcePlans.map(plan => (
+                <SelectTrigger><SelectValue placeholder={filteredSourcePlans.length ? "Pilih rencana kerja..." : "Tidak ada hasil pencarian"} /></SelectTrigger>
+                <SelectContent className="w-[min(760px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] !max-h-[var(--radix-select-content-available-height)]">
+                  {filteredSourcePlans.map(plan => (
                     <SelectItem key={plan.id} value={plan.id} className="items-start whitespace-normal py-2">
                       <span className="block min-w-0 whitespace-normal break-words leading-snug">
                         <span className="block font-medium">{plan.date} - {plan.category}</span>
