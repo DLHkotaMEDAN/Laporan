@@ -337,9 +337,16 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     setShowDuplicateDialog(false);
   };
 
-  const selectedSourcePlan = sourcePlans.find(plan => plan.id === sourcePlanId);
+  const matchingSourcePlans = selectedCategory
+    ? sourcePlans.filter(plan => plan.category === selectedCategory)
+    : [];
+  const selectedSourcePlan = matchingSourcePlans.find(plan => plan.id === sourcePlanId);
 
   const openCopyDialog = () => {
+    if (!selectedCategory) {
+      showError("Pilih Tim/Kategori terlebih dahulu");
+      return;
+    }
     setSourcePlanId("");
     setSelectedSourceItemIds([]);
     setCopyInsertMode('replace');
@@ -348,7 +355,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
   const handleSourcePlanChange = (id: string) => {
     setSourcePlanId(id);
-    const plan = sourcePlans.find(source => source.id === id);
+    const plan = matchingSourcePlans.find(source => source.id === id);
     setSelectedSourceItemIds(plan?.items?.map((_, index) => index) || []);
   };
 
@@ -571,9 +578,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
             <div className="space-y-2">
               <FormLabel>Rencana Kerja Sumber</FormLabel>
               <Select value={sourcePlanId} onValueChange={handleSourcePlanChange}>
-                <SelectTrigger><SelectValue placeholder={sourcePlans.length ? "Pilih rencana kerja..." : "Belum ada riwayat rencana kerja"} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={matchingSourcePlans.length ? "Pilih rencana kerja..." : "Belum ada riwayat untuk tim ini"} /></SelectTrigger>
                 <SelectContent>
-                  {sourcePlans.map(plan => <SelectItem key={plan.id} value={plan.id}>{plan.date} - {plan.category} - {plan.items?.[0]?.description || "Tanpa uraian"}{(plan.items?.length || 0) > 1 ? ` (+${plan.items.length - 1} kegiatan)` : ""}</SelectItem>)}
+                  {matchingSourcePlans.map(plan => <SelectItem key={plan.id} value={plan.id}>{plan.date} - {plan.category} - {plan.items?.[0]?.description || "Tanpa uraian"}{(plan.items?.length || 0) > 1 ? ` (+${plan.items.length - 1} kegiatan)` : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
