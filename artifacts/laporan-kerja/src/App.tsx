@@ -48,6 +48,7 @@ import {
   getRoleLandingPath,
   isAdminHarianAccess,
 } from "@/constants/access-control";
+import { AuthorizeRoute } from "@/components/AuthorizeRoute";
 
 const queryClient = new QueryClient();
 
@@ -131,8 +132,8 @@ const App = () => (
             <Route path="/work-plans/daily-rekap" element={<WorkPlanDailyRecap />} />
             <Route path="/work-plans/weekly-rekap" element={<WorkPlanWeeklyRecap />} />
             <Route path="/work-plans/monthly-rekap" element={<WorkPlanMonthlyRecap />} />
-            <Route path="/work-plans/create" element={<WorkPlanWriteRoute><CreateWorkPlan /></WorkPlanWriteRoute>} />
-            <Route path="/work-plans/edit/:id" element={<WorkPlanWriteRoute><EditWorkPlan /></WorkPlanWriteRoute>} />
+            <Route path="/work-plans/create" element={<AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute>} />
+            <Route path="/work-plans/edit/:id" element={<AuthorizeRoute resource="work_plans" action="update"><EditWorkPlan /></AuthorizeRoute>} />
             
             <Route path="/fuel-reports" element={<AdminRoute><FuelReportList /></AdminRoute>} />
             <Route path="/fuel-reports/create" element={<AdminRoute><CreateFuelReport /></AdminRoute>} />
