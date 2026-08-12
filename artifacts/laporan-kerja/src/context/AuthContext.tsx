@@ -3,10 +3,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { UserRole } from '@/constants/access-control';
 
 interface Profile {
   id: string;
-  role: 'admin' | 'admin_wilayah' | 'admin_rencana_kerja' | 'user' | 'pimpinan' | 'admin_harian' | 'admin_bbm' | 'admin_spj_bbm';
+  role: UserRole;
   category: string | null;
   username: string | null;
   region_id?: string | null;

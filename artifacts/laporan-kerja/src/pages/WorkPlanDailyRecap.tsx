@@ -184,6 +184,7 @@ const WorkPlanDailyRecap = () => {
       const descriptionSpan = descriptionSpans[itemIdx];
       const toolSpan = toolSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
+      const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => (
         <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
@@ -212,25 +213,25 @@ const WorkPlanDailyRecap = () => {
             </>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <>
-              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
-              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
-              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
+              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
             </>
           ) : null) : toolSpan > 0 && toolIdx === 0 && (
             <>
               <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
+                  <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
                 )) : "-"}
               </td>
               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>
+                  <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>
                 )) : "-"}
               </td>
               <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>
+                  <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>
                 )) : "-"}
               </td>
             </>
@@ -239,7 +240,7 @@ const WorkPlanDailyRecap = () => {
           {isTreeLayout ? (alignTreeTools ? (
             <td className="border-2 border-black p-1 text-center align-middle">{tool.members ?? 0}</td>
           ) : toolSpan > 0 && toolIdx === 0 ? (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
           ) : null) : personnelSpans[itemIdx] > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + personnelSpans[itemIdx]))}>{item.personnel.members}</td>
           )}

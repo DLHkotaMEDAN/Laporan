@@ -25,6 +25,30 @@ type GetUserDetailsInput = {
   userId: string;
 };
 
+const USER_ROLES = {
+  ADMIN: 'admin',
+  ADMIN_WILAYAH: 'admin_wilayah',
+  ADMIN_HARIAN: 'admin_harian',
+  ADMIN_LAPORAN_MINGGUAN: 'admin_laporan_mingguan',
+  ADMIN_LAPORAN_BULANAN: 'admin_laporan_bulanan',
+  ADMIN_LAPORAN_MINGGUAN_BULANAN: 'admin_laporan_mingguan_bulanan',
+  ADMIN_LAPORAN_HARIAN_MINGGUAN: 'admin_laporan_harian_mingguan',
+  ADMIN_LAPORAN_HARIAN_BULANAN: 'admin_laporan_harian_bulanan',
+  ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
+  ADMIN_BBM: 'admin_bbm',
+  ADMIN_SPJ_BBM: 'admin_spj_bbm',
+  PIMPINAN: 'pimpinan',
+  USER: 'user',
+} as const;
+
+const validRoles = new Set(Object.values(USER_ROLES));
+const regionRequiredRoles = new Set([
+  USER_ROLES.ADMIN_WILAYAH,
+  USER_ROLES.ADMIN_HARIAN,
+  USER_ROLES.ADMIN_RENCANA_KERJA,
+  USER_ROLES.USER,
+]);
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -79,10 +103,11 @@ Deno.serve(async (request) => {
 
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
-    if (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(input.role) && !input.regionId) {
+    if (!validRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
+    if (regionRequiredRoles.has(input.role) && !input.regionId) {
       throw new Error('Admin berbasis wilayah wajib memiliki wilayah.');
     }
-    if (input.role === 'user' && !input.teamId) throw new Error('Pengguna tim wajib memiliki tim.');
+    if (input.role === USER_ROLES.USER && !input.teamId) throw new Error('Pengguna tim wajib memiliki tim.');
 
     if (input.regionId) {
       const { data: region } = await adminClient.from('regions').select('id').eq('id', input.regionId).eq('is_active', true).maybeSingle();

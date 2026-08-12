@@ -1,28 +1,9 @@
-export type RecapPeriod = 'daily' | 'weekly' | 'monthly';
+import { RecapPeriod, canPrintReportRecapByRole, getRoleLabel } from '@/constants/access-control';
 
-const rolesByPeriod: Record<RecapPeriod, readonly string[]> = {
-  daily: [
-    'admin',
-    'admin_harian',
-    'admin_laporan_harian_mingguan',
-    'admin_laporan_harian_bulanan',
-  ],
-  weekly: [
-    'admin',
-    'admin_laporan_mingguan',
-    'admin_laporan_mingguan_bulanan',
-    'admin_laporan_harian_mingguan',
-  ],
-  monthly: [
-    'admin',
-    'admin_laporan_bulanan',
-    'admin_laporan_mingguan_bulanan',
-    'admin_laporan_harian_bulanan',
-  ],
-};
+export type { RecapPeriod };
 
 export const canPrintReportRecap = (role: string | null | undefined, period: RecapPeriod) =>
-  Boolean(role && rolesByPeriod[period].includes(role));
+  canPrintReportRecapByRole(role, period);
 
 export const getRecapPrintDeniedMessage = (role: string | null | undefined, period: RecapPeriod) => {
   if (!role) return 'Anda harus login untuk mencetak rekap.';
@@ -33,5 +14,5 @@ export const getRecapPrintDeniedMessage = (role: string | null | undefined, peri
     monthly: 'bulanan',
   };
 
-  return `Hak akses "${role}" tidak diizinkan untuk mencetak rekap ${labels[period]}. Hubungi admin untuk mendapatkan akses.`;
+  return `Hak akses "${getRoleLabel(role)}" tidak diizinkan untuk mencetak rekap ${labels[period]}. Hubungi admin untuk mendapatkan akses.`;
 };

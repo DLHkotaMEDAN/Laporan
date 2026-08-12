@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { showError } from '@/utils/toast';
+import { getRoleLandingPath } from '@/constants/access-control';
 
 const Login = () => {
   const { session, profile, loading: authLoading } = useAuth();
@@ -21,15 +22,7 @@ const Login = () => {
 
   useEffect(() => {
     if (session && profile && !authLoading) {
-      if (profile.role === 'admin_bbm') {
-        navigate('/fuel-reports');
-      } else if (profile.role === 'admin_spj_bbm') {
-        navigate('/fuel-reports/spj');
-      } else if (profile.role === 'admin_rencana_kerja') {
-        navigate('/work-plans');
-      } else {
-        navigate('/');
-      }
+      navigate(getRoleLandingPath(profile.role));
     }
   }, [session, profile, authLoading, navigate]);
 

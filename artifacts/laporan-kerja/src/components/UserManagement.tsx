@@ -21,29 +21,21 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-
-const accessOptions = [
-  { value: 'admin', label: 'Super Admin / Administrator' },
-  { value: 'admin_wilayah', label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
-  { value: 'admin_harian', label: 'Admin Laporan Harian' },
-  { value: 'admin_laporan_mingguan', label: 'Admin Laporan Mingguan' },
-  { value: 'admin_laporan_bulanan', label: 'Admin Laporan Bulanan' },
-  { value: 'admin_laporan_mingguan_bulanan', label: 'Admin Laporan Mingguan dan Bulanan' },
-  { value: 'admin_laporan_harian_mingguan', label: 'Admin Laporan Harian dan Mingguan' },
-  { value: 'admin_laporan_harian_bulanan', label: 'Admin Laporan Harian dan Bulanan' },
-  { value: 'admin_rencana_kerja', label: 'Admin Rencana Kerja' },
-  { value: 'admin_bbm', label: 'Admin BBM' },
-  { value: 'admin_spj_bbm', label: 'Admin SPJ BBM' },
-  { value: 'pimpinan', label: 'Pimpinan (Lihat Rekap)' },
-  { value: 'user', label: 'Pengguna Tim' },
-];
+import {
+  ACCESS_OPTIONS,
+  USER_ROLES,
+  UserRole,
+  getRoleBadgeClass,
+  roleRequiresRegion,
+  roleRequiresTeam,
+} from '@/constants/access-control';
 
 const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
 
 interface Profile {
   id: string;
   username: string | null;
-  role: string;
+  role: UserRole;
   category: string | null;
   region_id: string | null;
   team_id: string | null;
@@ -61,6 +53,22 @@ interface Team {
   name: string;
 }
 
+interface UserFormState {
+  username: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  regionId: string;
+  teamId: string;
+}
+
+interface EditUserFormState {
+  username: string;
+  role: UserRole;
+  regionId: string;
+  teamId: string;
+}
+
 const UserManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,9 +77,9 @@ const UserManagement = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '', teamId: '' });
+  const [newUser, setNewUser] = useState<UserFormState>({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, regionId: '', teamId: '' });
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
-  const [editUser, setEditUser] = useState({ username: '', role: '', regionId: '', teamId: '' });
+  const [editUser, setEditUser] = useState<EditUserFormState>({ username: '', role: USER_ROLES.USER, regionId: '', teamId: '' });
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   const [accountDetails, setAccountDetails] = useState<{ email?: string; createdAt?: string; lastSignInAt?: string | null; emailConfirmedAt?: string | null } | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -110,8 +118,8 @@ const UserManagement = () => {
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
-          regionId: ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role) ? newUser.regionId : null,
-          teamId: newUser.role === 'user' ? newUser.teamId : null,
+          regionId: roleRequiresRegion(newUser.role) ? newUser.regionId : null,
+          teamId: roleRequiresTeam(newUser.role) ? newUser.teamId : null,
         },
       });
       if (error) throw error;
@@ -129,7 +137,7 @@ const UserManagement = () => {
         },
         ...currentProfiles.filter(profile => profile.id !== data.id),
       ]);
-      setNewUser({ username: '', email: '', password: '', role: 'admin_wilayah', regionId: '', teamId: '' });
+      setNewUser({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, regionId: '', teamId: '' });
       await fetchProfiles();
     } catch (error: any) {
       showError('Gagal membuat akun: ' + error.message);
@@ -228,7 +236,7 @@ const UserManagement = () => {
 
   const handleSaveProfile = async () => {
     if (!editingProfile) return;
-    const requiresRegion = ['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(editUser.role);
+    const requiresRegion = roleRequiresRegion(editUser.role);
     if (!editUser.username.trim()) {
       showError('Nama pengguna wajib diisi.');
       return;
@@ -237,7 +245,7 @@ const UserManagement = () => {
       showError('Akun berbasis wilayah wajib memilih wilayah.');
       return;
     }
-    if (editUser.role === 'user' && !editUser.teamId) {
+    if (roleRequiresTeam(editUser.role) && !editUser.teamId) {
       showError('Pengguna tim wajib memilih tim.');
       return;
     }
@@ -246,7 +254,7 @@ const UserManagement = () => {
       username: editUser.username.trim(),
       role: editUser.role,
       region_id: requiresRegion ? editUser.regionId : null,
-      team_id: editUser.role === 'user' ? editUser.teamId : null,
+      team_id: roleRequiresTeam(editUser.role) ? editUser.teamId : null,
     };
 
     setUpdatingId(editingProfile.id);
@@ -308,26 +316,26 @@ const UserManagement = () => {
           <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
-        <div className={cn("grid gap-3", newUser.role === 'user' ? "md:grid-cols-6" : "md:grid-cols-5")}>
+        <div className={cn("grid gap-3", roleRequiresTeam(newUser.role) ? "md:grid-cols-6" : "md:grid-cols-5")}>
           <Input required placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
           <Input required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
           <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
-          <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role, teamId: '' })}>
+          <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role: role as UserRole, teamId: '' })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+            <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId, teamId: '' })} disabled={!['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role)}>
+          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId, teamId: '' })} disabled={!roleRequiresRegion(newUser.role)}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
             <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
           </Select>
-          {newUser.role === 'user' && (
+          {roleRequiresTeam(newUser.role) && (
             <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!newUser.regionId}>
             <SelectTrigger><SelectValue placeholder={newUser.regionId ? "Pilih tim" : "Pilih wilayah dahulu"} /></SelectTrigger>
               <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).length > 0 ? teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>) : <SelectItem value="no-team" disabled>Belum ada tim aktif untuk wilayah ini</SelectItem>}</SelectContent>
             </Select>
           )}
         </div>
-        <Button type="submit" disabled={creating || (['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(newUser.role) && !newUser.regionId) || (newUser.role === 'user' && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+        <Button type="submit" disabled={creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -385,22 +393,12 @@ const UserManagement = () => {
                     <TableCell>
                       <Select 
                         value={profile.role} 
-                        onValueChange={(val) => handleUpdateProfile(profile.id, { role: val })}
+                        onValueChange={(val) => handleUpdateProfile(profile.id, { role: val as UserRole })}
                         disabled={updatingId === profile.id}
                       >
                         <SelectTrigger className={cn(
                           "h-9 text-[10px] font-bold uppercase",
-                          profile.role === 'admin' ? "text-red-600 border-red-200 bg-red-50" :
-                          profile.role === 'pimpinan' ? "text-amber-600 border-amber-200 bg-amber-50" :
-                          profile.role === 'admin_harian' ? "text-purple-600 border-purple-200 bg-purple-50" :
-                          profile.role === 'admin_laporan_mingguan' ? "text-indigo-600 border-indigo-200 bg-indigo-50" :
-                          profile.role === 'admin_laporan_bulanan' ? "text-violet-600 border-violet-200 bg-violet-50" :
-                          profile.role === 'admin_laporan_mingguan_bulanan' ? "text-pink-600 border-pink-200 bg-pink-50" :
-                          profile.role === 'admin_laporan_harian_mingguan' ? "text-rose-600 border-rose-200 bg-rose-50" :
-                          profile.role === 'admin_laporan_harian_bulanan' ? "text-fuchsia-600 border-fuchsia-200 bg-fuchsia-50" :
-                          profile.role === 'admin_bbm' ? "text-orange-600 border-orange-200 bg-orange-50" :
-                          profile.role === 'admin_spj_bbm' ? "text-blue-800 border-blue-300 bg-blue-100" :
-                          "text-blue-600 border-blue-200 bg-blue-50"
+                          getRoleBadgeClass(profile.role)
                         )}>
                           <div className="flex items-center gap-2">
                             <Shield size={12} />
@@ -408,7 +406,7 @@ const UserManagement = () => {
                           </div>
                         </SelectTrigger>
                         <SelectContent>
-                          {accessOptions.map(option => <SelectItem key={option.value} value={option.value} className="text-xs font-bold">{option.label}</SelectItem>)}
+                          {ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className="text-xs font-bold">{option.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -419,7 +417,7 @@ const UserManagement = () => {
                           const team = teams.find(item => item.id === teamId);
                           if (team) void handleUpdateProfile(profile.id, { team_id: team.id, region_id: team.region_id });
                         }}
-                        disabled={updatingId === profile.id || profile.role !== 'user'}
+                        disabled={updatingId === profile.id || !roleRequiresTeam(profile.role)}
                       >
                         <SelectTrigger className={cn(
                           "h-9 text-xs",
@@ -503,12 +501,12 @@ const UserManagement = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Hak akses</label>
-              <Select value={editUser.role} onValueChange={role => setEditUser({ ...editUser, role })}>
+              <Select value={editUser.role} onValueChange={role => setEditUser({ ...editUser, role: role as UserRole })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{accessOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {['admin_wilayah', 'admin_harian', 'admin_rencana_kerja', 'user'].includes(editUser.role) && (
+            {roleRequiresRegion(editUser.role) && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Wilayah</label>
                 <Select value={editUser.regionId} onValueChange={regionId => setEditUser({ ...editUser, regionId, teamId: '' })}>
@@ -517,7 +515,7 @@ const UserManagement = () => {
                 </Select>
               </div>
             )}
-            {editUser.role === 'user' && (
+            {roleRequiresTeam(editUser.role) && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Kategori tim</label>
                 <Select value={editUser.teamId} onValueChange={teamId => setEditUser({ ...editUser, teamId })}>

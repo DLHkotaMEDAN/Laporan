@@ -41,6 +41,13 @@ import FuelSpjDailyRecap from "./pages/FuelSpjDailyRecap";
 import FuelSpjWeeklyRecap from "./pages/FuelSpjWeeklyRecap";
 import FuelSpjMonthlyRecap from "./pages/FuelSpjMonthlyRecap";
 import FuelSpjYearlyRecap from "./pages/FuelSpjYearlyRecap";
+import {
+  USER_ROLES,
+  canAccessFuelArea,
+  canPrintAdminRecap,
+  getRoleLandingPath,
+  isAdminHarianAccess,
+} from "@/constants/access-control";
 
 const queryClient = new QueryClient();
 
@@ -50,9 +57,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
   
-  if (profile?.role === 'admin_bbm') return <Navigate to="/fuel-reports" />;
-  if (profile?.role === 'admin_spj_bbm') return <Navigate to="/fuel-reports/spj" />;
-  if (profile?.role === 'admin_rencana_kerja') return <Navigate to="/work-plans" />;
+  if (
+    profile?.role === USER_ROLES.ADMIN_BBM
+    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
+    || profile?.role === USER_ROLES.ADMIN_RENCANA_KERJA
+  ) {
+    return <Navigate to={getRoleLandingPath(profile.role)} />;
+  }
   
   return <>{children}</>;
 };
@@ -63,11 +74,14 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
 
-  const isAdminHarian = profile?.role === 'admin_harian' || session.user.email === 'sakinah@gmail.com' || session.user.email === 'admin.laporan@gmail.com';
-  if (isAdminHarian) return <Navigate to="/" replace />;
+  if (isAdminHarianAccess(profile?.role, session.user.email)) return <Navigate to="/" replace />;
 
-  if (profile?.role === 'admin_bbm') return <Navigate to="/fuel-reports" replace />;
-  if (profile?.role === 'admin_spj_bbm') return <Navigate to="/fuel-reports/spj" replace />;
+  if (
+    profile?.role === USER_ROLES.ADMIN_BBM
+    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
+  ) {
+    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+  }
 
   return <>{children}</>;
 };
@@ -78,12 +92,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
   
-  const isAllowed = profile?.role === 'admin' || 
-                    profile?.role === 'admin_bbm' || 
-                    profile?.role === 'admin_spj_bbm' || 
-                    profile?.role === 'pimpinan' || 
-                    session?.user?.email === 'admin@gmail.com' ||
-                    session?.user?.email === 'pimpinan@gmail.com';
+  const isAllowed = canAccessFuelArea(profile?.role, session.user.email);
                     
   if (!isAllowed) return <Navigate to="/" />;
   
@@ -96,7 +105,7 @@ const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  const isAllowed = profile?.role === 'admin' || session.user.email === 'admin@gmail.com';
+  const isAllowed = canPrintAdminRecap(profile?.role, session.user.email);
   if (!isAllowed) return <Navigate to="/" replace />;
 
   return <>{children}</>;
