@@ -97,6 +97,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const { session, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showAddChoiceDialog, setShowAddChoiceDialog] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicateDate, setDuplicateDate] = useState("");
@@ -105,7 +106,6 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const [sourcePlans, setSourcePlans] = useState<WorkPlan[]>([]);
   const [sourcePlanId, setSourcePlanId] = useState("");
   const [selectedSourceItemIds, setSelectedSourceItemIds] = useState<number[]>([]);
-  const [copyInsertMode, setCopyInsertMode] = useState<'replace' | 'append'>('replace');
 
   // Autocomplete States
   const [history, setHistory] = useState({
@@ -245,12 +245,22 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   };
 
   const handleAddClick = () => {
+    setShowAddChoiceDialog(true);
+  };
+
+  const handleManualAddChoice = () => {
+    setShowAddChoiceDialog(false);
     if (useWizard) {
       setWizardStep(1);
       setShowWizard(true);
     } else {
       performAppend('full');
     }
+  };
+
+  const handleCopyAddChoice = () => {
+    setShowAddChoiceDialog(false);
+    openCopyDialog();
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -337,8 +347,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     setShowDuplicateDialog(false);
   };
 
+  const currentPlanDate = form.watch("date");
   const matchingSourcePlans = selectedCategory
-    ? sourcePlans.filter(plan => plan.category === selectedCategory)
+    ? sourcePlans.filter(plan => plan.id !== initialData?.id && plan.category === selectedCategory && plan.date < currentPlanDate)
     : [];
   const selectedSourcePlan = matchingSourcePlans.find(plan => plan.id === sourcePlanId);
 
@@ -349,7 +360,6 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     }
     setSourcePlanId("");
     setSelectedSourceItemIds([]);
-    setCopyInsertMode('replace');
     setShowCopyDialog(true);
   };
 
@@ -394,7 +404,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     const hasOnlyEmptyItem = currentItems.length === 1
       && !currentItems[0].description
       && !currentItems[0].location?.street;
-    replaceItems(copyInsertMode === 'replace' || hasOnlyEmptyItem ? copiedItems : [...currentItems, ...copiedItems]);
+    replaceItems(hasOnlyEmptyItem ? copiedItems : [...currentItems, ...copiedItems]);
     form.setValue("category", selectedSourcePlan.category);
     form.setValue("has_no_activity", false);
 
@@ -429,9 +439,6 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
             {isDuplicateMode && <Badge className="bg-amber-100 text-amber-700 border-amber-200 mt-1 animate-pulse"><Copy size={10} className="mr-1" /> Mode Duplikat: Belum Tersimpan</Badge>}
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 px-2 md:px-4" onClick={openCopyDialog}>
-              <Copy className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Salin Kegiatan</span>
-            </Button>
             {isEditing && !isDuplicateMode && <Button type="button" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 md:px-4" onClick={() => { setDuplicateDate(getTomorrowDate()); setShowDuplicateDialog(true); }}><Copy className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Duplikat</span></Button>}
             <Button type="submit" disabled={isSubmitting || isPimpinan} className={cn("bg-blue-600 hover:bg-blue-700 px-2 md:px-4", isPimpinan && "opacity-50 cursor-not-allowed")}>{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin md:mr-2" /> : <Save className="h-4 w-4 md:mr-2" />} <span className="hidden md:inline">{isDuplicateMode ? "Simpan Sebagai Baru" : "Simpan"}</span></Button>
           </div>
@@ -516,7 +523,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               </Card>
             )}
             <div className="space-y-6">
-              <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold flex items-center gap-2"><ClipboardList className="text-blue-600" /> Daftar Lokasi & Kegiatan</h2><Button type="button" variant="ghost" size="sm" className="text-emerald-700 hover:bg-emerald-50 shrink-0" onClick={openCopyDialog}><Copy size={15} className="mr-1" /> Salin dari Riwayat</Button></div>
+              <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold flex items-center gap-2"><ClipboardList className="text-blue-600" /> Daftar Lokasi & Kegiatan</h2></div>
               {itemFields.map((item, index) => {
                 const uiMode = form.watch(`items.${index}.uiMode`);
                 return (
@@ -566,13 +573,32 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           <Button type="submit" disabled={isSubmitting || isPimpinan} className={cn("bg-blue-600 hover:bg-blue-700 px-2 md:px-8", isPimpinan && "opacity-50 cursor-not-allowed")}>{isSubmitting ? "Menyimpan..." : isDuplicateMode ? "Simpan Sebagai Baru" : "Simpan Rencana Kerja"}</Button>
         </div>
       </form>
+      <Dialog open={showAddChoiceDialog} onOpenChange={setShowAddChoiceDialog}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Plus className="text-blue-600" /> Tambah Kegiatan / Lokasi Baru</DialogTitle>
+            <DialogDescription>Pilih cara menambahkan kegiatan ke rencana kerja tanggal {form.getValues("date")}.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-4">
+            <Button type="button" onClick={handleManualAddChoice} className="h-auto justify-start px-5 py-4 bg-blue-600 hover:bg-blue-700">
+              <Plus className="mr-3 h-5 w-5" />
+              <span className="text-left"><span className="block font-bold">Tambah manual</span><span className="block text-xs font-normal opacity-90">Buat lokasi dan kegiatan baru dari awal.</span></span>
+            </Button>
+            <Button type="button" variant="outline" onClick={handleCopyAddChoice} className="h-auto justify-start border-emerald-300 px-5 py-4 text-emerald-700 hover:bg-emerald-50">
+              <Copy className="mr-3 h-5 w-5" />
+              <span className="text-left"><span className="block font-bold">Salin dari tanggal sebelumnya</span><span className="block text-xs font-normal text-slate-500">Pilih kegiatan dari rencana Tim/Kategori yang sama.</span></span>
+            </Button>
+          </div>
+          <DialogFooter><Button type="button" variant="ghost" onClick={() => setShowAddChoiceDialog(false)}>Batal</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={showWizard} onOpenChange={setShowWizard}><DialogContent className="sm:max-w-[450px]"><DialogHeader><DialogTitle className="flex items-center gap-2"><HelpCircle className="text-blue-600 h-5 w-5" /> {wizardStep === 1 ? "Alat Operasional" : "Detail Kegiatan"}</DialogTitle><DialogDescription>{wizardStep === 1 ? "Apakah lokasi baru ini menggunakan Alat Operasional yang sama?" : "Apakah Detail Kegiatannya juga sama?"}</DialogDescription></DialogHeader><div className="py-6 flex flex-col gap-3">{wizardStep === 1 ? (<><Button onClick={() => setWizardStep(2)} className="h-12 justify-start px-6 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"><Check className="mr-3 h-5 w-5" /> Ya, Alat Sama</Button><Button onClick={() => performAppend('full')} variant="outline" className="h-12 justify-start px-6"><Plus className="mr-3 h-5 w-5" /> Tidak, Alat Berbeda</Button></>) : (<><Button onClick={() => performAppend('location_only')} className="h-12 justify-start px-6 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"><Check className="mr-3 h-5 w-5" /> Ya, Kegiatan Sama</Button><Button onClick={() => performAppend('activity_location')} variant="outline" className="h-12 justify-start px-6"><Plus className="mr-3 h-5 w-5" /> Tidak, Kegiatan Berbeda</Button></>)}</div><DialogFooter><Button variant="ghost" onClick={() => setShowWizard(false)}>Batal</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}><DialogContent className="sm:max-w-[400px]"><DialogHeader><DialogTitle className="flex items-center gap-2"><Copy className="text-blue-600 h-5 w-5" /> Duplikat Rencana Kerja</DialogTitle><DialogDescription>Pilih tanggal baru untuk menyalin data ini ke formulir.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><div className="space-y-2"><FormLabel>Tanggal Baru</FormLabel><Input type="date" value={duplicateDate} onChange={(e) => setDuplicateDate(e.target.value)} className="h-11" /></div></div><DialogFooter className="gap-2 sm:gap-0"><Button variant="ghost" onClick={() => setShowDuplicateDialog(false)}>Batal</Button><Button onClick={handleDuplicate} disabled={!duplicateDate} className="bg-blue-600 hover:bg-blue-700"><Copy className="h-4 w-4 mr-2" /> Salin ke Form</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showCopyDialog} onOpenChange={setShowCopyDialog}>
         <DialogContent className="sm:max-w-[620px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Copy className="text-emerald-600" /> Salin Lokasi & Kegiatan</DialogTitle>
-            <DialogDescription>Pilih rencana kerja yang sudah ada, lalu centang satu atau beberapa kegiatan. Tanggal pada formulir tetap tidak berubah.</DialogDescription>
+            <DialogDescription>Pilih rencana kerja yang sudah ada, lalu centang satu atau beberapa kegiatan untuk ditambahkan ke daftar saat ini. Kegiatan yang sudah ada tidak akan ditimpa, dan tanggal pada formulir tetap tidak berubah.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div className="space-y-2">
@@ -581,16 +607,6 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                 <SelectTrigger><SelectValue placeholder={matchingSourcePlans.length ? "Pilih rencana kerja..." : "Belum ada riwayat untuk tim ini"} /></SelectTrigger>
                 <SelectContent>
                   {matchingSourcePlans.map(plan => <SelectItem key={plan.id} value={plan.id}>{plan.date} - {plan.category} - {plan.items?.[0]?.description || "Tanpa uraian"}{(plan.items?.length || 0) > 1 ? ` (+${plan.items.length - 1} kegiatan)` : ""}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <FormLabel>Penempatan hasil salinan</FormLabel>
-              <Select value={copyInsertMode} onValueChange={(value) => setCopyInsertMode(value as 'replace' | 'append')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="replace">Ganti daftar saat ini</SelectItem>
-                  <SelectItem value="append">Tambahkan ke daftar saat ini</SelectItem>
                 </SelectContent>
               </Select>
             </div>
