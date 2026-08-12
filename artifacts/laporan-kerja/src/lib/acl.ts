@@ -1,7 +1,8 @@
 // src/lib/acl.ts
 import { supabase } from '@/integrations/supabase/client';
-import { ROLE_PERMISSIONS, Permission, Resource, Action, AuthContext } from '@/constants/permissions';
-import { UserRole } from '@/constants/access-control';
+import { ROLE_PERMISSIONS, Resource, Action } from '@/constants/permissions';
+import type { AuthContext } from '@/constants/permissions';
+import type { UserRole } from '@/constants/access-control';
 
 /**
  * Check if the current user (from Supabase session) has permission for a resource/action.
@@ -34,9 +35,11 @@ export async function userHasPermission(
 
     const ctx: AuthContext = {
       role: profile.role as UserRole | null,
+      id: session.user.id,
       regionId: profile.region_id ?? null,
       teamId: profile.team_id ?? null,
       email: session.user.email ?? null,
+      resourceId: opts.resourceId ?? null,
       resourceRegionId: opts.resourceRegionId ?? null,
       resourceTeamId: opts.resourceTeamId ?? null,
     };

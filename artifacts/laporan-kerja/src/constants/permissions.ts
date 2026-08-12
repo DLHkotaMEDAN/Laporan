@@ -1,11 +1,14 @@
 // src/constants/permissions.ts
-import { UserRole } from '@/constants/access-control';
+import { USER_ROLES } from '@/constants/access-control';
+import type { UserRole } from '@/constants/access-control';
 
 export type Resource =
   | 'reports'
   | 'work_plans'
   | 'fuel_reports'
   | 'fuel_spj_reports'
+  | 'fuel_prices'
+  | 'spj_bbm'
   | 'audit_logs'
   | 'profiles'
   | 'settings'
@@ -23,10 +26,12 @@ export interface Permission {
 
 export interface AuthContext {
   role: UserRole | null;
+  id?: string | null;
   regionId: string | null;
   teamId: string | null;
   email: string | null;
   // For checking a specific resource, these can be filled in by the caller
+  resourceId?: string | null;
   resourceRegionId?: string | null;
   resourceTeamId?: string | null;
 }
@@ -35,9 +40,11 @@ export interface AuthContext {
  * Default permission matrix.
  * Add or modify permissions here to change access control without touching code.
  */
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+// Roles without an explicit entry remain denied by hasPermission().
+// Keeping this partial prevents accidentally granting access when a new role is added.
+export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
   // Super admin – full access to everything
-  [UserRole.ADMIN]: [
+  [USER_ROLES.ADMIN]: [
     { resource: 'reports', action: 'create' },
     { resource: 'reports', action: 'read' },
     { resource: 'reports', action: 'update' },
@@ -64,7 +71,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   // Admin Wilayah – can manage reports, work plans, fuel, etc. only within own region
-  [UserRole.ADMIN_WILAYAH]: [
+  [USER_ROLES.ADMIN_WILAYAH]: [
     { resource: 'reports', action: 'create' },
     { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
@@ -83,7 +90,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   // Admin Spesialis BBM – only fuel reports and fuel prices
-  [UserRole.ADMIN_BBM]: [
+  [USER_ROLES.ADMIN_BBM]: [
     { resource: 'fuel_reports', action: 'create' },
     { resource: 'fuel_reports', action: 'read' },
     { resource: 'fuel_reports', action: 'update' },
@@ -94,7 +101,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   // Admin Spesialis SPJ BBM – only fuel SPJ reports
-  [UserRole.ADMIN_SPJ_BBM]: [
+  [USER_ROLES.ADMIN_SPJ_BBM]: [
     { resource: 'fuel_spj_reports', action: 'create' },
     { resource: 'fuel_spj_reports', action: 'read' },
     { resource: 'fuel_spj_reports', action: 'update' },
@@ -105,7 +112,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   // Admin Rencana Kerja – manage work plans only
-  [UserRole.ADMIN_RENCANA_KERJA]: [
+  [USER_ROLES.ADMIN_RENCANA_KERJA]: [
     { resource: 'work_plans', action: 'create' },
     { resource: 'work_plans', action: 'read' },
     { resource: 'work_plans', action: 'update' },
@@ -114,7 +121,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   // Regular user – can create/view own reports and work plans (by team)
-  [UserRole.USER]: [
+  [USER_ROLES.USER]: [
     { resource: 'reports', action: 'create' },
     { resource: 'reports', action: 'read', condition: ctx => ctx.teamId === ctx.resourceTeamId },
     { resource: 'reports', action: 'update', condition: ctx => ctx.teamId === ctx.resourceTeamId },
@@ -128,7 +135,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   // Pimpinan – read-only access to all reports and recaps
-  [UserRole.PIMPINAN]: [
+  [USER_ROLES.PIMPINAN]: [
     { resource: 'reports', action: 'read' },
     { resource: 'work_plans', action: 'read' },
     { resource: 'fuel_reports', action: 'read' },

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save, ArrowLeft, Loader2, MapPin, Users, Wrench, FileText, MessageSquare, ClipboardList, ShieldAlert, Check, HelpCircle, Copy, AlertCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -100,6 +101,11 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicateDate, setDuplicateDate] = useState("");
   const [isDuplicateMode, setIsDuplicateMode] = useState(false);
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [sourcePlans, setSourcePlans] = useState<WorkPlan[]>([]);
+  const [sourcePlanId, setSourcePlanId] = useState("");
+  const [selectedSourceItemIds, setSelectedSourceItemIds] = useState<number[]>([]);
+  const [copyInsertMode, setCopyInsertMode] = useState<'replace' | 'append'>('replace');
 
   // Autocomplete States
   const [history, setHistory] = useState({
@@ -151,7 +157,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     },
   });
 
-  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({ control: form.control, name: "items" });
+  const { fields: itemFields, append: appendItem, remove: removeItem, replace: replaceItems } = useFieldArray({ control: form.control, name: "items" });
   const selectedCategory = form.watch("category");
   const selectedTeamId = teams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
   const hasNoActivity = form.watch("has_no_activity");
@@ -164,6 +170,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
       try {
         const plans = await workPlanService.getAllWorkPlans(null, false, activeRegionId);
+        setSourcePlans(plans);
         const descs = new Set<string>();
         const streets = new Set<string>();
         const coords = new Set<string>();
@@ -193,7 +200,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       } catch (e) { console.error(e); }
     };
     fetchHistory();
-  }, [activeRegionId]);
+  }, [activeRegionId, initialData?.id]);
 
   useEffect(() => {
     if (!isEditing && !isDuplicateMode && selectedCategory) {
@@ -330,6 +337,71 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     setShowDuplicateDialog(false);
   };
 
+  const selectedSourcePlan = sourcePlans.find(plan => plan.id === sourcePlanId);
+
+  const openCopyDialog = () => {
+    setSourcePlanId("");
+    setSelectedSourceItemIds([]);
+    setCopyInsertMode('replace');
+    setShowCopyDialog(true);
+  };
+
+  const handleSourcePlanChange = (id: string) => {
+    setSourcePlanId(id);
+    const plan = sourcePlans.find(source => source.id === id);
+    setSelectedSourceItemIds(plan?.items?.map((_, index) => index) || []);
+  };
+
+  const toggleSourceItem = (index: number, checked: boolean) => {
+    setSelectedSourceItemIds(current => checked
+      ? [...new Set([...current, index])]
+      : current.filter(itemIndex => itemIndex !== index));
+  };
+
+  const copySelectedActivities = () => {
+    if (!selectedSourcePlan || selectedSourceItemIds.length === 0) {
+      showError("Pilih rencana dan minimal satu lokasi/kegiatan");
+      return;
+    }
+
+    const copiedItems = selectedSourceItemIds
+      .sort((a, b) => a - b)
+      .map(index => selectedSourcePlan.items[index])
+      .filter(Boolean)
+      .map(item => ({
+        description: item.description || "",
+        location: {
+          street: item.location?.street || "",
+          village: [...(item.location?.village || [])],
+          subDistrict: item.location?.subDistrict || "",
+        },
+        tools: (item.tools || []).map(tool => ({ ...tool, members: tool.members ?? 0 })),
+        coordinator: item.coordinator || "",
+        personnel: { members: Number(item.personnel?.members || 0) },
+        basis: item.basis || "",
+        remarks: item.remarks || "",
+        uiMode: 'full' as const,
+      }));
+
+    const currentItems = form.getValues("items");
+    const hasOnlyEmptyItem = currentItems.length === 1
+      && !currentItems[0].description
+      && !currentItems[0].location?.street;
+    replaceItems(copyInsertMode === 'replace' || hasOnlyEmptyItem ? copiedItems : [...currentItems, ...copiedItems]);
+    form.setValue("category", selectedSourcePlan.category);
+    form.setValue("has_no_activity", false);
+
+    if (selectedSourcePlan.category === "Tim Babat") {
+      const first = selectedSourcePlan.items[0];
+      form.setValue("globalTools", (first?.tools || []).map(tool => ({ ...tool, members: tool.members ?? 0 })));
+      form.setValue("globalCoordinator", first?.coordinator || "");
+      form.setValue("globalMembers", Number(first?.personnel?.members || 0));
+    }
+
+    setShowCopyDialog(false);
+    showSuccess(`${copiedItems.length} lokasi/kegiatan berhasil disalin ke formulir`);
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-5xl mx-auto pb-20">
@@ -350,6 +422,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
             {isDuplicateMode && <Badge className="bg-amber-100 text-amber-700 border-amber-200 mt-1 animate-pulse"><Copy size={10} className="mr-1" /> Mode Duplikat: Belum Tersimpan</Badge>}
           </div>
           <div className="flex gap-2">
+            <Button type="button" variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 px-2 md:px-4" onClick={openCopyDialog}>
+              <Copy className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Salin Kegiatan</span>
+            </Button>
             {isEditing && !isDuplicateMode && <Button type="button" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 md:px-4" onClick={() => { setDuplicateDate(getTomorrowDate()); setShowDuplicateDialog(true); }}><Copy className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Duplikat</span></Button>}
             <Button type="submit" disabled={isSubmitting || isPimpinan} className={cn("bg-blue-600 hover:bg-blue-700 px-2 md:px-4", isPimpinan && "opacity-50 cursor-not-allowed")}>{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin md:mr-2" /> : <Save className="h-4 w-4 md:mr-2" />} <span className="hidden md:inline">{isDuplicateMode ? "Simpan Sebagai Baru" : "Simpan"}</span></Button>
           </div>
@@ -434,7 +509,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               </Card>
             )}
             <div className="space-y-6">
-              <div className="flex items-center justify-between"><h2 className="text-xl font-bold flex items-center gap-2"><ClipboardList className="text-blue-600" /> Daftar Lokasi & Kegiatan</h2></div>
+              <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold flex items-center gap-2"><ClipboardList className="text-blue-600" /> Daftar Lokasi & Kegiatan</h2><Button type="button" variant="ghost" size="sm" className="text-emerald-700 hover:bg-emerald-50 shrink-0" onClick={openCopyDialog}><Copy size={15} className="mr-1" /> Salin dari Riwayat</Button></div>
               {itemFields.map((item, index) => {
                 const uiMode = form.watch(`items.${index}.uiMode`);
                 return (
@@ -486,6 +561,47 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       </form>
       <Dialog open={showWizard} onOpenChange={setShowWizard}><DialogContent className="sm:max-w-[450px]"><DialogHeader><DialogTitle className="flex items-center gap-2"><HelpCircle className="text-blue-600 h-5 w-5" /> {wizardStep === 1 ? "Alat Operasional" : "Detail Kegiatan"}</DialogTitle><DialogDescription>{wizardStep === 1 ? "Apakah lokasi baru ini menggunakan Alat Operasional yang sama?" : "Apakah Detail Kegiatannya juga sama?"}</DialogDescription></DialogHeader><div className="py-6 flex flex-col gap-3">{wizardStep === 1 ? (<><Button onClick={() => setWizardStep(2)} className="h-12 justify-start px-6 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"><Check className="mr-3 h-5 w-5" /> Ya, Alat Sama</Button><Button onClick={() => performAppend('full')} variant="outline" className="h-12 justify-start px-6"><Plus className="mr-3 h-5 w-5" /> Tidak, Alat Berbeda</Button></>) : (<><Button onClick={() => performAppend('location_only')} className="h-12 justify-start px-6 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"><Check className="mr-3 h-5 w-5" /> Ya, Kegiatan Sama</Button><Button onClick={() => performAppend('activity_location')} variant="outline" className="h-12 justify-start px-6"><Plus className="mr-3 h-5 w-5" /> Tidak, Kegiatan Berbeda</Button></>)}</div><DialogFooter><Button variant="ghost" onClick={() => setShowWizard(false)}>Batal</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}><DialogContent className="sm:max-w-[400px]"><DialogHeader><DialogTitle className="flex items-center gap-2"><Copy className="text-blue-600 h-5 w-5" /> Duplikat Rencana Kerja</DialogTitle><DialogDescription>Pilih tanggal baru untuk menyalin data ini ke formulir.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><div className="space-y-2"><FormLabel>Tanggal Baru</FormLabel><Input type="date" value={duplicateDate} onChange={(e) => setDuplicateDate(e.target.value)} className="h-11" /></div></div><DialogFooter className="gap-2 sm:gap-0"><Button variant="ghost" onClick={() => setShowDuplicateDialog(false)}>Batal</Button><Button onClick={handleDuplicate} disabled={!duplicateDate} className="bg-blue-600 hover:bg-blue-700"><Copy className="h-4 w-4 mr-2" /> Salin ke Form</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={showCopyDialog} onOpenChange={setShowCopyDialog}>
+        <DialogContent className="sm:max-w-[620px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Copy className="text-emerald-600" /> Salin Lokasi & Kegiatan</DialogTitle>
+            <DialogDescription>Pilih rencana kerja yang sudah ada, lalu centang satu atau beberapa kegiatan. Tanggal pada formulir tetap tidak berubah.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <FormLabel>Rencana Kerja Sumber</FormLabel>
+              <Select value={sourcePlanId} onValueChange={handleSourcePlanChange}>
+                <SelectTrigger><SelectValue placeholder={sourcePlans.length ? "Pilih rencana kerja..." : "Belum ada riwayat rencana kerja"} /></SelectTrigger>
+                <SelectContent>
+                  {sourcePlans.map(plan => <SelectItem key={plan.id} value={plan.id}>{plan.date} - {plan.category} - {plan.items?.[0]?.description || "Tanpa uraian"}{(plan.items?.length || 0) > 1 ? ` (+${plan.items.length - 1} kegiatan)` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <FormLabel>Penempatan hasil salinan</FormLabel>
+              <Select value={copyInsertMode} onValueChange={(value) => setCopyInsertMode(value as 'replace' | 'append')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="replace">Ganti daftar saat ini</SelectItem>
+                  <SelectItem value="append">Tambahkan ke daftar saat ini</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedSourcePlan && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between"><FormLabel>Daftar Lokasi & Kegiatan</FormLabel><Button type="button" variant="link" size="sm" className="h-auto p-0 text-emerald-700" onClick={() => setSelectedSourceItemIds(selectedSourcePlan.items.map((_, index) => index))}>Pilih semua</Button></div>
+                <div className="max-h-64 overflow-y-auto rounded-lg border divide-y">
+                  {selectedSourcePlan.items.map((item, index) => {
+                    const location = [item.location?.street, item.location?.village, item.location?.subDistrict].flat().filter(Boolean).join(", ");
+                    return <label key={`${selectedSourcePlan.id}-${index}`} className="flex cursor-pointer items-start gap-3 p-3 hover:bg-slate-50"><Checkbox checked={selectedSourceItemIds.includes(index)} onCheckedChange={(checked) => toggleSourceItem(index, checked === true)} className="mt-0.5" /><span className="min-w-0 text-sm"><span className="block font-semibold text-slate-800">{item.description || "Tanpa uraian kegiatan"}</span><span className="block truncate text-xs text-slate-500">{location || "Lokasi tidak ditentukan"}</span></span></label>;
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter><Button variant="ghost" onClick={() => setShowCopyDialog(false)}>Batal</Button><Button onClick={copySelectedActivities} disabled={!selectedSourcePlan || selectedSourceItemIds.length === 0} className="bg-emerald-600 hover:bg-emerald-700"><Copy className="h-4 w-4 mr-2" /> Salin ke Form</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 };

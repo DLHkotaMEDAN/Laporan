@@ -2,13 +2,14 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { userHasPermission, AuthContext } from '@/lib/acl';
+import { userHasPermission } from '@/lib/acl';
+import type { AuthContext, Action, Resource } from '@/constants/permissions';
 import { supabase } from '@/integrations/supabase/client';
 
 type AuthorizeRouteProps = {
   children: React.ReactNode;
-  resource: string; // matches table name in DB, e.g. 'reports'
-  action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'print';
+  resource: Resource; // matches table name in DB, e.g. 'reports'
+  action: Action;
   // If checking a specific record, provide its ID to fetch region/team for row‑level rules
   resourceId?: string;
 };
@@ -40,9 +41,11 @@ export const AuthorizeRoute = ({
       // Build context from profile (role, region_id, team_id, email)
       const ctx: AuthContext = {
         role: profile?.role ?? null,
+        id: session.user.id,
         regionId: profile?.region_id ?? null,
         teamId: profile?.team_id ?? null,
         email: session.user.email ?? null,
+        resourceId: effectiveId ?? null,
         resourceRegionId: null,
         resourceTeamId: null,
       };
@@ -68,8 +71,8 @@ export const AuthorizeRoute = ({
 
       const allowed = await userHasPermission(resource, action, {
         resourceId: effectiveId,
-        resourceRegionId: ctx.resourceRegionId,
-        resourceTeamId: ctx.resourceTeamId,
+        resourceRegionId: ctx.resourceRegionId ?? undefined,
+        resourceTeamId: ctx.resourceTeamId ?? undefined,
       });
 
       if (!cancelled) {
