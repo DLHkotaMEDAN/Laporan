@@ -75,37 +75,12 @@ const normalizeSearchText = (value: string) => value
   .normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "");
 
-const levenshteinDistance = (left: string, right: string) => {
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  for (let row = 1; row <= left.length; row += 1) {
-    let diagonal = previous[0];
-    previous[0] = row;
-    for (let column = 1; column <= right.length; column += 1) {
-      const above = previous[column];
-      previous[column] = left[row - 1] === right[column - 1]
-        ? diagonal
-        : Math.min(previous[column] + 1, previous[column - 1] + 1, diagonal + 1);
-      diagonal = above;
-    }
-  }
-  return previous[right.length];
-};
-
 const matchesGlobalSearch = (query: string, searchableValues: string[]) => {
   const normalizedQuery = normalizeSearchText(query.trim());
   if (!normalizedQuery) return true;
 
   const searchableText = normalizeSearchText(searchableValues.join(" "));
-  const searchableTokens = searchableText.split(/[^a-z0-9]+/).filter(Boolean);
-  return normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean).every(queryToken => {
-    if (searchableText.includes(queryToken)) return true;
-    if (queryToken.length < 4) return false;
-    const tolerance = queryToken.length >= 8 ? 2 : 1;
-    return searchableTokens.some(token =>
-      Math.abs(token.length - queryToken.length) <= tolerance
-      && levenshteinDistance(queryToken, token) <= tolerance,
-    );
-  });
+  return normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean).every(queryToken => searchableText.includes(queryToken));
 };
 
 const toolSchema = z.object({
@@ -408,6 +383,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     if (!sourceSearch) return true;
     return matchesGlobalSearch(sourceSearch, collectSearchValues(plan));
   });
+  const filteredSourceItems = selectedSourcePlan?.items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !sourceSearch || matchesGlobalSearch(sourceSearch, collectSearchValues(item))) || [];
 
   const formatSourceLocation = (plan: WorkPlan) => {
     const location = plan.items?.[0]?.location;
@@ -440,12 +418,14 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   };
 
   const copySelectedActivities = () => {
-    if (!selectedSourcePlan || selectedSourceItemIds.length === 0) {
+    if (!selectedSourcePlan || selectedSourceItemIds.length === 0 || filteredSourceItems.length === 0) {
       showError("Pilih rencana dan minimal satu lokasi/kegiatan");
       return;
     }
 
+    const visibleSourceItemIds = new Set(filteredSourceItems.map(({ index }) => index));
     const copiedItems = selectedSourceItemIds
+      .filter(index => visibleSourceItemIds.has(index))
       .sort((a, b) => a - b)
       .map(index => selectedSourcePlan.items[index])
       .filter(Boolean)
@@ -697,9 +677,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
             </div>
             {selectedSourcePlan && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between"><FormLabel>Daftar Lokasi & Kegiatan</FormLabel><Button type="button" variant="link" size="sm" className="h-auto p-0 text-emerald-700" onClick={() => setSelectedSourceItemIds(selectedSourcePlan.items.map((_, index) => index))}>Pilih semua</Button></div>
+                <div className="flex items-center justify-between"><FormLabel>Daftar Lokasi & Kegiatan{sourceSearch ? ` (${filteredSourceItems.length} hasil)` : ""}</FormLabel><Button type="button" variant="link" size="sm" className="h-auto p-0 text-emerald-700" onClick={() => setSelectedSourceItemIds(filteredSourceItems.map(({ index }) => index))}>Pilih semua</Button></div>
                 <div className="max-h-64 overflow-y-auto rounded-lg border divide-y">
-                  {selectedSourcePlan.items.map((item, index) => {
+                  {filteredSourceItems.map(({ item, index }) => {
                     const location = [item.location?.street, item.location?.village, item.location?.subDistrict].flat().filter(Boolean).join(", ");
                     return <label key={`${selectedSourcePlan.id}-${index}`} className="flex cursor-pointer items-start gap-3 p-3 hover:bg-slate-50"><Checkbox checked={selectedSourceItemIds.includes(index)} onCheckedChange={(checked) => toggleSourceItem(index, checked === true)} className="mt-0.5" /><span className="min-w-0 text-sm"><span className="block font-semibold text-slate-800">{item.description || "Tanpa uraian kegiatan"}</span><span className="block truncate text-xs text-slate-500">{location || "Lokasi tidak ditentukan"}</span></span></label>;
                   })}
@@ -707,7 +687,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               </div>
             )}
           </div>
-          <DialogFooter><Button variant="ghost" onClick={() => setShowCopyDialog(false)}>Batal</Button><Button onClick={copySelectedActivities} disabled={!selectedSourcePlan || selectedSourceItemIds.length === 0} className="bg-emerald-600 hover:bg-emerald-700"><Copy className="h-4 w-4 mr-2" /> Salin ke Form</Button></DialogFooter>
+          <DialogFooter><Button variant="ghost" onClick={() => setShowCopyDialog(false)}>Batal</Button><Button onClick={copySelectedActivities} disabled={!selectedSourcePlan || selectedSourceItemIds.length === 0 || filteredSourceItems.length === 0} className="bg-emerald-600 hover:bg-emerald-700"><Copy className="h-4 w-4 mr-2" /> Salin ke Form</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </Form>
