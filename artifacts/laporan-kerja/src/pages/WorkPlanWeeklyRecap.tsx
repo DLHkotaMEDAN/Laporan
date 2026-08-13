@@ -138,7 +138,7 @@ const WorkPlanWeeklyRecap = () => {
     if (!printRef.current) return;
     const toastId = showLoading("Menyiapkan PDF untuk dibagikan...");
     try {
-      const result = await shareRecapElementAsPdf(printRef.current, `Rekap_Rencana_Kerja_Mingguan_${format(weekStart, 'yyyy-MM-dd')}.pdf`);
+      const result = await shareRecapElementAsPdf(printRef.current, `Rekap_Rencana_Kerja_Mingguan_${format(weekStart, 'yyyy-MM-dd')}.pdf`, 'a4');
       if (result === 'downloaded') showSuccess("PDF diunduh. Silakan bagikan dari perangkat Anda.");
     } catch (error) { console.error(error); showError("Gagal membuat PDF untuk dibagikan"); }
     finally { dismissToast(toastId); }

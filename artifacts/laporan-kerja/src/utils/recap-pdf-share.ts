@@ -38,7 +38,11 @@ export const sharePdfFile = async (file: File) => {
 export const shareRecapPdfBase64 = (base64: string, fileName: string) =>
   sharePdfFile(toPdfFile(base64, fileName));
 
-export const shareRecapElementAsPdf = async (element: HTMLElement, fileName: string) => {
+export const shareRecapElementAsPdf = async (
+  element: HTMLElement,
+  fileName: string,
+  format: 'a3' | 'a4' = 'a3',
+) => {
   const canvas = await html2canvas(element, {
     backgroundColor: '#ffffff',
     scale: 2,
@@ -61,12 +65,23 @@ export const shareRecapElementAsPdf = async (element: HTMLElement, fileName: str
           text-decoration-color: #000 !important;
           box-shadow: none !important;
         }
+        .recap-pdf-render {
+          min-height: 0 !important;
+          overflow: visible !important;
+        }
+        .recap-pdf-render .recap-table-scroll, .recap-pdf-render .overflow-x-auto {
+          overflow: visible !important;
+        }
+        .recap-pdf-render table {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
         .recap-pdf-render thead, .recap-pdf-render th { background-color: #f1f5f9 !important; }
       `;
       documentClone.head.appendChild(printStyles);
     },
   });
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const imageHeight = (canvas.height * pageWidth) / canvas.width;
@@ -78,8 +93,8 @@ export const shareRecapElementAsPdf = async (element: HTMLElement, fileName: str
     pageCanvas.width = canvas.width;
     pageCanvas.height = sliceHeight;
     pageCanvas.getContext('2d')?.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-    if (page > 0) pdf.addPage('a3', 'landscape');
-    pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, (sliceHeight * pageWidth) / canvas.width);
+    if (page > 0) pdf.addPage(format, 'landscape');
+    pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, (sliceHeight * pageWidth) / canvas.width);
   }
 
   return sharePdfFile(new File([pdf.output('blob')], fileName, { type: 'application/pdf' }));
