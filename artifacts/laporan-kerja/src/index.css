@@ -7,7 +7,54 @@
   /* Prevent control bars from extending beyond the phone viewport. Tables keep
      their own horizontal scroll containers so report data remains readable. */
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  /* A single responsive rule for every Button in reports, work plans, BBM,
+     SPJ, dashboard and recap views. Text is allowed to wrap inside the button
+     instead of escaping its frame, while icon-only controls stay square. */
+  [data-slot="button"] {
+    height: auto !important;
+    min-height: 2.5rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-slot="button"] > span {
+    min-width: 0;
+  }
+
+  [data-slot="button"][class*="size-"],
+  [data-slot="button"]:has(> svg:only-child) {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  /* Action bars may wrap safely. The last action group is kept together so
+     primary actions such as Save and Print never split across the viewport. */
+  .no-print > .flex,
+  .no-print .flex.flex-wrap {
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  .no-print > .flex > .flex:last-child,
+  .no-print > .flex > [data-slot="button"]:last-child {
+    max-width: 100%;
+  }
+
+  .no-print .flex.flex-wrap > [data-slot="button"],
+  .no-print .flex.flex-wrap > [data-radix-popper-content-wrapper] {
+    flex: 0 1 auto;
+  }
+
+  /* The configuration cards at the top of every recap have enough breathing
+     room from the device edge and do not form a hard clipping frame. */
+  .no-print.rounded-xl,
+  .no-print.rounded-lg {
+    border-radius: 0.875rem;
   }
 
   .no-print {
