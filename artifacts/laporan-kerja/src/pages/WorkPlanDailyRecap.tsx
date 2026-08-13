@@ -399,10 +399,10 @@ const WorkPlanDailyRecap = () => {
           </p>
         </div>
 
-        <div className="overflow-x-auto print:overflow-visible">
+        <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="work-plan-table split-table-before-footer w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
+              <table className="work-plan-table split-table-before-footer w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
@@ -425,7 +425,7 @@ const WorkPlanDailyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="work-plan-table continuation-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0 border-t-0">
+                <table className="work-plan-table continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0 border-t-0">
                   {colGroup}
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}

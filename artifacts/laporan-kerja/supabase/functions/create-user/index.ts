@@ -25,6 +25,10 @@ type GetUserDetailsInput = {
   userId: string;
 };
 
+type ListUserEmailsInput = {
+  action: 'list-user-emails';
+};
+
 const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
@@ -34,6 +38,9 @@ const USER_ROLES = {
   ADMIN_LAPORAN_MINGGUAN_BULANAN: 'admin_laporan_mingguan_bulanan',
   ADMIN_LAPORAN_HARIAN_MINGGUAN: 'admin_laporan_harian_mingguan',
   ADMIN_LAPORAN_HARIAN_BULANAN: 'admin_laporan_harian_bulanan',
+  ADMIN_LAPORAN_HARIAN_RENCANA_KERJA: 'admin_laporan_harian_rencana_kerja',
+  ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA: 'admin_laporan_mingguan_rencana_kerja',
+  ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
@@ -45,6 +52,9 @@ const validRoles = new Set(Object.values(USER_ROLES));
 const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_WILAYAH,
   USER_ROLES.ADMIN_HARIAN,
+  USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
+  USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
+  USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.USER,
 ]);
@@ -75,7 +85,22 @@ Deno.serve(async (request) => {
       .single();
     if (callerError || callerProfile?.role !== 'admin') throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
-    const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput;
+    const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput | ListUserEmailsInput;
+    if ('action' in input && input.action === 'list-user-emails') {
+      const users: { id: string; email: string | undefined }[] = [];
+      const perPage = 1000;
+      let page = 1;
+
+      while (true) {
+        const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+        if (error) throw error;
+        users.push(...data.users.map(user => ({ id: user.id, email: user.email })));
+        if (data.users.length < perPage) break;
+        page += 1;
+      }
+
+      return Response.json({ users }, { headers: corsHeaders });
+    }
     if ('action' in input && input.action === 'get-user-details') {
       if (!input.userId) throw new Error('ID pengguna wajib diisi.');
       const { data, error } = await adminClient.auth.admin.getUserById(input.userId);

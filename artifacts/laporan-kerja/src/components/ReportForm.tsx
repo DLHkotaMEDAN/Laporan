@@ -142,7 +142,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   const activeRegionId = profile?.region_id ?? initialData?.region_id ?? null;
   const { teams } = useAvailableTeams(activeRegionId);
   
-  const canEditPrice = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_spj_bbm' || session?.user?.email === 'admin@gmail.com';
+  const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

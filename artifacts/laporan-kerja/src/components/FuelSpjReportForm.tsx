@@ -66,7 +66,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
     spjNumbers: new Set<string>()
   });
 
-  const canEditPrice = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_spj_bbm' || session?.user?.email === 'admin@gmail.com';
+  const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
   const isSpjBbmAdmin = profile?.role === 'admin_spj_bbm';
 
   const form = useForm<z.infer<typeof formSchema>>({

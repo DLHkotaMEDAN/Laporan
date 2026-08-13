@@ -35,6 +35,7 @@ const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Ti
 interface Profile {
   id: string;
   username: string | null;
+  email?: string | null;
   role: UserRole;
   category: string | null;
   region_id: string | null;
@@ -129,6 +130,7 @@ const UserManagement = () => {
         {
           id: data.id,
           username: newUser.username.trim(),
+          email: data.email || newUser.email.trim().toLowerCase(),
           role: newUser.role,
           category: null,
           region_id: newUser.regionId || null,
@@ -155,7 +157,30 @@ const UserManagement = () => {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setProfiles(data || []);
+      const { data: accountData, error: accountError } = await supabase.functions.invoke('create-user', {
+        body: { action: 'list-user-emails' },
+      });
+      let accounts: { id: string; email?: string }[] = accountData?.users || [];
+
+      // Fallback for an already-deployed function that predates list-user-emails.
+      // It keeps the table usable and still obtains the email through the existing
+      // per-account admin endpoint until the function is redeployed.
+      if (accountError || accountData?.error) {
+        const accountDetails = await Promise.all((data || []).map(async profile => {
+          const { data: detail } = await supabase.functions.invoke('create-user', {
+            body: { action: 'get-user-details', userId: profile.id },
+          });
+          return detail?.id && detail?.email ? { id: detail.id, email: detail.email } : null;
+        }));
+        accounts = accountDetails.filter((account): account is { id: string; email: string } => account !== null);
+      }
+
+      const emailsByUserId = new Map<string, string>(
+        accounts
+          .filter((account): account is { id: string; email: string } => Boolean(account.id && account.email))
+          .map(account => [account.id, account.email]),
+      );
+      setProfiles((data || []).map(profile => ({ ...profile, email: emailsByUserId.get(profile.id) || null })));
     } catch (error: any) {
       showError("Gagal memuat daftar pengguna: " + error.message);
     } finally {
@@ -297,8 +322,9 @@ const UserManagement = () => {
     }
   };
 
-  const filteredProfiles = profiles.filter(p => 
+  const filteredProfiles = profiles.filter(p =>
     (p.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+    (p.email?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
     (p.role?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
@@ -368,7 +394,7 @@ const UserManagement = () => {
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-[200px]">Username / Email</TableHead>
+                <TableHead className="w-[260px]">Username / Email</TableHead>
                 <TableHead className="w-[220px]">Hak Akses</TableHead>
                 <TableHead className="w-[220px]">Kategori (Khusus User)</TableHead>
                 <TableHead className="w-[180px]">Update Terakhir</TableHead>
@@ -386,7 +412,7 @@ const UserManagement = () => {
                         </div>
                         <div className="flex flex-col">
                           <span className="truncate max-w-[150px] font-bold">{profile.username || "Tanpa Nama"}</span>
-                          <span className="text-[9px] text-slate-400 flex items-center gap-1"><Mail size={10} /> {profile.id.substring(0, 8)}...</span>
+                          <span title={profile.email || 'Email tidak tersedia'} className="max-w-[220px] truncate text-[10px] text-slate-500 flex items-center gap-1"><Mail size={10} className="shrink-0" /> {profile.email || 'Email tidak tersedia'}</span>
                         </div>
                       </div>
                     </TableCell>

@@ -7,6 +7,9 @@ export const USER_ROLES = {
   ADMIN_LAPORAN_MINGGUAN_BULANAN: 'admin_laporan_mingguan_bulanan',
   ADMIN_LAPORAN_HARIAN_MINGGUAN: 'admin_laporan_harian_mingguan',
   ADMIN_LAPORAN_HARIAN_BULANAN: 'admin_laporan_harian_bulanan',
+  ADMIN_LAPORAN_HARIAN_RENCANA_KERJA: 'admin_laporan_harian_rencana_kerja',
+  ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA: 'admin_laporan_mingguan_rencana_kerja',
+  ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
@@ -27,6 +30,9 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN, label: 'Admin Laporan Mingguan dan Bulanan' },
   { value: USER_ROLES.ADMIN_LAPORAN_HARIAN_MINGGUAN, label: 'Admin Laporan Harian dan Mingguan' },
   { value: USER_ROLES.ADMIN_LAPORAN_HARIAN_BULANAN, label: 'Admin Laporan Harian dan Bulanan' },
+  { value: USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA, label: 'Admin Laporan Harian dan Rencana Kerja' },
+  { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA, label: 'Admin Laporan Mingguan dan Rencana Kerja' },
+  { value: USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA, label: 'Admin Laporan Bulanan dan Rencana Kerja' },
   { value: USER_ROLES.ADMIN_RENCANA_KERJA, label: 'Admin Rencana Kerja' },
   { value: USER_ROLES.ADMIN_BBM, label: 'Admin BBM' },
   { value: USER_ROLES.ADMIN_SPJ_BBM, label: 'Admin SPJ BBM' },
@@ -45,6 +51,9 @@ export type RecapPeriod = 'daily' | 'weekly' | 'monthly';
 const REGION_REQUIRED_ROLES = [
   USER_ROLES.ADMIN_WILAYAH,
   USER_ROLES.ADMIN_HARIAN,
+  USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
+  USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
+  USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.USER,
 ] as const satisfies readonly UserRole[];
@@ -55,18 +64,21 @@ const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
     USER_ROLES.ADMIN_HARIAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_MINGGUAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_BULANAN,
+    USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   ],
   weekly: [
     USER_ROLES.ADMIN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_MINGGUAN,
+    USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
   ],
   monthly: [
     USER_ROLES.ADMIN,
     USER_ROLES.ADMIN_LAPORAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_BULANAN,
+    USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   ],
 };
 
@@ -86,6 +98,22 @@ export const isPimpinanAccess = (role: string | null | undefined, email?: string
 
 export const isAdminHarianAccess = (role: string | null | undefined, email?: string | null) =>
   role === USER_ROLES.ADMIN_HARIAN || Boolean(email && (SYSTEM_EMAILS.adminHarian as readonly string[]).includes(email));
+
+export const canManageReportEntries = (role: string | null | undefined, email?: string | null) =>
+  isSuperAdminAccess(role, email)
+  || role === USER_ROLES.ADMIN_WILAYAH
+  || isAdminHarianAccess(role, email)
+  || role === USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA
+  || role === USER_ROLES.USER;
+
+export const canManageWorkPlans = (role: string | null | undefined, email?: string | null) =>
+  isSuperAdminAccess(role, email)
+  || role === USER_ROLES.ADMIN_WILAYAH
+  || role === USER_ROLES.ADMIN_RENCANA_KERJA
+  || role === USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA
+  || role === USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA
+  || role === USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA
+  || role === USER_ROLES.USER;
 
 export const canAccessFuelArea = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email)
@@ -127,6 +155,12 @@ export const getRoleBadgeClass = (role: string | null | undefined) => {
       return 'text-rose-600 border-rose-200 bg-rose-50';
     case USER_ROLES.ADMIN_LAPORAN_HARIAN_BULANAN:
       return 'text-fuchsia-600 border-fuchsia-200 bg-fuchsia-50';
+    case USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA:
+      return 'text-teal-700 border-teal-200 bg-teal-50';
+    case USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA:
+      return 'text-cyan-700 border-cyan-200 bg-cyan-50';
+    case USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA:
+      return 'text-emerald-700 border-emerald-200 bg-emerald-50';
     case USER_ROLES.ADMIN_BBM:
       return 'text-orange-600 border-orange-200 bg-orange-50';
     case USER_ROLES.ADMIN_SPJ_BBM:

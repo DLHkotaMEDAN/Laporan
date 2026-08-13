@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { canManageWorkPlans as hasWorkPlanManagement } from '@/constants/access-control';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -89,7 +90,7 @@ const WorkPlanList = () => {
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
-  const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
+  const canManageWorkPlans = isLoggedIn && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
   
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && profile?.category && !isPimpinan && !isAdminHarian;
   const { regions, teams: regionTeams } = useRegionFilterOptions(isAdmin, selectedRegion);

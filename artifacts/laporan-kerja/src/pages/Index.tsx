@@ -27,6 +27,7 @@ import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -140,8 +141,8 @@ const Index = () => {
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja';
   const isAdminWilayah = profile?.role === 'admin_wilayah';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
-  const canManageReports = isLoggedIn && !isPimpinan && !isAdminRencanaKerja;
-  const canManageWorkPlans = isLoggedIn && !isPimpinan && !isAdminHarian;
+  const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
+  const canManageWorkPlans = isLoggedIn && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
   const canPrintDailyRecap = canPrintReportRecap(profile?.role, 'daily');
   const canPrintWeeklyRecap = canPrintReportRecap(profile?.role, 'weekly');
   const canPrintMonthlyRecap = canPrintReportRecap(profile?.role, 'monthly');
@@ -623,7 +624,7 @@ const Index = () => {
             </TabsList>
 
             <div className="flex items-center gap-2 px-2">
-              {activeTab === 'reports' && isAdminHarian && (
+              {activeTab === 'reports' && canManageReports && (
                 <Button
                   type="button"
                   onClick={() => navigate('/create')}

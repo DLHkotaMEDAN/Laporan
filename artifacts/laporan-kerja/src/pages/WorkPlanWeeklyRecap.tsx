@@ -321,10 +321,10 @@ const WorkPlanWeeklyRecap = () => {
           <p className="text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>
         </div>
 
-        <div className="overflow-x-auto print:overflow-visible">
+        <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
+              <table className="w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">

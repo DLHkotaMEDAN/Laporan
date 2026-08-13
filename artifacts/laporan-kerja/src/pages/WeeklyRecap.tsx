@@ -696,7 +696,7 @@ const WeeklyRecap = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto print:overflow-visible">
+        <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
           {reports.length > 0 ? (
             <>
               <table className="w-full min-w-[1200px] border-collapse border-2 border-black text-[11px] table-fixed print:w-full print:min-w-0">

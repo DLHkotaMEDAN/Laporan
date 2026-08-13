@@ -120,6 +120,38 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles', action: 'read' },
   ],
 
+  // Admin laporan dan rencana kerja dikelola dalam wilayah yang ditetapkan.
+  [USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA]: [
+    { resource: 'reports', action: 'create' },
+    { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'create' },
+    { resource: 'work_plans', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'profiles', action: 'read' },
+  ],
+
+  // Rekap laporan mingguan/bulanan bersifat baca saja; rencana kerja dapat dikelola.
+  [USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA]: [
+    { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'create' },
+    { resource: 'work_plans', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'profiles', action: 'read' },
+  ],
+
+  [USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA]: [
+    { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'create' },
+    { resource: 'work_plans', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'profiles', action: 'read' },
+  ],
+
   // Regular user – can create/view own reports and work plans (by team)
   [USER_ROLES.USER]: [
     { resource: 'reports', action: 'create' },
