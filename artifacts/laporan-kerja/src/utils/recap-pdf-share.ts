@@ -43,12 +43,23 @@ export const shareRecapElementAsPdf = async (
   fileName: string,
   format: 'a3' | 'a4' = 'a3',
 ) => {
+  // Keep the canvas render in the same printable area used by `window.print()`:
+  // landscape paper with 15 mm margins. Rendering at the current browser width
+  // causes different line wrapping and an oversized PDF on mobile/desktop.
+  const paperSize = format === 'a3'
+    ? { width: 420, height: 297 }
+    : { width: 297, height: 210 };
+  const margin = 15;
+  const printableWidth = paperSize.width - (margin * 2);
+  const printableHeight = paperSize.height - (margin * 2);
+  const printableWidthPx = Math.round((printableWidth / 25.4) * 96);
+
   const canvas = await html2canvas(element, {
     backgroundColor: '#ffffff',
     scale: 2,
     useCORS: true,
-    width: element.scrollWidth,
-    windowWidth: element.scrollWidth,
+    width: printableWidthPx,
+    windowWidth: printableWidthPx,
     onclone: (documentClone) => {
       const printArea = documentClone.querySelector('.recap-print-area');
       if (!printArea) return;
@@ -66,8 +77,14 @@ export const shareRecapElementAsPdf = async (
           box-shadow: none !important;
         }
         .recap-pdf-render {
+          box-sizing: border-box !important;
+          width: ${printableWidthPx}px !important;
+          max-width: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
           min-height: 0 !important;
           overflow: visible !important;
+          box-shadow: none !important;
         }
         .recap-pdf-render .recap-table-scroll, .recap-pdf-render .overflow-x-auto {
           overflow: visible !important;
@@ -82,10 +99,7 @@ export const shareRecapElementAsPdf = async (
     },
   });
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const imageHeight = (canvas.height * pageWidth) / canvas.width;
-  const pageImageHeight = (canvas.height * pageHeight) / imageHeight;
+  const pageImageHeight = (canvas.height * printableHeight) / ((canvas.height * printableWidth) / canvas.width);
 
   for (let sourceY = 0, page = 0; sourceY < canvas.height; sourceY += pageImageHeight, page += 1) {
     const sliceHeight = Math.min(pageImageHeight, canvas.height - sourceY);
@@ -94,7 +108,14 @@ export const shareRecapElementAsPdf = async (
     pageCanvas.height = sliceHeight;
     pageCanvas.getContext('2d')?.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
     if (page > 0) pdf.addPage(format, 'landscape');
-    pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, (sliceHeight * pageWidth) / canvas.width);
+    pdf.addImage(
+      pageCanvas.toDataURL('image/png'),
+      'PNG',
+      margin,
+      margin,
+      printableWidth,
+      (sliceHeight * printableWidth) / canvas.width,
+    );
   }
 
   return sharePdfFile(new File([pdf.output('blob')], fileName, { type: 'application/pdf' }));
