@@ -45,6 +45,26 @@ export const shareRecapElementAsPdf = async (element: HTMLElement, fileName: str
     useCORS: true,
     width: element.scrollWidth,
     windowWidth: element.scrollWidth,
+    onclone: (documentClone) => {
+      const printArea = documentClone.querySelector('.recap-print-area');
+      if (!printArea) return;
+
+      printArea.classList.add('recap-pdf-render');
+      const printStyles = documentClone.createElement('style');
+      printStyles.textContent = `
+        .recap-pdf-render, .recap-pdf-render * {
+          color: #000 !important;
+          background-color: #fff !important;
+          background-image: none !important;
+          border-color: #000 !important;
+          outline-color: #000 !important;
+          text-decoration-color: #000 !important;
+          box-shadow: none !important;
+        }
+        .recap-pdf-render thead, .recap-pdf-render th { background-color: #f1f5f9 !important; }
+      `;
+      documentClone.head.appendChild(printStyles);
+    },
   });
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
   const pageWidth = pdf.internal.pageSize.getWidth();
