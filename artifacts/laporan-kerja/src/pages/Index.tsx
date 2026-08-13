@@ -535,14 +535,6 @@ const Index = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => navigate('/create')} disabled={!canManageReports} className="h-11 bg-white text-slate-950 hover:bg-emerald-50">
-                  <FileText className="mr-2 h-4 w-4" /> Laporan
-                </Button>
-                <Button onClick={() => navigate('/work-plans/create')} disabled={!canManageWorkPlans} className="h-11 bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
-                  <ClipboardList className="mr-2 h-4 w-4" /> Rencana
-                </Button>
-              </div>
             </div>
           </div>
         </section>
