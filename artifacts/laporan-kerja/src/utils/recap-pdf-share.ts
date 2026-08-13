@@ -14,18 +14,20 @@ const downloadFile = (file: File) => {
   anchor.href = url;
   anchor.download = file.name;
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 };
 
 export const sharePdfFile = async (file: File) => {
   const shareData = { files: [file], title: file.name };
-  if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+  const nativeShare = (navigator as Navigator & { share?: (data: ShareData) => Promise<void> }).share;
+  const canUseNativeShare = typeof nativeShare === 'function' && (!navigator.canShare || navigator.canShare(shareData));
+
+  if (canUseNativeShare) {
     try {
-      await navigator.share(shareData);
+      await nativeShare(shareData);
       return 'shared' as const;
     } catch (error) {
       if ((error as DOMException).name === 'AbortError') return 'cancelled' as const;
-      throw error;
     }
   }
 

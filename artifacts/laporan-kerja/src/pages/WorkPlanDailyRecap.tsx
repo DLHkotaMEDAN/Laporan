@@ -313,8 +313,8 @@ const WorkPlanDailyRecap = () => {
           
           <div className="flex items-center justify-end gap-2 border-t md:border-t-0 pt-3 md:pt-0">
             <Select value={logoMode} onValueChange={(v) => setLogoMode(v as LogoMode)}>
-              <SelectTrigger className="w-[40px] md:w-[160px] bg-blue-50 border-blue-200 h-10 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
-                <div className="flex items-center gap-2"><Image size={16} /><span className="hidden md:inline"><SelectValue placeholder="Logo" /></span></div>
+              <SelectTrigger className="w-[40px] shrink-0 md:w-[160px] bg-blue-50 border-blue-200 h-10 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
+                <div className="flex min-w-0 items-center gap-2"><Image size={16} /><span className="hidden whitespace-nowrap md:inline"><SelectValue placeholder="Logo" /></span></div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="with-logo">Dengan Logo</SelectItem>
@@ -341,10 +341,10 @@ const WorkPlanDailyRecap = () => {
             )}
 
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
-              <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
-                <div className="flex items-center gap-2">
+              <SelectTrigger className="w-[40px] shrink-0 md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
+                <div className="flex min-w-0 items-center gap-2">
                   <PenTool size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Tanda Tangan" /></span>
+                  <span className="hidden whitespace-nowrap md:inline"><SelectValue placeholder="Tanda Tangan" /></span>
                 </div>
               </SelectTrigger>
               <SelectContent>
