@@ -624,15 +624,6 @@ const Index = () => {
             </TabsList>
 
             <div className="flex items-center gap-2 px-2">
-              {activeTab === 'reports' && canManageReports && (
-                <Button
-                  type="button"
-                  onClick={() => navigate('/create')}
-                  className="h-10 rounded-xl bg-blue-600 px-4 font-bold text-white hover:bg-blue-700"
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Tambah Laporan Harian
-                </Button>
-              )}
               {(activeTab !== 'reports' || canPrintAnyReportRecap) && <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700 border-slate-200 h-10 px-4 font-bold rounded-xl">
