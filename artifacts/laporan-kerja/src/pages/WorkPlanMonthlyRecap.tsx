@@ -21,7 +21,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
-import { shareRecapElementAsPdf } from '@/utils/recap-pdf-share';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,14 +113,10 @@ const WorkPlanMonthlyRecap = () => {
     }
   };
 
-  const handleSharePdf = async () => {
+  const handleSharePdf = () => {
     if (!printRef.current) return;
-    const toastId = showLoading("Menyiapkan PDF untuk dibagikan...");
-    try {
-      const result = await shareRecapElementAsPdf(printRef.current, `Rekap_Rencana_Kerja_Bulanan_${selectedMonth}_${selectedYear}.pdf`);
-      if (result === 'downloaded') showSuccess("PDF diunduh. Silakan bagikan dari perangkat Anda.");
-    } catch (error) { console.error(error); showError("Gagal membuat PDF untuk dibagikan"); }
-    finally { dismissToast(toastId); }
+    showSuccess("Pilih 'Simpan sebagai PDF' di dialog cetak, lalu bagikan file PDF tersebut.");
+    window.setTimeout(() => window.print(), 150);
   };
   
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
@@ -313,7 +308,7 @@ const WorkPlanMonthlyRecap = () => {
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2">
-                  <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Bagikan PDF
+                  <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Simpan PDF untuk Dibagikan
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
