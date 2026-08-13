@@ -10,18 +10,14 @@
     overflow-x: clip;
   }
 
-  /* A single responsive rule for every Button in reports, work plans, BBM,
-     SPJ, dashboard and recap views. Text is allowed to wrap inside the button
-     instead of escaping its frame, while icon-only controls stay square. */
+  /* Keep button labels intact. Action bars can wrap complete buttons to a new
+     row, but button text must never be split into vertical characters. */
   [data-slot="button"] {
     height: auto !important;
     min-height: 2.5rem;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  [data-slot="button"] > span {
-    min-width: 0;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   [data-slot="button"][class*="size-"],
