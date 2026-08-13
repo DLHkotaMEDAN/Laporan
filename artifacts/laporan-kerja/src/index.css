@@ -4,11 +4,21 @@
 
 /* Rekap lebar tetap dapat dijelajahi pada layar ponsel tanpa mengubah ukuran cetak. */
 @media (max-width: 767px) {
-  .recap-table-scroll {
+  .recap-print-area {
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     padding-bottom: 0.75rem;
     scrollbar-width: thin;
+  }
+
+  .recap-print-area > * {
+    min-width: 1200px;
+  }
+
+  .recap-print-area .recap-table-scroll {
+    overflow-x: visible;
+    padding-bottom: 0;
   }
 }
 

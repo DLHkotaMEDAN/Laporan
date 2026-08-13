@@ -707,7 +707,7 @@ const DailyRecap = () => {
         defaultFileName={`Rekap_Harian_DLH_${selectedDate}`}
       />
 
-      <div ref={printRef} className="print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
+      <div ref={printRef} className="print-area recap-print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
         <div className="pdf-header text-center mb-5 leading-tight">
           <h1 className="text-[11px] font-bold uppercase">Pemerintah Kota Medan</h1>
           <h2 className="text-[13px] font-black uppercase">Dinas Lingkungan Hidup</h2>

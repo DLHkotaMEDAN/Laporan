@@ -678,7 +678,7 @@ const WeeklyRecap = () => {
         defaultFileName={`Rekap_Mingguan_DLH_${format(weekStart, 'yyyy-MM-dd')}`}
       />
 
-      <div ref={printRef} className="print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
+      <div ref={printRef} className="print-area recap-print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
         <div className="pdf-header">
           <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
             <div className="w-20 h-20 flex items-center justify-center overflow-hidden"><img src={LOGO_MEDAN_URL} className="max-h-full max-w-full object-contain" alt="Logo Medan" /></div>
