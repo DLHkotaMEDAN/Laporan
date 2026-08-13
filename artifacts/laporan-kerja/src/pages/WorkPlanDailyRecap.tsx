@@ -7,7 +7,7 @@ import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image, Edit } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image, Edit, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
+import { shareRecapElementAsPdf } from '@/utils/recap-pdf-share';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,6 +121,16 @@ const WorkPlanDailyRecap = () => {
     } finally {
       dismissToast(toastId);
     }
+  };
+
+  const handleSharePdf = async () => {
+    if (!printRef.current) return;
+    const toastId = showLoading("Menyiapkan PDF untuk dibagikan...");
+    try {
+      const result = await shareRecapElementAsPdf(printRef.current, `Rekap_Rencana_Kerja_Harian_${selectedDate || 'semua'}.pdf`);
+      if (result === 'downloaded') showSuccess("PDF diunduh. Silakan bagikan dari perangkat Anda.");
+    } catch (error) { console.error(error); showError("Gagal membuat PDF untuk dibagikan"); }
+    finally { dismissToast(toastId); }
   };
   
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
@@ -353,6 +364,9 @@ const WorkPlanDailyRecap = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => window.print()} className="cursor-pointer py-2">
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2">
+                  <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Bagikan PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel

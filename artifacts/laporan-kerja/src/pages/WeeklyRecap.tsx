@@ -9,7 +9,7 @@ import {
   ArrowLeft, Printer, Fuel, FileText, ChevronsUpDown, 
   Table, LogOut, LogIn, CloudUpload, 
   Loader2, Lock, ChevronDown,
-  Image as ImageIcon, ImageOff, PenTool, Calendar, Settings2
+  Image as ImageIcon, ImageOff, PenTool, Calendar, Settings2, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import DriveUploadDialog from '@/components/DriveUploadDialog';
 import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
+import { shareRecapElementAsPdf } from '@/utils/recap-pdf-share';
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import {
@@ -188,6 +189,16 @@ const WeeklyRecap = () => {
     setTimeout(() => {
       window.print();
     }, 150);
+  };
+
+  const handleSharePdf = async () => {
+    if (!canPrintWeeklyRecap() || !printRef.current) return;
+    const toastId = showLoading("Menyiapkan PDF untuk dibagikan...");
+    try {
+      const result = await shareRecapElementAsPdf(printRef.current, `Rekap_Mingguan_DLH_${format(weekStart, 'yyyy-MM-dd')}.pdf`);
+      if (result === 'downloaded') showSuccess("PDF diunduh. Silakan bagikan dari perangkat Anda.");
+    } catch (error) { console.error(error); showError("Gagal membuat PDF untuk dibagikan"); }
+    finally { dismissToast(toastId); }
   };
 
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
@@ -651,6 +662,9 @@ const WeeklyRecap = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={handlePrint} className="cursor-pointer py-2">
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2">
+                  <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Bagikan PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel

@@ -6,7 +6,7 @@ import { WorkPlan } from '@/types/workPlan';
 import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, FileText, PenTool, Plus, ChevronDown, Table, Calendar as CalendarIcon, Image } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, PenTool, Plus, ChevronDown, Table, Calendar as CalendarIcon, Image, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -21,6 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
+import { shareRecapElementAsPdf } from '@/utils/recap-pdf-share';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ const WorkPlanMonthlyRecap = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const printRef = useRef<HTMLDivElement>(null);
 
   const isLoggedIn = !!session;
 
@@ -110,6 +112,16 @@ const WorkPlanMonthlyRecap = () => {
     } finally {
       dismissToast(toastId);
     }
+  };
+
+  const handleSharePdf = async () => {
+    if (!printRef.current) return;
+    const toastId = showLoading("Menyiapkan PDF untuk dibagikan...");
+    try {
+      const result = await shareRecapElementAsPdf(printRef.current, `Rekap_Rencana_Kerja_Bulanan_${selectedMonth}_${selectedYear}.pdf`);
+      if (result === 'downloaded') showSuccess("PDF diunduh. Silakan bagikan dari perangkat Anda.");
+    } catch (error) { console.error(error); showError("Gagal membuat PDF untuk dibagikan"); }
+    finally { dismissToast(toastId); }
   };
   
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
@@ -300,6 +312,9 @@ const WorkPlanMonthlyRecap = () => {
                 <DropdownMenuItem onClick={() => window.print()} className="cursor-pointer py-2">
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2">
+                  <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Bagikan PDF
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
                 </DropdownMenuItem>
@@ -325,7 +340,7 @@ const WorkPlanMonthlyRecap = () => {
         </div>
       </div>
 
-      <div className="print-area recap-print-area bg-white p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
+      <div ref={printRef} className="print-area recap-print-area bg-white p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
         <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
           {logoMode === "with-logo" && <img src={LOGO_MEDAN_URL} className="h-20 w-20 object-contain" alt="Logo Medan" />}
           <div className="text-center">
