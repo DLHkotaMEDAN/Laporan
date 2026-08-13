@@ -20,7 +20,6 @@
     word-break: normal;
   }
 
-  [data-slot="button"][class*="size-"],
   [data-slot="button"]:has(> svg:only-child) {
     width: 2.5rem;
     min-width: 2.5rem;

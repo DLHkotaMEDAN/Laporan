@@ -399,21 +399,21 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-[#f3f7f2]">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-2 py-1 shadow-sm ring-1 ring-slate-200">
-              <img src={LOGO_MEDAN_URL} alt="Logo Kota Medan" className="h-9 w-9 object-contain" />
-              <img src={LOGO_DLH_URL} alt="Logo DLH Kota Medan" className="h-9 w-9 object-contain" />
+        <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-3 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-1 rounded-2xl bg-white px-2 py-1 shadow-sm ring-1 ring-slate-200 sm:gap-2">
+              <img src={LOGO_MEDAN_URL} alt="Logo Kota Medan" className="h-8 w-8 object-contain sm:h-9 sm:w-9" />
+              <img src={LOGO_DLH_URL} alt="Logo DLH Kota Medan" className="h-8 w-8 object-contain sm:h-9 sm:w-9" />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-black text-slate-900 leading-tight tracking-tight">DLH KOTA MEDAN</h1>
+            <div className="flex min-w-0 flex-col">
+              <h1 className="truncate text-xs font-black leading-tight tracking-tight text-slate-900 sm:text-sm md:text-lg">DLH KOTA MEDAN</h1>
               <Badge variant="outline" className="w-fit text-[8px] md:text-[10px] py-0 h-4 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold">
                 <Cloud className="h-2 w-2 mr-1" /> SISTEM OPERASIONAL
               </Badge>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="ml-2 flex shrink-0 items-center gap-2 md:gap-3">
             {isLoggedIn ? (
               <div className="flex items-center gap-3">
                 <div className="hidden sm:flex flex-col items-end">
@@ -451,8 +451,8 @@ const Index = () => {
                 </DropdownMenu>
               </div>
             ) : (
-              <Button onClick={() => navigate('/login')} size="sm" className="bg-emerald-700 hover:bg-emerald-800 h-9 px-4 font-bold shadow-md">
-                <LogIn className="h-4 w-4 mr-2" /> Masuk
+              <Button onClick={() => navigate('/login')} size="sm" className="h-9 bg-emerald-700 px-3 font-bold shadow-md hover:bg-emerald-800 sm:px-4">
+                <LogIn className="mr-1.5 h-4 w-4 sm:mr-2" /> Masuk
               </Button>
             )}
           </div>
