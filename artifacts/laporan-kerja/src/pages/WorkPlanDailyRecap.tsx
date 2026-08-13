@@ -27,6 +27,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -311,7 +315,7 @@ const WorkPlanDailyRecap = () => {
             </div>
           </div>
           
-          <div className="flex items-center justify-end gap-2 border-t md:border-t-0 pt-3 md:pt-0">
+          <div className="hidden">
             <Select value={logoMode} onValueChange={(v) => setLogoMode(v as LogoMode)}>
               <SelectTrigger className="w-[40px] shrink-0 md:w-[160px] bg-blue-50 border-blue-200 h-10 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
                 <div className="flex min-w-0 items-center gap-2"><Image size={16} /><span className="hidden whitespace-nowrap md:inline"><SelectValue placeholder="Logo" /></span></div>
@@ -392,6 +396,57 @@ const WorkPlanDailyRecap = () => {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="no-print mx-auto mb-4 flex max-w-[1200px] justify-end px-4 md:px-0">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="h-10 bg-blue-600 px-4 shadow-md hover:bg-blue-700">
+              <FileText className="mr-2 h-4 w-4" /> Menu Rekap
+              <ChevronDown className="ml-2 h-4 w-4 opacity-70" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuItem onClick={() => setLogoMode('with-logo')} className="cursor-pointer">Dengan Logo</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLogoMode('without-logo')} className="cursor-pointer">Tanpa Logo</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-52">
+                <DropdownMenuItem onClick={() => setSignatureMode('with-signature')} className="cursor-pointer">Ada Tanda Tangan</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSignatureMode('without-signature')} className="cursor-pointer">Tanpa Tanda Tangan</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            {isLoggedIn && plans.length > 0 && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-h-72 w-80 overflow-y-auto">
+                  {plans.map((plan) => (
+                    <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer">
+                      {plan.category} - {plan.items[0]?.description || "Rencana Kerja"}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => window.print()} className="cursor-pointer py-2"><Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2"><Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Bagikan PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2"><Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/work-plans/daily-rekap')} className="cursor-pointer py-2"><CalendarIcon className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/work-plans/weekly-rekap')} className="cursor-pointer py-2"><Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Mingguan</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/work-plans/monthly-rekap')} className="cursor-pointer py-2"><FileText className="mr-2 h-4 w-4 text-orange-600" /> Rekap Bulanan</DropdownMenuItem>
+            {isLoggedIn && <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/work-plans/create')} className="cursor-pointer py-2 text-blue-700"><Plus className="mr-2 h-4 w-4" /> Tambah Baru</DropdownMenuItem>
+            </>}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div ref={printRef} className="print-area recap-print-area bg-white p-8 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
