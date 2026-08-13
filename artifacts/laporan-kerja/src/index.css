@@ -4,6 +4,26 @@
 
 /* Rekap lebar tetap dapat dijelajahi pada layar ponsel tanpa mengubah ukuran cetak. */
 @media (max-width: 767px) {
+  /* Prevent control bars from extending beyond the phone viewport. Tables keep
+     their own horizontal scroll containers so report data remains readable. */
+  body {
+    overflow-x: hidden;
+  }
+
+  .no-print {
+    min-width: 0;
+    margin-inline: 0.5rem;
+  }
+
+  .no-print > .flex,
+  .no-print .flex.flex-wrap {
+    min-width: 0;
+  }
+
+  .no-print .flex.flex-wrap > * {
+    max-width: 100%;
+  }
+
   .recap-print-area {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
