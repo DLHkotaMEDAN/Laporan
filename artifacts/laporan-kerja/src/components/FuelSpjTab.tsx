@@ -5,10 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  FileText, Trash2, Edit, 
-  Search, RefreshCw, FilterX, CalendarDays, Eye
-} from 'lucide-react';
+import { Trash2, Edit, Search, RefreshCw, FilterX, CalendarDays, Eye } from 'lucide-react';
 import { FuelSpjReport } from '@/types/fuelSpjReport';
 import { fuelSpjService } from '@/services/fuelSpjService';
 import { showSuccess, showError } from '@/utils/toast';
@@ -108,11 +105,6 @@ const FuelSpjTab = () => {
             <Button variant="outline" size="icon" onClick={loadReports} disabled={loading} className="h-10 w-10 shrink-0 border-slate-200">
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             </Button>
-            {!isPimpinan && (
-              <Button onClick={() => navigate('/fuel-reports/spj/create')} className="bg-blue-700 hover:bg-blue-800 h-10 flex-1 font-bold text-xs md:text-sm">
-                <FileText className="mr-2 h-4 w-4" /> Input SPJ Baru
-              </Button>
-            )}
           </div>
         </div>
       </div>

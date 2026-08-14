@@ -268,7 +268,7 @@ const FuelSpjMonthlyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/fuel-reports/spj')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
+            <Button variant="ghost" onClick={() => navigate('/')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="w-[130px] md:w-[150px]"><SelectValue placeholder="Bulan" /></SelectTrigger><SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="w-[90px] md:w-[100px]"><SelectValue placeholder="Tahun" /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>

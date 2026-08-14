@@ -265,7 +265,7 @@ const FuelSpjWeeklyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-            <Button variant="ghost" onClick={() => navigate('/fuel-reports/spj')} className="h-9 px-3">
+            <Button variant="ghost" onClick={() => navigate('/')} className="h-9 px-3">
               <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
             </Button>
             

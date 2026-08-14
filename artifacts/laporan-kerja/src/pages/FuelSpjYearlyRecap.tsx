@@ -254,7 +254,7 @@ const FuelSpjYearlyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/fuel-reports/spj')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
+            <Button variant="ghost" onClick={() => navigate('/')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
             <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="w-[120px] md:w-[150px]"><SelectValue placeholder="Tahun" /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
             <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
               <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200"><Filter className="mr-2 h-4 w-4 text-slate-400" /><SelectValue placeholder="Kelompokkan" /></SelectTrigger>
