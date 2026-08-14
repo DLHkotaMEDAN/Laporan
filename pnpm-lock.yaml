@@ -243,6 +243,9 @@ importers:
 
   artifacts/laporan-kerja:
     dependencies:
+      '@sparticuz/chromium':
+        specifier: 149.0.0
+        version: 149.0.0
       '@supabase/supabase-js':
         specifier: ^2.107.0
         version: 2.107.0
@@ -255,6 +258,9 @@ importers:
       jspdf:
         specifier: ^4.2.1
         version: 4.2.1
+      puppeteer-core:
+        specifier: 25.6.0
+        version: 25.6.0
       react-router-dom:
         specifier: ^7.16.0
         version: 7.16.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

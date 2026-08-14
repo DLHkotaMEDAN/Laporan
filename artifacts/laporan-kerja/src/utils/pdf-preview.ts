@@ -98,6 +98,9 @@ export const openShareablePdfPreview = async ({ fileName }: PdfPreviewOptions) =
       body: JSON.stringify({ documentHtml: getSnapshot(), fileName }),
     });
     if (!response.ok) {
+      if (response.status === 405 || response.status === 404) {
+        throw new Error("Fitur PDF belum aktif di server online. Jalankan deploy ulang Vercel.");
+      }
       const responseBody = await response.json().catch(() => null) as { message?: string } | null;
       throw new Error(responseBody?.message || "PDF tidak dapat dibuat.");
     }
