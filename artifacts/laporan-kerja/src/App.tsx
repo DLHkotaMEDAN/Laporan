@@ -16,7 +16,6 @@ import Maintenance from "./pages/Maintenance";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
-import WorkPlanList from "./pages/WorkPlanList";
 import CreateWorkPlan from "./pages/CreateWorkPlan";
 import EditWorkPlan from "./pages/EditWorkPlan";
 import PrintWorkPlan from "./pages/PrintWorkPlan";
@@ -127,7 +126,7 @@ const App = () => (
             <Route path="/daily-rekap" element={<DailyRecap />} />
             <Route path="/weekly-rekap" element={<WeeklyRecap />} />
             
-            <Route path="/work-plans" element={<WorkPlanList />} />
+            <Route path="/work-plans" element={<Navigate to="/work-plans/daily-rekap" replace />} />
             <Route path="/work-plans/print/:id" element={<PrintWorkPlan />} />
             <Route path="/work-plans/daily-rekap" element={<WorkPlanDailyRecap />} />
             <Route path="/work-plans/weekly-rekap" element={<WorkPlanWeeklyRecap />} />

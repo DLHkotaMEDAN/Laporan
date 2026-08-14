@@ -451,8 +451,15 @@ const Index = () => {
                 </DropdownMenu>
               </div>
             ) : (
-              <Button onClick={() => navigate('/login')} size="sm" className="h-9 bg-emerald-700 px-3 font-bold shadow-md hover:bg-emerald-800 sm:px-4">
-                <LogIn className="mr-1.5 h-4 w-4 sm:mr-2" /> Masuk
+              <Button
+                onClick={() => navigate('/login')}
+                size="sm"
+                aria-label="Masuk"
+                title="Masuk"
+                className="h-10 w-10 shrink-0 rounded-full bg-emerald-700 p-0 font-bold shadow-md hover:bg-emerald-800 sm:h-9 sm:w-auto sm:rounded-md sm:px-4"
+              >
+                <LogIn className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Masuk</span>
               </Button>
             )}
           </div>
