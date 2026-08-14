@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { showError } from '@/utils/toast';
-import { getRoleLandingPath } from '@/constants/access-control';
 
 const Login = () => {
   const { session, profile, loading: authLoading } = useAuth();
@@ -22,7 +21,7 @@ const Login = () => {
 
   useEffect(() => {
     if (session && profile && !authLoading) {
-      navigate(getRoleLandingPath(profile.role));
+      navigate('/');
     }
   }, [session, profile, authLoading, navigate]);
 
