@@ -591,6 +591,7 @@ const Index = () => {
           isLoggedIn={isLoggedIn}
           canManageReports={canManageReports}
           canManageWorkPlans={canManageWorkPlans}
+          canManageFuel={isAdmin}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
