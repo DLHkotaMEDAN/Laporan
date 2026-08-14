@@ -1023,31 +1023,31 @@ const Index = () => {
       />
 
       <Dialog open={isDailyRecapDateOpen} onOpenChange={setIsDailyRecapDateOpen}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="rounded-2xl p-5 sm:max-w-[460px] sm:p-6">
+          <DialogHeader className="pr-8">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
               <CalendarDays className="h-5 w-5 text-green-600" /> Pilih Tanggal Rekap Harian
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-base leading-relaxed">
               Tentukan tanggal laporan yang ingin ditampilkan dan dicetak.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-2">
-            <label htmlFor="daily-recap-date" className="text-sm font-semibold text-slate-700">Tanggal Laporan</label>
+          <div className="space-y-2 py-3 sm:py-4">
+            <label htmlFor="daily-recap-date" className="text-base font-semibold text-slate-700">Tanggal Laporan</label>
             <Input
               id="daily-recap-date"
               type="date"
               value={dailyRecapDate}
               onChange={(event) => setDailyRecapDate(event.target.value)}
-              className="h-11"
+              className="h-12 rounded-xl text-base"
             />
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setIsDailyRecapDateOpen(false)}>Batal</Button>
+          <DialogFooter className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 sm:[&>[data-slot=button]]:w-full">
+            <Button type="button" variant="outline" className="h-11 w-full rounded-xl" onClick={() => setIsDailyRecapDateOpen(false)}>Batal</Button>
             <Button
               type="button"
               disabled={!dailyRecapDate}
-              className="bg-green-600 hover:bg-green-700"
+              className="h-11 w-full rounded-xl bg-green-600 font-bold shadow-sm hover:bg-green-700"
               onClick={() => {
                 setIsDailyRecapDateOpen(false);
                 navigate(`/daily-rekap?categories=semua&date=${dailyRecapDate}`);
