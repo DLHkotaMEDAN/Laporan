@@ -1,11 +1,9 @@
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { savePdfPreview } from "./pdf-preview-storage";
 
 type PdfPreviewOptions = {
   fileName: string;
 };
 
-GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const getSnapshot = () => {
   const printArea = document.querySelector<HTMLElement>(".recap-print-area");
@@ -53,7 +51,7 @@ const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => (
   "\"": "&quot;",
 }[character] ?? character));
 
-const renderPdfPreview = async (popup: Window, pdf: Blob) => {
+/* const renderPdfPreview = async (popup: Window, pdf: Blob) => {
   const pages = popup.document.querySelector<HTMLElement>("#pdf-pages");
   if (!pages) return;
 
@@ -74,9 +72,9 @@ const renderPdfPreview = async (popup: Window, pdf: Blob) => {
     await page.render({ canvas, canvasContext: context, viewport }).promise;
     pages.append(canvas);
   }
-};
+}; */
 
-const showPdf = (popup: Window, pdf: Blob, fileName: string) => {
+/* const showPdf = (popup: Window, pdf: Blob, fileName: string) => {
   const url = URL.createObjectURL(pdf);
   const safeName = escapeHtml(fileName);
   popup.document.write(`<!doctype html>
@@ -123,7 +121,7 @@ const showPdf = (popup: Window, pdf: Blob, fileName: string) => {
   });
 
   popup.addEventListener("beforeunload", () => URL.revokeObjectURL(url), { once: true });
-};
+}; */
 
 export const openShareablePdfPreview = async ({ fileName }: PdfPreviewOptions) => {
   const popup = showLoadingWindow();
@@ -142,7 +140,8 @@ export const openShareablePdfPreview = async ({ fileName }: PdfPreviewOptions) =
       const responseBody = await response.json().catch(() => null) as { message?: string } | null;
       throw new Error(responseBody?.message || "PDF tidak dapat dibuat.");
     }
-    showPdf(popup, await response.blob(), fileName);
+    const previewKey = await savePdfPreview({ fileName, pdf: await response.blob() });
+    popup.location.replace(`/pdf-preview?id=${encodeURIComponent(previewKey)}`);
   } catch (error) {
     popup.close();
     throw error;

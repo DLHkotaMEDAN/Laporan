@@ -15,6 +15,7 @@ import WeeklyRecap from "./pages/WeeklyRecap";
 import Maintenance from "./pages/Maintenance";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import PdfPreview from "./pages/PdfPreview";
 
 import CreateWorkPlan from "./pages/CreateWorkPlan";
 import EditWorkPlan from "./pages/EditWorkPlan";
@@ -158,6 +159,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Index />} />
+            <Route path="/pdf-preview" element={<PdfPreview />} />
             <Route path="/report/:id" element={<NonFuelSpecialistRoute><ReportDetail /></NonFuelSpecialistRoute>} />
             <Route path="/monthly-rekap" element={<NonFuelSpecialistRoute><MonthlyRecap /></NonFuelSpecialistRoute>} />
             <Route path="/daily-rekap" element={<NonFuelSpecialistRoute><DailyRecap /></NonFuelSpecialistRoute>} />
