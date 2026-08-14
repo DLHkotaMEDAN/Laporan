@@ -141,7 +141,7 @@ export const openShareablePdfPreview = async ({ fileName }: PdfPreviewOptions) =
       throw new Error(responseBody?.message || "PDF tidak dapat dibuat.");
     }
     const previewKey = await savePdfPreview({ fileName, pdf: await response.blob() });
-    popup.location.replace(`/pdf-preview?id=${encodeURIComponent(previewKey)}`);
+    popup.location.replace(new URL(`/pdf-preview?id=${encodeURIComponent(previewKey)}`, window.location.origin).href);
   } catch (error) {
     popup.close();
     throw error;
