@@ -42,7 +42,7 @@ export default async function handler(request: RequestLike, response: ResponseLi
     return;
   }
 
-  let browser: { close: () => Promise<void> } | undefined;
+  let browser: import("puppeteer-core").Browser | undefined;
   try {
     // Load these server-only modules only when this endpoint is requested.
     // This prevents the whole Vercel Function from failing before it can
