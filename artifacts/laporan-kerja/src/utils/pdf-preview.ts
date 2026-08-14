@@ -1,6 +1,11 @@
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
 type PdfPreviewOptions = {
   fileName: string;
 };
+
+GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const getSnapshot = () => {
   const printArea = document.querySelector<HTMLElement>(".recap-print-area");
@@ -48,6 +53,29 @@ const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => (
   "\"": "&quot;",
 }[character] ?? character));
 
+const renderPdfPreview = async (popup: Window, pdf: Blob) => {
+  const pages = popup.document.querySelector<HTMLElement>("#pdf-pages");
+  if (!pages) return;
+
+  const loadingTask = getDocument({ data: new Uint8Array(await pdf.arrayBuffer()) });
+  const documentPdf = await loadingTask.promise;
+  pages.replaceChildren();
+
+  for (let pageNumber = 1; pageNumber <= documentPdf.numPages; pageNumber += 1) {
+    const page = await documentPdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = popup.document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) continue;
+
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    canvas.setAttribute("aria-label", `Halaman ${pageNumber}`);
+    await page.render({ canvas, canvasContext: context, viewport }).promise;
+    pages.append(canvas);
+  }
+};
+
 const showPdf = (popup: Window, pdf: Blob, fileName: string) => {
   const url = URL.createObjectURL(pdf);
   const safeName = escapeHtml(fileName);
@@ -59,16 +87,26 @@ const showPdf = (popup: Window, pdf: Blob, fileName: string) => {
       strong { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       button, a { border: 0; border-radius: 7px; padding: 9px 13px; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
       #share { color: #fff; background: #2563eb; } #download { color: #172033; background: #e2e8f0; }
-      iframe { width: 100%; height: calc(100vh - 57px); border: 0; display: block; background: #fff; }
+      #pdf-pages { min-height: calc(100vh - 57px); padding: 18px; display: grid; justify-items: center; gap: 18px; overflow: auto; }
+      #pdf-pages canvas { display: block; width: min(100%, 1584px); height: auto; background: #fff; box-shadow: 0 2px 14px #0f172a44; }
+      .loading { color: #475569; padding: 3rem; }
+      @media (max-width: 640px) { header { padding: 7px 11px; min-height: 48px; } strong { font-size: 11px; } button, a { padding: 8px 10px; font-size: 12px; } #pdf-pages { min-height: calc(100vh - 49px); padding: 8px; } }
     </style>
     <header><strong>${safeName}</strong><button id="share" type="button">Bagikan PDF</button><a id="download" download="${safeName}">Unduh</a></header>
-    <iframe title="Pratinjau PDF"></iframe>`);
+    <main id="pdf-pages"><p class="loading">Menampilkan pratinjau PDF…</p></main>`);
   popup.document.close();
 
-  const frame = popup.document.querySelector("iframe");
   const download = popup.document.querySelector<HTMLAnchorElement>("#download");
-  frame?.setAttribute("src", url);
   if (download) download.href = url;
+
+  void renderPdfPreview(popup, pdf).catch(() => {
+    popup.document.querySelector("#pdf-pages")?.replaceChildren(
+      Object.assign(popup.document.createElement("p"), {
+        className: "loading",
+        textContent: "Pratinjau tidak dapat dimuat. Gunakan tombol Unduh untuk membuka PDF.",
+      }),
+    );
+  });
 
   popup.document.querySelector<HTMLButtonElement>("#share")?.addEventListener("click", async () => {
     const file = new File([pdf], fileName, { type: "application/pdf" });
