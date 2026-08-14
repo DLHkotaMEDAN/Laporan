@@ -198,13 +198,13 @@ const FuelDailyRecap = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/fuel-reports')} className="px-2 md:px-4"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
-            <div className="relative flex-1 md:flex-none"><CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pl-10 w-full md:w-[200px]" /></div>
+      <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Kembali" title="Kembali" className="h-10 w-10 shrink-0 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
+            <div className="relative flex-1 min-w-[168px] sm:flex-none"><CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-10 w-full pl-10 sm:w-[200px]" /></div>
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-              <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200"><Filter className="mr-2 h-4 w-4 text-slate-400" /><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger>
+              <SelectTrigger className="h-10 flex-1 min-w-[155px] bg-slate-50 border-slate-200 sm:w-[180px] sm:flex-none"><Filter className="mr-2 h-4 w-4 shrink-0 text-slate-400" /><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="semua">Semua Wilayah</SelectItem>
                 {regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -212,12 +212,12 @@ const FuelDailyRecap = () => {
             </Select>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full items-center justify-end gap-2 xl:w-auto">
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
-              <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
+              <SelectTrigger aria-label="Pengaturan tanda tangan" title="Pengaturan tanda tangan" className="h-10 w-10 shrink-0 justify-center rounded-xl border-amber-200 bg-amber-50 p-0 font-medium text-amber-700 sm:w-[180px] sm:px-3">
                 <div className="flex items-center gap-2">
                   <PenTool size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Tanda Tangan" /></span>
+                  <span className="hidden sm:inline"><SelectValue placeholder="Tanda Tangan" /></span>
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -228,8 +228,8 @@ const FuelDailyRecap = () => {
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50">
-                  <Settings2 className="mr-2 h-4 w-4" /> Pilih Kolom
+                <Button variant="outline" aria-label="Pilih kolom" title="Pilih kolom" className="h-10 w-10 shrink-0 rounded-xl border-blue-200 bg-white p-0 text-blue-600 hover:bg-blue-50 sm:w-auto sm:px-3">
+                  <Settings2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Pilih Kolom</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-3" align="end">
@@ -264,9 +264,9 @@ const FuelDailyRecap = () => {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4">
-                  <Printer className="h-4 w-4 md:mr-2" /> 
-                  <span className="hidden md:inline">Cetak Rekap</span>
+                <Button aria-label="Cetak rekap" title="Cetak rekap" className="h-10 min-w-10 shrink-0 rounded-xl bg-blue-600 px-2 hover:bg-blue-700 sm:px-3">
+                  <Printer className="h-4 w-4 sm:mr-2" /> 
+                  <span className="hidden sm:inline">Cetak Rekap</span>
                   <ChevronDown className="ml-1 h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>

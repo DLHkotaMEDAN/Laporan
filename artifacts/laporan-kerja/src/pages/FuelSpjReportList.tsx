@@ -51,19 +51,15 @@ const FuelSpjReportList = () => {
   const [selectedRegion, setSelectedRegion] = useState("semua");
 
   const isAllowed = profile?.role === 'admin' || 
-                    profile?.role === 'admin_bbm' ||
                     profile?.role === 'admin_spj_bbm' || 
                     profile?.role === 'pimpinan' || 
                     (session?.user?.email === 'pimpinan@gmail.com');
 
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isReadOnly = isPimpinan || profile?.role === 'admin_bbm';
   const { regions } = useRegionFilterOptions(Boolean(profile), 'semua');
   const roleLabel = profile?.role === 'admin'
     ? "Administrator"
-    : profile?.role === 'admin_bbm'
-      ? "Admin BBM"
-      : isPimpinan
+    : isPimpinan
       ? "Pimpinan"
       : "Admin SPJ BBM";
 
@@ -90,7 +86,7 @@ const FuelSpjReportList = () => {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (isReadOnly) return;
+    if (isPimpinan) return;
     if (!confirm("Hapus laporan SPJ ini?")) return;
     try {
       await fuelSpjService.deleteReport(id);
@@ -196,7 +192,7 @@ const FuelSpjReportList = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {!isReadOnly && (
+            {!isPimpinan && (
               <Button onClick={() => navigate('/fuel-reports/spj/create')} className="bg-blue-600 font-bold shadow-sm">
                 <Plus className="mr-2 h-4 w-4" /> Input SPJ Baru
               </Button>
@@ -324,7 +320,7 @@ const FuelSpjReportList = () => {
                         <td rowSpan={row.totalEntries} className="px-2 py-3 text-center align-middle">
                           <div className="flex items-center justify-center gap-1">
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/${row.report.id}`); }}><Eye size={13} /></Button>
-                            {!isReadOnly && (
+                            {!isPimpinan && (
                               <>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/edit/${row.report.id}`); }}><Edit size={13} /></Button>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDelete(e, row.report.id)}><Trash2 size={13} /></Button>

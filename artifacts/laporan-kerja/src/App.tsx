@@ -112,6 +112,30 @@ const FuelReportRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const FuelSpjRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  if (!canAccessFuelArea(profile?.role, session.user.email) || profile?.role === USER_ROLES.ADMIN_BBM) {
+    return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => {
+  const { profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (profile?.role === USER_ROLES.ADMIN_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_BBM) {
+    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, profile, loading } = useAuth();
 
@@ -134,16 +158,16 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Index />} />
-            <Route path="/report/:id" element={<ReportDetail />} />
-            <Route path="/monthly-rekap" element={<MonthlyRecap />} />
-            <Route path="/daily-rekap" element={<DailyRecap />} />
-            <Route path="/weekly-rekap" element={<WeeklyRecap />} />
+            <Route path="/report/:id" element={<NonFuelSpecialistRoute><ReportDetail /></NonFuelSpecialistRoute>} />
+            <Route path="/monthly-rekap" element={<NonFuelSpecialistRoute><MonthlyRecap /></NonFuelSpecialistRoute>} />
+            <Route path="/daily-rekap" element={<NonFuelSpecialistRoute><DailyRecap /></NonFuelSpecialistRoute>} />
+            <Route path="/weekly-rekap" element={<NonFuelSpecialistRoute><WeeklyRecap /></NonFuelSpecialistRoute>} />
             
             <Route path="/work-plans" element={<Navigate to="/work-plans/daily-rekap" replace />} />
-            <Route path="/work-plans/print/:id" element={<PrintWorkPlan />} />
-            <Route path="/work-plans/daily-rekap" element={<WorkPlanDailyRecap />} />
-            <Route path="/work-plans/weekly-rekap" element={<WorkPlanWeeklyRecap />} />
-            <Route path="/work-plans/monthly-rekap" element={<WorkPlanMonthlyRecap />} />
+            <Route path="/work-plans/print/:id" element={<NonFuelSpecialistRoute><PrintWorkPlan /></NonFuelSpecialistRoute>} />
+            <Route path="/work-plans/daily-rekap" element={<NonFuelSpecialistRoute><WorkPlanDailyRecap /></NonFuelSpecialistRoute>} />
+            <Route path="/work-plans/weekly-rekap" element={<NonFuelSpecialistRoute><WorkPlanWeeklyRecap /></NonFuelSpecialistRoute>} />
+            <Route path="/work-plans/monthly-rekap" element={<NonFuelSpecialistRoute><WorkPlanMonthlyRecap /></NonFuelSpecialistRoute>} />
             <Route path="/work-plans/create" element={<AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute>} />
             <Route path="/work-plans/edit/:id" element={<AuthorizeRoute resource="work_plans" action="update"><EditWorkPlan /></AuthorizeRoute>} />
             
@@ -156,14 +180,14 @@ const App = () => (
             <Route path="/fuel-reports/monthly-rekap" element={<FuelReportRoute><FuelMonthlyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/yearly-rekap" element={<FuelReportRoute><FuelYearlyRecap /></FuelReportRoute>} />
 
-            <Route path="/fuel-reports/spj" element={<AdminRoute><FuelSpjReportList /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/create" element={<AdminRoute><CreateFuelSpjReport /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/edit/:id" element={<AdminRoute><EditFuelSpjReport /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/:id" element={<AdminRoute><FuelSpjReportDetail /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/daily-rekap" element={<AdminRoute><FuelSpjDailyRecap /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/weekly-rekap" element={<AdminRoute><FuelSpjWeeklyRecap /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/monthly-rekap" element={<AdminRoute><FuelSpjMonthlyRecap /></AdminRoute>} />
-            <Route path="/fuel-reports/spj/yearly-rekap" element={<AdminRoute><FuelSpjYearlyRecap /></AdminRoute>} />
+            <Route path="/fuel-reports/spj" element={<FuelSpjRoute><FuelSpjReportList /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/create" element={<FuelSpjRoute><CreateFuelSpjReport /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/edit/:id" element={<FuelSpjRoute><EditFuelSpjReport /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/:id" element={<FuelSpjRoute><FuelSpjReportDetail /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/daily-rekap" element={<FuelSpjRoute><FuelSpjDailyRecap /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/weekly-rekap" element={<FuelSpjRoute><FuelSpjWeeklyRecap /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/monthly-rekap" element={<FuelSpjRoute><FuelSpjMonthlyRecap /></FuelSpjRoute>} />
+            <Route path="/fuel-reports/spj/yearly-rekap" element={<FuelSpjRoute><FuelSpjYearlyRecap /></FuelSpjRoute>} />
             
             <Route path="/create" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditReport /></ProtectedRoute>} />

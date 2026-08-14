@@ -204,10 +204,10 @@ const FuelMonthlyRecap = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/fuel-reports')} className="px-2 md:px-4"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
+            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[130px] md:w-[150px]"><SelectValue placeholder="Bulan" /></SelectTrigger>
               <SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent>
@@ -225,12 +225,12 @@ const FuelMonthlyRecap = () => {
             </Select>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full items-center justify-end gap-2 xl:w-auto">
             <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
-              <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
+              <SelectTrigger aria-label="Pengaturan tanda tangan" title="Pengaturan tanda tangan" className="h-10 w-10 shrink-0 justify-center rounded-xl border-amber-200 bg-amber-50 p-0 font-medium text-amber-700 sm:w-[180px] sm:px-3">
                 <div className="flex items-center gap-2">
                   <PenTool size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Tanda Tangan" /></span>
+                  <span className="hidden sm:inline"><SelectValue placeholder="Tanda Tangan" /></span>
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -241,8 +241,8 @@ const FuelMonthlyRecap = () => {
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50">
-                  <Settings2 className="mr-2 h-4 w-4" /> Pilih Kolom
+                <Button variant="outline" aria-label="Pilih kolom" title="Pilih kolom" className="h-10 w-10 shrink-0 rounded-xl border-blue-200 bg-white p-0 text-blue-600 hover:bg-blue-50 sm:w-auto sm:px-3">
+                  <Settings2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Pilih Kolom</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-3" align="end">
@@ -276,9 +276,9 @@ const FuelMonthlyRecap = () => {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4">
-                  <Printer className="h-4 w-4 md:mr-2" /> 
-                  <span className="hidden md:inline">Cetak Rekap</span>
+                <Button aria-label="Cetak rekap" title="Cetak rekap" className="h-10 min-w-10 shrink-0 rounded-xl bg-blue-600 px-2 hover:bg-blue-700 sm:px-3">
+                  <Printer className="h-4 w-4 sm:mr-2" /> 
+                  <span className="hidden sm:inline">Cetak Rekap</span>
                   <ChevronDown className="ml-1 h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>

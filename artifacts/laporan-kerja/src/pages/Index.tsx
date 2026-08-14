@@ -136,6 +136,7 @@ const Index = () => {
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
   const isAdminBbm = profile?.role === 'admin_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
+  const isFuelSpecialist = isAdminBbm || isAdminSpj;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja';
@@ -170,8 +171,14 @@ const Index = () => {
   }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, authLoading, navigate]);
 
   useEffect(() => {
-    setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
-  }, [isAdminRencanaKerja]);
+    if (isAdminBbm) {
+      setActiveTab("fuel_reports");
+    } else if (isAdminSpj) {
+      setActiveTab("fuel_spj");
+    } else {
+      setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
+    }
+  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja]);
 
   useEffect(() => {
     if (selectedCategory !== 'semua' && !categories.includes(selectedCategory)) {
@@ -595,13 +602,13 @@ const Index = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
             <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
-              {!isAdminRencanaKerja && <TabsTrigger 
+              {!isAdminRencanaKerja && !isFuelSpecialist && <TabsTrigger
                 value="reports" 
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
                 <FileText size={16} /> Laporan Harian
               </TabsTrigger>}
-              {!isAdminHarian && <TabsTrigger 
+              {!isAdminHarian && !isFuelSpecialist && <TabsTrigger
                 value="workplans" 
                 className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
@@ -614,7 +621,7 @@ const Index = () => {
                       <Fuel size={16} className="mr-2" /> Admin BBM
                     </TabsTrigger>
                   )}
-                  {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && (
+                  {(isAdmin || isPimpinan || isAdminSpj) && (
                     <TabsTrigger value="fuel_spj" className="data-[state=active]:bg-blue-800 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
                       <Table size={16} className="mr-2" /> Laporan SPJ
                     </TabsTrigger>
@@ -775,7 +782,7 @@ const Index = () => {
             </div>
           )}
 
-          {!isAdminRencanaKerja && <TabsContent value="reports" className="mt-0">
+          {!isAdminRencanaKerja && !isFuelSpecialist && <TabsContent value="reports" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
@@ -885,7 +892,7 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {!isAdminHarian && <TabsContent value="workplans" className="mt-0">
+          {!isAdminHarian && !isFuelSpecialist && <TabsContent value="workplans" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />
@@ -999,7 +1006,7 @@ const Index = () => {
                   <FuelReportTab />
                 </TabsContent>
               )}
-              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && (
+              {(isAdmin || isPimpinan || isAdminSpj) && (
                 <TabsContent value="fuel_spj" className="mt-0">
                   <FuelSpjTab />
                 </TabsContent>
