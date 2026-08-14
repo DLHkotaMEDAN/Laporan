@@ -163,8 +163,6 @@ const Index = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (isAdminBbm) { navigate('/fuel-reports'); return; }
-    if (isAdminSpj) { navigate('/fuel-reports/spj'); return; }
     loadData();
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
@@ -609,16 +607,18 @@ const Index = () => {
               >
                 <ClipboardList size={16} /> Rencana Kerja
               </TabsTrigger>}
-              {(isAdmin || isPimpinan) && !isAdminHarian && (
+              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && !isAdminHarian && (
                 <>
-                  {isAdmin && (
+                  {(isAdmin || isAdminBbm) && (
                     <TabsTrigger value="fuel_reports" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
                       <Fuel size={16} className="mr-2" /> Admin BBM
                     </TabsTrigger>
                   )}
-                  <TabsTrigger value="fuel_spj" className="data-[state=active]:bg-blue-800 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
-                    <Table size={16} className="mr-2" /> Laporan SPJ
-                  </TabsTrigger>
+                  {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && (
+                    <TabsTrigger value="fuel_spj" className="data-[state=active]:bg-blue-800 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
+                      <Table size={16} className="mr-2" /> Laporan SPJ
+                    </TabsTrigger>
+                  )}
                 </>
               )}
             </TabsList>
@@ -992,16 +992,18 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {(isAdmin || isPimpinan) && (
+          {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && (
             <>
-              {isAdmin && (
+              {(isAdmin || isAdminBbm) && (
                 <TabsContent value="fuel_reports" className="mt-0">
                   <FuelReportTab />
                 </TabsContent>
               )}
-              <TabsContent value="fuel_spj" className="mt-0">
-                <FuelSpjTab />
-              </TabsContent>
+              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && (
+                <TabsContent value="fuel_spj" className="mt-0">
+                  <FuelSpjTab />
+                </TabsContent>
+              )}
             </>
           )}
         </Tabs>
