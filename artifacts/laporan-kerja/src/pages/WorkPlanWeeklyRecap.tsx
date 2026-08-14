@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
+import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,10 +134,17 @@ const WorkPlanWeeklyRecap = () => {
     }
   };
 
-  const handleSharePdf = () => {
+  const handleSharePdf = async () => {
     if (!printRef.current) return;
-    showSuccess("Pilih 'Simpan sebagai PDF' di dialog cetak, lalu bagikan file PDF tersebut.");
-    window.setTimeout(() => window.print(), 150);
+    const toastId = showLoading("Menyiapkan pratinjau PDF...");
+    try {
+      await openShareablePdfPreview({ fileName: `Rekap_Rencana_Kerja_Mingguan_${format(weekStart, 'yyyy-MM-dd')}.pdf` });
+    } catch (error) {
+      console.error(error);
+      showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
+    } finally {
+      dismissToast(toastId);
+    }
   };
   
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));

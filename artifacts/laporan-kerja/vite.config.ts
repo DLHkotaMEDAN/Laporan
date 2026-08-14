@@ -53,7 +53,7 @@ export default defineConfig({
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
           supabase: ["@supabase/supabase-js"],
-          export: ["exceljs", "jspdf", "html2canvas"],
+          export: ["exceljs", "jspdf"],
           charts: ["recharts"],
         },
       },
@@ -64,6 +64,12 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": {
+        target: process.env.PDF_API_URL ?? "http://127.0.0.1:19762",
+        changeOrigin: true,
+      },
+    },
     fs: {
       strict: true,
     },

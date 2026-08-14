@@ -28,6 +28,7 @@ import DriveUploadDialog from '@/components/DriveUploadDialog';
 import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
+import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import {
   Tooltip,
   TooltipContent,
@@ -183,10 +184,17 @@ const DailyRecap = () => {
     }, 150);
   };
 
-  const handleSharePdf = () => {
+  const handleSharePdf = async () => {
     if (!canPrintDailyRecap() || !printRef.current) return;
-    showSuccess("Pilih 'Simpan sebagai PDF' di dialog cetak, lalu bagikan file PDF tersebut.");
-    window.setTimeout(() => window.print(), 150);
+    const toastId = showLoading("Menyiapkan pratinjau PDF...");
+    try {
+      await openShareablePdfPreview({ fileName: `Rekap_Harian_DLH_${selectedDate}.pdf` });
+    } catch (error) {
+      console.error(error);
+      showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
+    } finally {
+      dismissToast(toastId);
+    }
   };
 
   const handleDriveUpload = async (config: { fileName: string; folderId: string; accessToken: string }) => {
