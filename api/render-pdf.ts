@@ -1,6 +1,3 @@
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
-
 const MAX_DOCUMENT_SIZE = 4 * 1024 * 1024;
 
 type RequestLike = {
@@ -45,11 +42,19 @@ export default async function handler(request: RequestLike, response: ResponseLi
     return;
   }
 
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;
+  let browser: { close: () => Promise<void> } | undefined;
   try {
+    // Load these server-only modules only when this endpoint is requested.
+    // This prevents the whole Vercel Function from failing before it can
+    // return a useful response if Chromium cannot be initialized.
+    const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
+      import("@sparticuz/chromium"),
+      import("puppeteer-core"),
+    ]);
+
     chromium.setGraphicsMode = false;
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
       defaultViewport: { width: 1920, height: 1080, deviceScaleFactor: 1 },
       executablePath: await chromium.executablePath(),
       headless: "shell",
