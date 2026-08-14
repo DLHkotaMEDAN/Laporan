@@ -3,20 +3,32 @@ type PdfPreviewOptions = {
 };
 
 const getSnapshot = () => {
-  const snapshot = document.documentElement.cloneNode(true) as HTMLElement;
+  const printArea = document.querySelector<HTMLElement>(".recap-print-area");
+  if (!printArea) throw new Error("Area rekap untuk PDF tidak ditemukan.");
 
-  snapshot.querySelectorAll("script, iframe, link[rel='modulepreload']").forEach((node) => node.remove());
+  const head = document.head.cloneNode(false) as HTMLHeadElement;
+  document.querySelectorAll<HTMLLinkElement>("link[rel='stylesheet'][href]").forEach((link) => {
+    const copy = link.cloneNode() as HTMLLinkElement;
+    copy.href = new URL(link.getAttribute("href") || "", document.baseURI).href;
+    head.append(copy);
+  });
+  document.querySelectorAll<HTMLStyleElement>("style").forEach((style) => {
+    head.append(style.cloneNode(true));
+  });
+
+  const base = document.createElement("base");
+  base.href = document.baseURI;
+  head.prepend(base);
+
+  const snapshot = printArea.cloneNode(true) as HTMLElement;
+  snapshot.querySelectorAll("script, iframe").forEach((node) => node.remove());
   snapshot.querySelectorAll<HTMLLinkElement>("link[href]").forEach((link) => {
     link.href = new URL(link.getAttribute("href") || "", document.baseURI).href;
   });
 
-  const base = snapshot.ownerDocument?.createElement("base") ?? document.createElement("base");
-  base.href = document.baseURI;
-  snapshot.querySelector("head")?.prepend(base);
-
-  // The server renders this static copy with print media enabled. Keeping the
-  // page's own print stylesheet is what makes it match browser printing.
-  return `<!doctype html>${snapshot.outerHTML}`;
+  // Send only the actual report plus the styles it needs. This keeps the
+  // request safely below mobile and serverless payload limits.
+  return `<!doctype html><html><head>${head.innerHTML}</head><body>${snapshot.outerHTML}</body></html>`;
 };
 
 const showLoadingWindow = () => {
