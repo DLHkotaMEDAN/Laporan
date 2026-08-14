@@ -29,6 +29,7 @@ import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
+import { weeklyPdfFileName } from '@/utils/pdf-file-name';
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import {
@@ -195,7 +196,9 @@ const WeeklyRecap = () => {
     if (!canPrintWeeklyRecap() || !printRef.current) return;
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
-      await openShareablePdfPreview({ fileName: `Rekap_Mingguan_DLH_${format(weekStart, 'yyyy-MM-dd')}.pdf` });
+      await openShareablePdfPreview({
+        fileName: weeklyPdfFileName("Laporan Mingguan", weekStart, weekEnd, regionName),
+      });
     } catch (error) {
       console.error(error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");

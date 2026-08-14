@@ -23,6 +23,7 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
+import { dailyPdfFileName } from '@/utils/pdf-file-name';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,7 +132,9 @@ const WorkPlanDailyRecap = () => {
     if (!printRef.current) return;
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
-      await openShareablePdfPreview({ fileName: `Rekap_Rencana_Kerja_Harian_${selectedDate || 'semua'}.pdf` });
+      await openShareablePdfPreview({
+        fileName: dailyPdfFileName("Rencana Kerja", selectedDate, regionName),
+      });
     } catch (error) {
       console.error(error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");

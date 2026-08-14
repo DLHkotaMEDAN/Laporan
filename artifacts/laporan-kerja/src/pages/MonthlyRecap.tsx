@@ -26,6 +26,7 @@ import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
+import { monthlyPdfFileName } from '@/utils/pdf-file-name';
 import {
   Tooltip,
   TooltipContent,
@@ -167,7 +168,9 @@ const MonthlyRecap = () => {
     if (!canPrintMonthlyRecap() || !printRef.current) return;
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
-      await openShareablePdfPreview({ fileName: `Rekap_Bulanan_DLH_${selectedMonth}_${selectedYear}.pdf` });
+      await openShareablePdfPreview({
+        fileName: monthlyPdfFileName("Laporan Bulanan", Number(selectedMonth), selectedYear, regionName),
+      });
     } catch (error) {
       console.error(error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");

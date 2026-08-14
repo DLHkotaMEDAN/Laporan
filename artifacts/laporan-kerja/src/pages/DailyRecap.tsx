@@ -29,6 +29,7 @@ import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
+import { dailyPdfFileName } from '@/utils/pdf-file-name';
 import {
   Tooltip,
   TooltipContent,
@@ -188,7 +189,9 @@ const DailyRecap = () => {
     if (!canPrintDailyRecap() || !printRef.current) return;
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
-      await openShareablePdfPreview({ fileName: `Rekap_Harian_DLH_${selectedDate}.pdf` });
+      await openShareablePdfPreview({
+        fileName: dailyPdfFileName("Laporan Harian", selectedDate, regionName),
+      });
     } catch (error) {
       console.error(error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
