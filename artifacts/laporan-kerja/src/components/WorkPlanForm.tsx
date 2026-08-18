@@ -687,7 +687,24 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               </div>
             )}
           </div>
-          <DialogFooter><Button variant="ghost" onClick={() => setShowCopyDialog(false)}>Batal</Button><Button onClick={copySelectedActivities} disabled={!selectedSourcePlan || selectedSourceItemIds.length === 0 || filteredSourceItems.length === 0} className="bg-emerald-600 hover:bg-emerald-700"><Copy className="h-4 w-4 mr-2" /> Salin ke Form</Button></DialogFooter>
+          <DialogFooter className="mt-2 gap-3 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCopyDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={copySelectedActivities}
+              disabled={!selectedSourcePlan || selectedSourceItemIds.length === 0 || filteredSourceItems.length === 0}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
+            >
+              <Copy className="mr-2 h-4 w-4" /> Salin ke Form
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Form>
