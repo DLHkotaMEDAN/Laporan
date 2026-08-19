@@ -1,27 +1,50 @@
 import { ArrowRight, Leaf, LockKeyhole, MapPin, ShieldCheck, Sprout } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { getStoredLandingPhotoUrl, type LandingPhotoSlot } from "@/services/landingPhotoService";
 
 const leaders = [
   {
     role: "Wali Kota Medan",
     name: "Rico Tri Putra Bayu Waas",
+    slot: "mayor" as LandingPhotoSlot,
     image: "https://upload.wikimedia.org/wikipedia/commons/9/97/WALIKOTA_MEDAN_-_RICO_WAAS.jpg",
   },
   {
     role: "Wakil Wali Kota Medan",
     name: "H. Zakiyuddin Harahap",
+    slot: "deputyMayor" as LandingPhotoSlot,
     image: "https://dkp3.medan.go.id/storage/pimpinan/QEGV6dunjCjNh3hYJu3TMKDj2YjbHbnk9ptAbxRt.png",
   },
   {
     role: "Kepala Dinas Lingkungan Hidup",
     name: "Melvi Marlabayana, S.T., M.Si",
+    slot: "environmentHead" as LandingPhotoSlot,
     image: "https://portal.medan.go.id/images/eselon/melvi-marlabayana-st-1_1756351561.jpg",
   },
 ];
 
 const PublicLanding = () => {
   const navigate = useNavigate();
+  const [leaderPhotos, setLeaderPhotos] = useState<Record<LandingPhotoSlot, string>>({
+    mayor: leaders[0].image,
+    deputyMayor: leaders[1].image,
+    environmentHead: leaders[2].image,
+  });
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all(leaders.map(async (leader) => ({ slot: leader.slot, url: await getStoredLandingPhotoUrl(leader.slot) }))).then((storedPhotos) => {
+      if (!active) return;
+      setLeaderPhotos((current) => {
+        const next = { ...current };
+        storedPhotos.forEach(({ slot, url }) => { if (url) next[slot] = url; });
+        return next;
+      });
+    });
+    return () => { active = false; };
+  }, []);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f5f8f4] text-slate-800">
@@ -81,7 +104,7 @@ const PublicLanding = () => {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
           <div className="mx-auto mb-8 max-w-2xl text-center sm:mb-10"><p className="font-bold tracking-[0.16em] text-emerald-700 text-[11px] sm:text-xs">PIMPINAN KOTA MEDAN</p><h2 className="mt-3 text-[1.8rem] font-black leading-tight tracking-tight text-slate-800 sm:text-4xl">Bersama mewujudkan Medan yang bersih dan lestari</h2></div>
           <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 [scrollbar-width:thin] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 md:gap-6">
-            {leaders.map((leader) => <article key={leader.role} className="group w-[82vw] shrink-0 snap-center overflow-hidden rounded-3xl border border-slate-100 bg-[#f8fbf8] shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-xl sm:w-auto sm:shrink"><div className="h-72 overflow-hidden bg-gradient-to-b from-emerald-100 to-emerald-50 sm:h-64 md:h-80"><img src={leader.image} alt={`Foto ${leader.name}`} className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105" /></div><div className="min-h-28 p-5 text-center sm:p-4 md:p-6"><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700 md:text-xs md:tracking-[0.14em]">{leader.role}</p><h3 className="mt-2 text-lg font-extrabold leading-snug text-slate-800 md:text-xl">{leader.name}</h3></div></article>)}
+            {leaders.map((leader) => <article key={leader.role} className="group w-[82vw] shrink-0 snap-center overflow-hidden rounded-3xl border border-slate-100 bg-[#f8fbf8] shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-xl sm:w-auto sm:shrink"><div className="h-72 overflow-hidden bg-gradient-to-b from-emerald-100 to-emerald-50 sm:h-64 md:h-80"><img src={leaderPhotos[leader.slot]} alt={`Foto ${leader.name}`} className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105" /></div><div className="min-h-28 p-5 text-center sm:p-4 md:p-6"><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700 md:text-xs md:tracking-[0.14em]">{leader.role}</p><h3 className="mt-2 text-lg font-extrabold leading-snug text-slate-800 md:text-xl">{leader.name}</h3></div></article>)}
           </div>
           <p className="mt-1 text-center text-xs text-slate-400 sm:hidden">Geser untuk melihat pimpinan lainnya</p>
         </div>

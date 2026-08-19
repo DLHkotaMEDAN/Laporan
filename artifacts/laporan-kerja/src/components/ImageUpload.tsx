@@ -57,7 +57,7 @@ const ImageUpload = ({ value, onChange, label, disabled = false }: ImageUploadPr
   };
 
   const handleAreaClick = () => {
-    if (!value && !isProcessing && !disabled) {
+    if (!isProcessing && !disabled) {
       fileInputRef.current?.click();
     }
   };
@@ -89,10 +89,12 @@ const ImageUpload = ({ value, onChange, label, disabled = false }: ImageUploadPr
           <>
             <img src={value} alt={label} className="w-full h-full object-fill" />
             {!disabled && (
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700">Ganti Foto</span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onChange(""); }}
+                  aria-label={`Hapus ${label}`}
                   className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                 >
                   <X size={20} />

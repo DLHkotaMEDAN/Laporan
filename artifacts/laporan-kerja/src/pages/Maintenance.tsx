@@ -30,6 +30,25 @@ import { reportService } from '@/services/reportService';
 import { workPlanService } from '@/services/workPlanService';
 import { format, isSameDay, isSameMonth, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import ImageUpload from '@/components/ImageUpload';
+import {
+  getStoredLandingPhotoUrl,
+  removeLandingPhoto,
+  uploadLandingPhoto,
+  type LandingPhotoSlot,
+} from '@/services/landingPhotoService';
+
+const landingProfiles: { slot: LandingPhotoSlot; label: string; fallback: string }[] = [
+  { slot: 'mayor', label: 'Foto Wali Kota Medan', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/97/WALIKOTA_MEDAN_-_RICO_WAAS.jpg' },
+  { slot: 'deputyMayor', label: 'Foto Wakil Wali Kota Medan', fallback: 'https://dkp3.medan.go.id/storage/pimpinan/QEGV6dunjCjNh3hYJu3TMKDj2YjbHbnk9ptAbxRt.png' },
+  { slot: 'environmentHead', label: 'Foto Kepala DLH Kota Medan', fallback: 'https://portal.medan.go.id/images/eselon/melvi-marlabayana-st-1_1756351561.jpg' },
+];
+
+const defaultLandingPhotos = (): Record<LandingPhotoSlot, string> => ({
+  mayor: landingProfiles[0].fallback,
+  deputyMayor: landingProfiles[1].fallback,
+  environmentHead: landingProfiles[2].fallback,
+});
 
 const Maintenance = () => {
   const navigate = useNavigate();
@@ -57,12 +76,47 @@ const Maintenance = () => {
   
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState("");
+  const [landingPhotoDrafts, setLandingPhotoDrafts] = useState<Record<LandingPhotoSlot, string>>(defaultLandingPhotos);
+  const [landingPhotoSaving, setLandingPhotoSaving] = useState<LandingPhotoSlot | null>(null);
 
   const STORAGE_LIMIT = 1024 * 1024 * 1024; 
   const DB_LIMIT = 500 * 1024 * 1024; 
   const AUTH_LIMIT = 50000;
 
   const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+
+  const loadLandingPhotos = useCallback(async () => {
+    const stored = await Promise.all(landingProfiles.map(async (profile) => ({
+      slot: profile.slot,
+      url: await getStoredLandingPhotoUrl(profile.slot),
+    })));
+    setLandingPhotoDrafts((current) => {
+      const next = { ...current };
+      stored.forEach(({ slot, url }) => { if (url) next[slot] = url; });
+      return next;
+    });
+  }, []);
+
+  const handleSaveLandingPhoto = async (slot: LandingPhotoSlot) => {
+    const currentPhoto = landingPhotoDrafts[slot];
+    const profileInfo = landingProfiles.find((profile) => profile.slot === slot)!;
+    setLandingPhotoSaving(slot);
+    try {
+      if (!currentPhoto) {
+        await removeLandingPhoto(slot);
+        setLandingPhotoDrafts((current) => ({ ...current, [slot]: profileInfo.fallback }));
+        showSuccess(`${profileInfo.label} dikembalikan ke foto cadangan.`);
+      } else if (currentPhoto.startsWith('data:image/')) {
+        const publicUrl = await uploadLandingPhoto(slot, currentPhoto);
+        setLandingPhotoDrafts((current) => ({ ...current, [slot]: publicUrl }));
+        showSuccess(`${profileInfo.label} berhasil diperbarui.`);
+      }
+    } catch (error: any) {
+      showError(`Gagal menyimpan foto: ${error.message || 'izin ditolak'}`);
+    } finally {
+      setLandingPhotoSaving(null);
+    }
+  };
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -196,8 +250,9 @@ const Maintenance = () => {
     } else if (isAdmin) {
       fetchData();
       analyzeSystem();
+      loadLandingPhotos();
     }
-  }, [isAdmin, session, fetchData, analyzeSystem, navigate]);
+  }, [isAdmin, session, fetchData, analyzeSystem, loadLandingPhotos, navigate]);
 
   const handleRestore = async (type: 'REPORT' | 'WORK_PLAN', id: string) => {
     try {
@@ -304,8 +359,9 @@ const Maintenance = () => {
 
         <Tabs defaultValue="storage" className="w-full">
           <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-full lg:grid lg:grid-cols-4 mb-8 h-12 bg-white border shadow-sm p-1 min-w-max">
+            <TabsList className="inline-flex w-full lg:grid lg:grid-cols-5 mb-8 h-12 bg-white border shadow-sm p-1 min-w-max">
               <TabsTrigger value="storage" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex items-center gap-2 px-6"><HardDrive size={16} /> Storage & File</TabsTrigger>
+              <TabsTrigger value="landing" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex items-center gap-2 px-6"><Globe size={16} /> Halaman Depan</TabsTrigger>
               <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex items-center gap-2 px-6"><Users size={16} /> Pengguna</TabsTrigger>
               <TabsTrigger value="history" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex items-center gap-2 px-6"><History size={16} /> Riwayat</TabsTrigger>
               <TabsTrigger value="trash" className="data-[state=active]:bg-red-600 data-[state=active]:text-white flex items-center gap-2 px-6"><Trash2 size={16} /> Tempat Sampah</TabsTrigger>
@@ -377,6 +433,31 @@ const Maintenance = () => {
                     <p className="text-xs text-slate-400">Tidak ditemukan file sampah di sistem.</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="landing">
+            <Card className="border-t-4 border-t-emerald-600 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><Globe className="text-emerald-600" /> Foto Pimpinan Halaman Depan</CardTitle>
+                <p className="text-xs leading-relaxed text-slate-500">Foto di sini tersimpan aman pada Storage internal. Klik foto untuk mengganti, lalu tekan Simpan Perubahan. Menghapus foto dan menyimpan akan memakai foto cadangan.</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 sm:grid-cols-3">
+                  {landingProfiles.map((profileInfo) => {
+                    const isSavingPhoto = landingPhotoSaving === profileInfo.slot;
+                    const canSave = !landingPhotoDrafts[profileInfo.slot].startsWith('http');
+                    return (
+                      <div key={profileInfo.slot} className="space-y-3 rounded-2xl border bg-slate-50 p-3">
+                        <ImageUpload label={profileInfo.label} value={landingPhotoDrafts[profileInfo.slot]} onChange={(value) => setLandingPhotoDrafts((current) => ({ ...current, [profileInfo.slot]: value }))} disabled={isSavingPhoto} />
+                        <Button className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isSavingPhoto || !canSave} onClick={() => handleSaveLandingPhoto(profileInfo.slot)}>
+                          {isSavingPhoto ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : 'Simpan Perubahan'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
