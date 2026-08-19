@@ -1,4 +1,4 @@
-import { ArrowRight, Leaf, LockKeyhole, MapPin, ShieldCheck, Sprout } from "lucide-react";
+import { ArrowRight, LockKeyhole, MapPin, ShieldCheck, Sprout } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -57,8 +57,8 @@ const PublicLanding = () => {
       <header className="absolute inset-x-0 top-0 z-20 border-b border-white/15 bg-[#075737]/90 text-white backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 md:px-8 md:py-3.5">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/30 bg-white/10 text-[#e8d47a] sm:h-10 sm:w-10">
-              <Leaf className="h-5 w-5" />
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-transparent sm:h-12 sm:w-12">
+              <img src="/logo-dlh-kota-medan.jpg" alt="Logo Dinas Lingkungan Hidup Kota Medan" className="h-full w-full scale-[1.06] object-cover" />
             </div>
             <div className="min-w-0 leading-tight">
               <p className="truncate text-[9px] font-bold tracking-[0.12em] text-emerald-100 sm:text-xs sm:tracking-[0.16em]">PEMERINTAH KOTA MEDAN</p>
@@ -100,10 +100,10 @@ const PublicLanding = () => {
       <section className="relative z-10 mx-auto grid max-w-7xl gap-3 px-4 py-5 sm:grid-cols-3 sm:gap-4 sm:px-6 sm:py-7 md:-mt-7 md:px-8 md:py-8">
         {[
           [ShieldCheck, "Sistem Internal", "Data laporan hanya dapat diakses oleh pengguna berwenang."],
-          [Leaf, "Lingkungan Berkelanjutan", "Mendorong layanan dan kerja lapangan yang lebih tertata."],
+          [Sprout, "Lingkungan Berkelanjutan", "Mendorong layanan dan kerja lapangan yang lebih tertata."],
           [MapPin, "Kota Medan", "Dinas Lingkungan Hidup Pemerintah Kota Medan."],
         ].map(([Icon, title, description]) => {
-          const FeatureIcon = Icon as typeof Leaf;
+          const FeatureIcon = Icon as typeof Sprout;
           return <div key={title as string} className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:block sm:min-h-44 sm:p-5 md:flex md:min-h-0"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 sm:mb-4 sm:h-11 sm:w-11 md:mb-0"><FeatureIcon className="h-5 w-5" /></div><div><h2 className="font-extrabold text-slate-800">{title as string}</h2><p className="mt-1 text-sm leading-relaxed text-slate-500">{description as string}</p></div></div>;
         })}
       </section>
