@@ -139,6 +139,8 @@ const WorkPlanMonthlyRecap = () => {
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
+  const showRegionColumn = isAdmin && selectedRegion === 'semua';
+  const getPlanRegionName = (plan: WorkPlan) => regions.find((region) => region.id === plan.region_id)?.name || '-';
 
   const renderPlanRows = (plan: WorkPlan, pIdx: number) => {
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
@@ -146,6 +148,7 @@ const WorkPlanMonthlyRecap = () => {
       return (
         <tr key={plan.id}>
           <td className="border-2 border-black p-1 text-center align-middle font-bold">{pIdx + 1}</td>
+          {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle">{getPlanRegionName(plan)}</td>}
           <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
           <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
@@ -183,6 +186,7 @@ const WorkPlanMonthlyRecap = () => {
           {itemIdx === 0 && toolIdx === 0 && (
             <>
               <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
+              {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
               <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={totalPlanRows}>
                 {format(parseISO(plan.date), 'dd/MM/yy')}
               </td>
@@ -256,6 +260,7 @@ const WorkPlanMonthlyRecap = () => {
   const colGroup = (
     <colgroup>
       <col style={{ width: '25px' }} />
+      {showRegionColumn && <col style={{ width: '90px' }} />}
       <col style={{ width: '55px' }} />
       <col style={{ width: '55px' }} />
       <col style={{ width: '110px' }} />
@@ -385,6 +390,7 @@ const WorkPlanMonthlyRecap = () => {
                 <thead>
                   <tr className="bg-slate-100">
                     <th className="border-2 border-black p-1">No</th>
+                    {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
                     <th className="border-2 border-black p-1">Hari/Tgl</th>
                     <th className="border-2 border-black p-1">Tim/Kec</th>
                     <th className="border-2 border-black p-1">Detail Kegiatan</th>

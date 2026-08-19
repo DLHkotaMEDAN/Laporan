@@ -232,10 +232,13 @@ const WorkPlanWeeklyRecap = () => {
   };
 
   const { rows, noSpans, dateSpans } = getTableSpans();
+  const showRegionColumn = isAdmin && selectedRegion === 'semua';
+  const getPlanRegionName = (plan: WorkPlan) => regions.find((region) => region.id === plan.region_id)?.name || '-';
 
   const colGroup = (
     <colgroup>
       <col style={{ width: '30px' }} />
+      {showRegionColumn && <col style={{ width: '90px' }} />}
       <col style={{ width: '60px' }} />
       <col style={{ width: '60px' }} />
       <col style={{ width: '120px' }} />
@@ -364,6 +367,7 @@ const WorkPlanWeeklyRecap = () => {
                 <thead>
                   <tr className="bg-slate-100">
                     <th className="border-2 border-black p-1">No</th>
+                    {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
                     <th className="border-2 border-black p-1">Hari/Tgl</th>
                     <th className="border-2 border-black p-1">Tim/Kec</th>
                     <th className="border-2 border-black p-1">Detail Kegiatan</th>
@@ -391,6 +395,7 @@ const WorkPlanWeeklyRecap = () => {
                         return (
                           <tr key={`no-act-${idx}`}>
                             {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
+                            {showRegionColumn && <td className="border-2 border-black p-1 text-center align-middle font-bold">{getPlanRegionName(row.plan)}</td>}
                             {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                             <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
                             <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
@@ -406,6 +411,7 @@ const WorkPlanWeeklyRecap = () => {
                       return (
                         <tr key={`row-${idx}`}>
                           {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
+                          {showRegionColumn && isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{getPlanRegionName(plan)}</td>}
                           {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                           {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
                           
