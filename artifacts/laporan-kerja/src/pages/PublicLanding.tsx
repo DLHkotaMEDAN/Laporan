@@ -73,8 +73,10 @@ const PublicLanding = () => {
       </header>
 
       <section className="relative isolate flex min-h-[610px] items-end overflow-hidden bg-[#075737] pt-20 sm:min-h-[590px] sm:pt-24 md:min-h-[620px]">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,57,36,.82)_0%,rgba(3,82,50,.92)_55%,rgba(2,57,36,.98)_100%)] md:bg-[linear-gradient(90deg,rgba(2,57,36,.95)_0%,rgba(4,92,56,.85)_43%,rgba(2,45,30,.28)_100%)]" />
-        <div className="absolute inset-0 scale-[1.28] bg-cover bg-center opacity-50 sm:opacity-60" style={{ backgroundImage: `url('${leaderPhotos.hero}')` }} />
+        <div className="absolute inset-0 scale-[1.42] bg-cover bg-center opacity-50 sm:scale-[1.35] sm:opacity-60 md:scale-[1.28]" style={{ backgroundImage: `url('${leaderPhotos.hero}')` }} />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,57,36,.86)_0%,rgba(3,82,50,.78)_55%,rgba(2,57,36,.94)_100%)] md:bg-[linear-gradient(90deg,rgba(2,57,36,.95)_0%,rgba(4,92,56,.85)_43%,rgba(2,45,30,.42)_100%)]" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#075737] via-[#075737]/90 to-transparent sm:h-24 md:h-14" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#063d2a] via-[#063d2a]/90 to-transparent sm:h-36 md:h-20" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(236,211,105,.25),transparent_30%)]" />
         <div className="relative mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 sm:pb-16 md:pb-24">
           <div className="max-w-3xl">
@@ -85,7 +87,7 @@ const PublicLanding = () => {
             <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-emerald-50 sm:mt-6 sm:text-lg">Portal Sistem Laporan Dinas Lingkungan Hidup Kota Medan. Akses pengelolaan laporan tersedia untuk petugas yang telah terdaftar.</p>
             <div className="mt-7 grid gap-3 sm:mt-8 sm:flex sm:flex-wrap">
               <Button onClick={() => navigate("/login")} className="h-12 w-full rounded-full bg-[#f1d76d] px-6 font-bold text-[#12422f] hover:bg-[#ffe995] sm:w-auto">
-                Masuk ke Sistem <ArrowRight className="ml-2 h-4 w-4" />
+                <span>Masuk ke Sistem</span><ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <a href="https://dlh.medan.go.id/web/" target="_blank" rel="noreferrer" className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/60 px-6 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto">
                 Website DLH Kota Medan
