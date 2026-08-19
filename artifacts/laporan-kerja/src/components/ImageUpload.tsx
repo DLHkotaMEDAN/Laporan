@@ -11,9 +11,10 @@ interface ImageUploadProps {
   label: string;
   disabled?: boolean;
   aspectClassName?: string;
+  compressionSize?: { width: number; height: number };
 }
 
-const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName = "aspect-[2.26/2.95]" }: ImageUploadProps) => {
+const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName = "aspect-[2.26/2.95]", compressionSize = { width: 2.26, height: 2.95 } }: ImageUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +27,7 @@ const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName
     
     reader.onload = async (e) => {
       const originalBase64 = e.target?.result as string;
-      const processedBase64 = await compressImage(originalBase64, 2.26, 2.95, 0.9);
+      const processedBase64 = await compressImage(originalBase64, compressionSize.width, compressionSize.height, 0.9);
       onChange(processedBase64);
       setIsProcessing(false);
     };

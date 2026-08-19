@@ -452,7 +452,7 @@ const Maintenance = () => {
               </CardHeader>
               <CardContent>
                 <div className="mb-6 max-w-2xl rounded-2xl border bg-slate-50 p-3">
-                  <ImageUpload label={landingHeroProfile.label} value={landingPhotoDrafts.hero} onChange={(value) => setLandingPhotoDrafts((current) => ({ ...current, hero: value }))} disabled={landingPhotoSaving === 'hero'} aspectClassName="aspect-[16/7]" />
+                  <ImageUpload label={landingHeroProfile.label} value={landingPhotoDrafts.hero} onChange={(value) => setLandingPhotoDrafts((current) => ({ ...current, hero: value }))} disabled={landingPhotoSaving === 'hero'} aspectClassName="aspect-[16/7]" compressionSize={{ width: 16, height: 7 }} />
                   <Button className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700" disabled={landingPhotoSaving === 'hero' || landingPhotoDrafts.hero.startsWith('http')} onClick={() => handleSaveLandingPhoto('hero')}>
                     {landingPhotoSaving === 'hero' ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : 'Simpan Foto Latar'}
                   </Button>
