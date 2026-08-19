@@ -118,7 +118,9 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
-  const selectedCategoryTitle = selectedCategory === 'semua' ? '' : ` - ${selectedCategory.toUpperCase()}`;
+  const recapTitle = selectedCategory === 'semua'
+    ? 'REKAP RENCANA KERJA HARIAN'
+    : `REKAP RENCANA KERJA HARIAN KATEGORI ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -128,7 +130,7 @@ const WorkPlanDailyRecap = () => {
         : format(parseISO(selectedDate), "dd MMMM yyyy", { locale: localeId });
       await exportWorkPlanExcel({
         plans,
-        title: "Rekap Rencana Kerja Harian",
+        title: recapTitle,
         periodLabel: `Tanggal: ${dateLabel}`,
         fileName: `Rekap_Rencana_Kerja_Harian_${selectedDate || "semua"}.xlsx`,
         includeLogo: logoMode === "with-logo",
@@ -510,8 +512,7 @@ const WorkPlanDailyRecap = () => {
         </div>
 
         <div className="text-center mb-5">
-          <h3 className="text-xl font-bold underline uppercase">REKAP RENCANA KERJA HARIAN {regionName}{selectedCategoryTitle}</h3>
-          {selectedCategory !== "semua" && <p className="text-lg font-bold uppercase">Tim: {selectedCategory}</p>}
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
           <p className="text-lg font-bold">
             Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
           </p>

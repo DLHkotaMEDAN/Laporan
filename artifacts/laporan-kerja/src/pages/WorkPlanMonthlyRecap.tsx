@@ -110,7 +110,9 @@ const WorkPlanMonthlyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
-  const selectedCategoryTitle = selectedCategory === 'semua' ? '' : ` - ${selectedCategory.toUpperCase()}`;
+  const recapTitle = selectedCategory === 'semua'
+    ? 'REKAP RENCANA KERJA BULANAN'
+    : `REKAP RENCANA KERJA BULANAN KATEGORI ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -118,7 +120,7 @@ const WorkPlanMonthlyRecap = () => {
       const monthLabel = months[parseInt(selectedMonth, 10) - 1];
       await exportWorkPlanExcel({
         plans,
-        title: "Rekap Rencana Kerja Bulanan",
+        title: recapTitle,
         periodLabel: `Bulan: ${monthLabel} ${selectedYear}`,
         fileName: `Rekap_Rencana_Kerja_Bulanan_${monthLabel}_${selectedYear}.xlsx`,
         includeLogo: logoMode === "with-logo",
@@ -398,7 +400,7 @@ const WorkPlanMonthlyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA {regionName}{selectedCategoryTitle}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
           <p className="text-lg font-bold">Bulan: {months[parseInt(selectedMonth)-1]} {selectedYear}</p>
         </div>
 

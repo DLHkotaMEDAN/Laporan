@@ -129,7 +129,9 @@ const WorkPlanWeeklyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
-  const selectedCategoryTitle = selectedCategory === 'semua' ? '' : ` - ${selectedCategory.toUpperCase()}`;
+  const recapTitle = selectedCategory === 'semua'
+    ? 'REKAP RENCANA KERJA MINGGUAN'
+    : `REKAP RENCANA KERJA MINGGUAN KATEGORI ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -138,7 +140,7 @@ const WorkPlanWeeklyRecap = () => {
       const endLabel = format(weekEnd, "dd MMMM yyyy", { locale: localeId });
       await exportWorkPlanExcel({
         plans,
-        title: "Rekap Rencana Kerja Mingguan",
+        title: recapTitle,
         periodLabel: `Periode: ${startLabel} s.d. ${endLabel}`,
         fileName: `Rekap_Rencana_Kerja_Mingguan_${format(weekStart, "yyyy-MM-dd")}_sd_${format(weekEnd, "yyyy-MM-dd")}.xlsx`,
         includeLogo: logoMode === "with-logo",
@@ -376,7 +378,7 @@ const WorkPlanWeeklyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA {regionName}{selectedCategoryTitle}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
           <p className="text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>
         </div>
 
