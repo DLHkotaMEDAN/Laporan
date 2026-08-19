@@ -330,9 +330,6 @@ const FuelReportList = () => {
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9 shrink-0">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 ring-1 ring-orange-100">
                   <Fuel className="h-5 w-5 text-orange-600" />
                 </div>

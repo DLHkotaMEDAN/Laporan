@@ -57,6 +57,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import PublicLanding from "./PublicLanding";
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -163,7 +164,7 @@ const Index = () => {
         : "Sistem Laporan";
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !isLoggedIn) return;
     loadData();
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
@@ -391,6 +392,10 @@ const Index = () => {
       plansToday: filteredWorkPlans.filter(p => p.date === today).length
     };
   }, [filteredReports, filteredWorkPlans]);
+
+  if (!authLoading && !isLoggedIn) {
+    return <PublicLanding />;
+  }
 
   if (authLoading) {
     return (

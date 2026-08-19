@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Plus, Calendar, MapPin, Fuel, Trash2, Edit, 
-  Search, FilterX, ArrowLeft, RefreshCw, Printer, ChevronDown,
+  Search, FilterX, RefreshCw, Printer, ChevronDown,
   Table, FileText, Settings2, Eye, LogOut, CalendarDays
 } from 'lucide-react';
 import { fuelSpjService } from '@/services/fuelSpjService';
@@ -140,9 +140,6 @@ const FuelSpjReportList = () => {
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9 shrink-0">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 ring-1 ring-blue-100">
                   <FileText className="h-5 w-5 text-blue-700" />
                 </div>
