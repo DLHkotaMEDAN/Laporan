@@ -68,7 +68,7 @@ const PublicLanding = () => {
 
       <section className="relative isolate flex min-h-[610px] items-end overflow-hidden bg-[#075737] pt-20 sm:min-h-[590px] sm:pt-24 md:min-h-[620px]">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,57,36,.82)_0%,rgba(3,82,50,.92)_55%,rgba(2,57,36,.98)_100%)] md:bg-[linear-gradient(90deg,rgba(2,57,36,.95)_0%,rgba(4,92,56,.85)_43%,rgba(2,45,30,.28)_100%)]" />
-        <div className="absolute inset-0 bg-cover bg-[center_right_35%] opacity-50 sm:bg-center sm:opacity-60" style={{ backgroundImage: "url('https://dlh.medan.go.id/web/resources/img/cover/780X520.jpg')" }} />
+        <div className="absolute inset-0 scale-[1.28] bg-cover bg-center opacity-50 sm:opacity-60" style={{ backgroundImage: "url('https://dlh.medan.go.id/web/resources/img/cover/780X520.jpg')" }} />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(236,211,105,.25),transparent_30%)]" />
         <div className="relative mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 sm:pb-16 md:pb-24">
           <div className="max-w-3xl">
