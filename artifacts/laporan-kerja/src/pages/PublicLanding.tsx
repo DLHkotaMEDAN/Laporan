@@ -25,9 +25,12 @@ const leaders = [
   },
 ];
 
+const HERO_FALLBACK_IMAGE = "https://dlh.medan.go.id/web/resources/img/cover/780X520.jpg";
+
 const PublicLanding = () => {
   const navigate = useNavigate();
   const [leaderPhotos, setLeaderPhotos] = useState<Record<LandingPhotoSlot, string>>({
+    hero: HERO_FALLBACK_IMAGE,
     mayor: leaders[0].image,
     deputyMayor: leaders[1].image,
     environmentHead: leaders[2].image,
@@ -35,7 +38,10 @@ const PublicLanding = () => {
 
   useEffect(() => {
     let active = true;
-    void Promise.all(leaders.map(async (leader) => ({ slot: leader.slot, url: await getStoredLandingPhotoUrl(leader.slot) }))).then((storedPhotos) => {
+    void Promise.all([
+      { slot: "hero" as LandingPhotoSlot, url: getStoredLandingPhotoUrl("hero") },
+      ...leaders.map((leader) => ({ slot: leader.slot, url: getStoredLandingPhotoUrl(leader.slot) })),
+    ].map(async ({ slot, url }) => ({ slot, url: await url }))).then((storedPhotos) => {
       if (!active) return;
       setLeaderPhotos((current) => {
         const next = { ...current };
@@ -68,7 +74,7 @@ const PublicLanding = () => {
 
       <section className="relative isolate flex min-h-[610px] items-end overflow-hidden bg-[#075737] pt-20 sm:min-h-[590px] sm:pt-24 md:min-h-[620px]">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,57,36,.82)_0%,rgba(3,82,50,.92)_55%,rgba(2,57,36,.98)_100%)] md:bg-[linear-gradient(90deg,rgba(2,57,36,.95)_0%,rgba(4,92,56,.85)_43%,rgba(2,45,30,.28)_100%)]" />
-        <div className="absolute inset-0 scale-[1.28] bg-cover bg-center opacity-50 sm:opacity-60" style={{ backgroundImage: "url('https://dlh.medan.go.id/web/resources/img/cover/780X520.jpg')" }} />
+        <div className="absolute inset-0 scale-[1.28] bg-cover bg-center opacity-50 sm:opacity-60" style={{ backgroundImage: `url('${leaderPhotos.hero}')` }} />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(236,211,105,.25),transparent_30%)]" />
         <div className="relative mx-auto w-full max-w-7xl px-5 pb-12 sm:px-8 sm:pb-16 md:pb-24">
           <div className="max-w-3xl">

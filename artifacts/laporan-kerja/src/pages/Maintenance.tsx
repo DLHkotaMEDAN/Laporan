@@ -44,7 +44,14 @@ const landingProfiles: { slot: LandingPhotoSlot; label: string; fallback: string
   { slot: 'environmentHead', label: 'Foto Kepala DLH Kota Medan', fallback: 'https://portal.medan.go.id/images/eselon/melvi-marlabayana-st-1_1756351561.jpg' },
 ];
 
+const landingHeroProfile: { slot: LandingPhotoSlot; label: string; fallback: string } = {
+  slot: 'hero',
+  label: 'Foto Latar Halaman Depan',
+  fallback: 'https://dlh.medan.go.id/web/resources/img/cover/780X520.jpg',
+};
+
 const defaultLandingPhotos = (): Record<LandingPhotoSlot, string> => ({
+  hero: landingHeroProfile.fallback,
   mayor: landingProfiles[0].fallback,
   deputyMayor: landingProfiles[1].fallback,
   environmentHead: landingProfiles[2].fallback,
@@ -86,7 +93,7 @@ const Maintenance = () => {
   const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
 
   const loadLandingPhotos = useCallback(async () => {
-    const stored = await Promise.all(landingProfiles.map(async (profile) => ({
+    const stored = await Promise.all([landingHeroProfile, ...landingProfiles].map(async (profile) => ({
       slot: profile.slot,
       url: await getStoredLandingPhotoUrl(profile.slot),
     })));
@@ -99,7 +106,7 @@ const Maintenance = () => {
 
   const handleSaveLandingPhoto = async (slot: LandingPhotoSlot) => {
     const currentPhoto = landingPhotoDrafts[slot];
-    const profileInfo = landingProfiles.find((profile) => profile.slot === slot)!;
+    const profileInfo = [landingHeroProfile, ...landingProfiles].find((profile) => profile.slot === slot)!;
     setLandingPhotoSaving(slot);
     try {
       if (!currentPhoto) {
@@ -444,6 +451,13 @@ const Maintenance = () => {
                 <p className="text-xs leading-relaxed text-slate-500">Foto di sini tersimpan aman pada Storage internal. Klik foto untuk mengganti, lalu tekan Simpan Perubahan. Menghapus foto dan menyimpan akan memakai foto cadangan.</p>
               </CardHeader>
               <CardContent>
+                <div className="mb-6 max-w-2xl rounded-2xl border bg-slate-50 p-3">
+                  <ImageUpload label={landingHeroProfile.label} value={landingPhotoDrafts.hero} onChange={(value) => setLandingPhotoDrafts((current) => ({ ...current, hero: value }))} disabled={landingPhotoSaving === 'hero'} aspectClassName="aspect-[16/7]" />
+                  <Button className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700" disabled={landingPhotoSaving === 'hero' || landingPhotoDrafts.hero.startsWith('http')} onClick={() => handleSaveLandingPhoto('hero')}>
+                    {landingPhotoSaving === 'hero' ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : 'Simpan Foto Latar'}
+                  </Button>
+                  <p className="mt-2 text-center text-[11px] text-slate-500">Saran: gunakan foto horizontal dengan rasio 16:7 dan tanpa teks agar judul beranda tetap rapi.</p>
+                </div>
                 <div className="grid gap-6 sm:grid-cols-3">
                   {landingProfiles.map((profileInfo) => {
                     const isSavingPhoto = landingPhotoSaving === profileInfo.slot;

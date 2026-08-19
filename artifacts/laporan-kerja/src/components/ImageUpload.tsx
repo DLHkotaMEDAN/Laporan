@@ -10,9 +10,10 @@ interface ImageUploadProps {
   onChange: (base64: string) => void;
   label: string;
   disabled?: boolean;
+  aspectClassName?: string;
 }
 
-const ImageUpload = ({ value, onChange, label, disabled = false }: ImageUploadProps) => {
+const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName = "aspect-[2.26/2.95]" }: ImageUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +72,8 @@ const ImageUpload = ({ value, onChange, label, disabled = false }: ImageUploadPr
         onDrop={onDrop}
         onPaste={onPaste}
         className={cn(
-          "relative group aspect-[2.26/2.95] rounded-xl border-2 border-dashed transition-all flex items-center justify-center overflow-hidden",
+          "relative group rounded-xl border-2 border-dashed transition-all flex items-center justify-center overflow-hidden",
+          aspectClassName,
           !disabled && "cursor-pointer",
           isDragging ? "border-blue-500 bg-blue-50" : "border-slate-200",
           !disabled && !value && "hover:border-blue-400 hover:bg-slate-50",
@@ -111,7 +113,7 @@ const ImageUpload = ({ value, onChange, label, disabled = false }: ImageUploadPr
               <Upload size={20} />
             </div>
             <p className="text-xs font-medium text-slate-600">{disabled ? "Mode Pantau" : "Klik atau Paste"}</p>
-            <p className="text-[10px] text-slate-400 mt-1">Ukuran: 2.26" x 2.95"</p>
+            <p className="text-[10px] text-slate-400 mt-1">Klik, paste, atau tarik gambar ke sini</p>
           </div>
         )}
         <input

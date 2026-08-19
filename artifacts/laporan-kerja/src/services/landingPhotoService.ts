@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-export const landingPhotoSlots = ["mayor", "deputyMayor", "environmentHead"] as const;
+export const landingPhotoSlots = ["hero", "mayor", "deputyMayor", "environmentHead"] as const;
 export type LandingPhotoSlot = typeof landingPhotoSlots[number];
 
 const bucket = "assets";
