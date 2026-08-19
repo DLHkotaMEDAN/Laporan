@@ -57,27 +57,33 @@ const WorkPlanDailyRecap = () => {
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
   const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
-  const selectedCategory = searchParams.get('category') || "semua";
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
-  
+
   const printRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session;
+  const getRegionOrder = (regionId: string | null | undefined) => {
+    const regionIndex = regions.findIndex((region) => region.id === regionId);
+    return regionIndex === -1 ? Number.MAX_SAFE_INTEGER : regionIndex;
+  };
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, selectedCategory, regionId]);
+  }, [selectedDate, selectedCategory, regionId, regions]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
-      
+
+      setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
       let targetDate = selectedDate;
-      
+
       if (!targetDate && data.length > 0) {
         const allDates = data.map(p => p.date);
         targetDate = allDates.reduce((a, b) => (a > b ? a : b));
@@ -92,13 +98,17 @@ const WorkPlanDailyRecap = () => {
         (selectedCategory === "semua" || p.category === selectedCategory) &&
         p.is_visible !== false
       );
-      
+
       filtered.sort((a, b) => {
+        if (isAdmin && selectedRegion === 'semua') {
+          const regionDiff = getRegionOrder(a.region_id) - getRegionOrder(b.region_id);
+          if (regionDiff !== 0) return regionDiff;
+        }
         const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
         if (dateDiff !== 0) return dateDiff;
         return sortByCategory(a.category, b.category);
       });
-      
+
       setPlans(filtered);
     } catch (error) {
       console.error(error);
@@ -108,6 +118,7 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
+  const selectedCategoryTitle = selectedCategory === 'semua' ? '' : ` - ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -147,7 +158,7 @@ const WorkPlanDailyRecap = () => {
       dismissToast(toastId);
     }
   };
-  
+
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
@@ -291,7 +302,9 @@ const WorkPlanDailyRecap = () => {
   const columnWidths = hasRemarks
     ? ['3%', '6.5%', '13.5%', '15%', '13%', '3%', '11.5%', '3.5%', '9.5%', '10.5%', '11%']
     : ['3.5%', '7.5%', '15%', '16.5%', '14.5%', '3.5%', '13%', '4%', '10.5%', '12%'];
-  const displayColumnWidths = showRegionColumn ? ["10%", ...columnWidths] : columnWidths;
+  const displayColumnWidths = showRegionColumn
+    ? [columnWidths[0], "10%", ...columnWidths.slice(1)]
+    : columnWidths;
 
   const colGroup = (
     <colgroup>
@@ -305,10 +318,10 @@ const WorkPlanDailyRecap = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
-              <ArrowLeft className="h-4 w-4 md:mr-2" /> 
+              <ArrowLeft className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Kembali</span>
             </Button>
-            
+
             <div className="flex items-center gap-2">
               {isAdmin && (
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
@@ -321,6 +334,15 @@ const WorkPlanDailyRecap = () => {
                   </SelectContent>
                 </Select>
               )}
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 h-10 text-xs md:text-sm">
+                  <SelectValue placeholder="Pilih Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semua">Semua Kategori</SelectItem>
+                  {availableCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                </SelectContent>
+              </Select>
               <Select value={selectedDate === "semua" ? "semua" : selectedDate === "" ? "" : "custom"} onValueChange={(v) => {
                 if (v === "semua") setSelectedDate("semua");
                 else if (v === "custom") setSelectedDate(new Date().toISOString().split('T')[0]);
@@ -341,7 +363,7 @@ const WorkPlanDailyRecap = () => {
               )}
             </div>
           </div>
-          
+
           <div className="hidden">
             <Select value={logoMode} onValueChange={(v) => setLogoMode(v as LogoMode)}>
               <SelectTrigger className="w-[40px] shrink-0 md:w-[160px] bg-blue-50 border-blue-200 h-10 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
@@ -387,7 +409,7 @@ const WorkPlanDailyRecap = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="bg-white border-slate-200 h-10 px-2 md:px-4">
-                  <Printer className="h-4 w-4 md:mr-2" /> 
+                  <Printer className="h-4 w-4 md:mr-2" />
                   <span className="hidden md:inline">Cetak Rekap</span>
                   <ChevronDown className="ml-1 h-4 w-4 opacity-50" />
                 </Button>
@@ -417,7 +439,7 @@ const WorkPlanDailyRecap = () => {
 
             {isLoggedIn && (
               <Button onClick={() => navigate('/work-plans/create')} variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 md:px-4 h-10">
-                <Plus className="h-4 w-4 md:mr-2" /> 
+                <Plus className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Tambah Baru</span>
               </Button>
             )}
@@ -488,7 +510,7 @@ const WorkPlanDailyRecap = () => {
         </div>
 
         <div className="text-center mb-5">
-          <h3 className="text-xl font-bold underline uppercase">REKAP RENCANA KERJA HARIAN {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">REKAP RENCANA KERJA HARIAN {regionName}{selectedCategoryTitle}</h3>
           {selectedCategory !== "semua" && <p className="text-lg font-bold uppercase">Tim: {selectedCategory}</p>}
           <p className="text-lg font-bold">
             Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
@@ -596,17 +618,17 @@ const WorkPlanDailyRecap = () => {
         .print-area td > div.border-t.border-black { border-top-width: 1.5px !important; }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster { 
-            display: none !important; 
+          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster {
+            display: none !important;
             visibility: hidden !important;
           }
-          .print-area { 
-            box-shadow: none !important; 
-            border: none !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            width: 100% !important; 
-            max-width: none !important; 
+          .print-area {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
             overflow: visible !important;
           }
           @page { size: A3 landscape; margin: 1.5cm; }

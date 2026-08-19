@@ -78,35 +78,48 @@ const WorkPlanWeeklyRecap = () => {
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
   const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const printRef = useRef<HTMLDivElement>(null);
-  
+
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const isLoggedIn = !!session;
+  const getRegionOrder = (regionId: string | null | undefined) => {
+    const regionIndex = regions.findIndex((region) => region.id === regionId);
+    return regionIndex === -1 ? Number.MAX_SAFE_INTEGER : regionIndex;
+  };
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, regionId]);
+  }, [selectedDate, selectedCategory, regionId, regions]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
+      setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
       const filtered = data.filter(p => {
         const pDate = parseISO(p.date);
-        return isWithinInterval(pDate, { start: weekStart, end: weekEnd }) && p.is_visible !== false;
+        return isWithinInterval(pDate, { start: weekStart, end: weekEnd }) &&
+          (selectedCategory === 'semua' || p.category === selectedCategory) &&
+          p.is_visible !== false;
       });
-      
+
       filtered.sort((a, b) => {
+        if (isAdmin && selectedRegion === 'semua') {
+          const regionDiff = getRegionOrder(a.region_id) - getRegionOrder(b.region_id);
+          if (regionDiff !== 0) return regionDiff;
+        }
         const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (dateDiff !== 0) return dateDiff;
         return sortByCategory(a.category, b.category);
       });
-      
+
       setPlans(filtered);
     } catch (error) {
       console.error(error);
@@ -116,6 +129,7 @@ const WorkPlanWeeklyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
+  const selectedCategoryTitle = selectedCategory === 'semua' ? '' : ` - ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -154,7 +168,7 @@ const WorkPlanWeeklyRecap = () => {
       dismissToast(toastId);
     }
   };
-  
+
   const categoriesInPlans = Array.from(new Set(plans.map(p => p.category)));
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
@@ -164,7 +178,7 @@ const WorkPlanWeeklyRecap = () => {
     const dateSpans: number[] = [];
     let currentNo = 0;
     let lastDate = "";
-    
+
     const rows: WeeklyTableRow[] = [];
     plans.forEach((plan) => {
       const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
@@ -270,6 +284,13 @@ const WorkPlanWeeklyRecap = () => {
                 </SelectContent>
               </Select>
             )}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 h-10 text-xs md:text-sm"><SelectValue placeholder="Pilih Kategori" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="semua">Semua Kategori</SelectItem>
+                {availableCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <div className="relative">
               <CalendarIcon className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 h-3 w-3 md:h-4 md:w-4 text-slate-400" />
               <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pl-7 md:pl-10 w-[130px] md:w-[180px] h-10 text-xs md:text-sm" />
@@ -306,7 +327,7 @@ const WorkPlanWeeklyRecap = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="bg-white border-slate-200 h-10 px-2 md:px-4">
-                  <Printer className="h-4 w-4 md:mr-2" /> 
+                  <Printer className="h-4 w-4 md:mr-2" />
                   <span className="hidden md:inline">Cetak Rekap</span>
                   <ChevronDown className="ml-1 h-4 w-4 opacity-50" />
                 </Button>
@@ -355,7 +376,7 @@ const WorkPlanWeeklyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">RENCANA KERJA {regionName}{selectedCategoryTitle}</h3>
           <p className="text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>
         </div>
 
@@ -390,7 +411,7 @@ const WorkPlanWeeklyRecap = () => {
                         currentNo++;
                         lastDate = row.date;
                       }
-                      
+
                       if (row.type === "noActivity") {
                         return (
                           <tr key={`no-act-${idx}`}>
@@ -414,7 +435,7 @@ const WorkPlanWeeklyRecap = () => {
                           {showRegionColumn && isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{getPlanRegionName(plan)}</td>}
                           {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                           {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
-                          
+
                           {row.descriptionSpanRows > 0 && (
                             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={row.descriptionSpanRows}>{item.description}</td>
                           )}
@@ -519,17 +540,17 @@ const WorkPlanWeeklyRecap = () => {
         .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster { 
-            display: none !important; 
+          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster {
+            display: none !important;
             visibility: hidden !important;
           }
-          .print-area { 
-            box-shadow: none !important; 
-            border: none !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            width: 100% !important; 
-            max-width: none !important; 
+          .print-area {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
             overflow: visible !important;
           }
           @page { size: A3 landscape; margin: 1.5cm; }
