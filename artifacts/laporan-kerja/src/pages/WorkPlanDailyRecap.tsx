@@ -20,6 +20,7 @@ import {
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
@@ -50,7 +51,11 @@ const WorkPlanDailyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { session, profile } = useAuth();
-  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
+  const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
+  const { regions } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
+  const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -64,12 +69,12 @@ const WorkPlanDailyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, selectedCategory]);
+  }, [selectedDate, selectedCategory, regionId]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await workPlanService.getAllWorkPlans();
+      const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
       
       let targetDate = selectedDate;
       
@@ -300,6 +305,17 @@ const WorkPlanDailyRecap = () => {
             </Button>
             
             <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                  <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 h-10 text-xs md:text-sm">
+                    <SelectValue placeholder="Pilih Wilayah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="semua">Semua Wilayah</SelectItem>
+                    {regions.map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={selectedDate === "semua" ? "semua" : selectedDate === "" ? "" : "custom"} onValueChange={(v) => {
                 if (v === "semua") setSelectedDate("semua");
                 else if (v === "custom") setSelectedDate(new Date().toISOString().split('T')[0]);
@@ -382,13 +398,13 @@ const WorkPlanDailyRecap = () => {
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
-                <DropdownMenuItem onClick={() => navigate('/work-plans/daily-rekap')} className="cursor-pointer py-2">
+                  <DropdownMenuItem onClick={() => navigate(`/work-plans/daily-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="cursor-pointer py-2">
                   <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/work-plans/weekly-rekap')} className="cursor-pointer py-2">
+                  <DropdownMenuItem onClick={() => navigate(`/work-plans/weekly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Mingguan
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/work-plans/monthly-rekap')} className="cursor-pointer py-2">
+                  <DropdownMenuItem onClick={() => navigate(`/work-plans/monthly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="cursor-pointer py-2">
                   <FileText className="mr-2 h-4 w-4 text-orange-600" /> Rekap Bulanan
                 </DropdownMenuItem>
               </DropdownMenuContent>

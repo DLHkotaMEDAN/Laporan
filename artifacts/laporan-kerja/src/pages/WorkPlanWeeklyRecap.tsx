@@ -20,6 +20,7 @@ import {
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
@@ -71,7 +72,11 @@ const WorkPlanWeeklyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { session, profile } = useAuth();
-  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
+  const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
+  const { regions } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
+  const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
@@ -85,12 +90,12 @@ const WorkPlanWeeklyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate]);
+  }, [selectedDate, regionId]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await workPlanService.getAllWorkPlans();
+      const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
       const filtered = data.filter(p => {
         const pDate = parseISO(p.date);
         return isWithinInterval(pDate, { start: weekStart, end: weekEnd }) && p.is_visible !== false;
@@ -253,6 +258,15 @@ const WorkPlanWeeklyRecap = () => {
             <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
               <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Kembali</span>
             </Button>
+            {isAdmin && (
+              <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 h-10 text-xs md:text-sm"><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semua">Semua Wilayah</SelectItem>
+                  {regions.map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <div className="relative">
               <CalendarIcon className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 h-3 w-3 md:h-4 md:w-4 text-slate-400" />
               <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pl-7 md:pl-10 w-[130px] md:w-[180px] h-10 text-xs md:text-sm" />
@@ -305,13 +319,13 @@ const WorkPlanWeeklyRecap = () => {
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
-                <DropdownMenuItem onClick={() => navigate('/work-plans/daily-rekap')} className="cursor-pointer py-2">
+                <DropdownMenuItem onClick={() => navigate(`/work-plans/daily-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="cursor-pointer py-2">
                   <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/work-plans/weekly-rekap')} className="cursor-pointer py-2">
+                <DropdownMenuItem onClick={() => navigate(`/work-plans/weekly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Mingguan
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/work-plans/monthly-rekap')} className="cursor-pointer py-2">
+                <DropdownMenuItem onClick={() => navigate(`/work-plans/monthly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="cursor-pointer py-2">
                   <FileText className="mr-2 h-4 w-4 text-orange-600" /> Rekap Bulanan
                 </DropdownMenuItem>
               </DropdownMenuContent>

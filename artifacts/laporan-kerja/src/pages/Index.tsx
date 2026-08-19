@@ -663,13 +663,13 @@ const Index = () => {
                   )}
                   {activeTab === 'workplans' && (
                     <>
-                      <DropdownMenuItem onClick={() => navigate('/work-plans/daily-rekap')} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate(`/work-plans/daily-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
                         <Printer className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Rencana
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/work-plans/weekly-rekap')} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate(`/work-plans/weekly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
                         <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Rencana
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/work-plans/monthly-rekap')} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate(`/work-plans/monthly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
                         <FileText className="mr-3 h-4 w-4 text-purple-600" /> Rekap Bulanan Rencana
                       </DropdownMenuItem>
                     </>
