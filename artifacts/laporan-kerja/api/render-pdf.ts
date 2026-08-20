@@ -43,13 +43,14 @@ export default {
       const page = await browser.newPage();
       await page.setJavaScriptEnabled(false);
       await page.setContent(documentHtml, { waitUntil: "load", timeout: 40_000 });
+      await page.emulateMediaType("print");
       await page.addStyleTag({ content: `
         @media print {
           table thead { display: table-header-group !important; }
           table tr { break-inside: avoid; page-break-inside: avoid; }
         }
       ` });
-      await page.emulateMediaType("print");
+      await page.evaluate("document.querySelectorAll('table thead').forEach((header) => header.style.setProperty('display', 'table-header-group', 'important'))");
 
       const pdf = await page.pdf({
         format: "A3",
