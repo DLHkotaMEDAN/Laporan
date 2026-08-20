@@ -112,7 +112,7 @@ const WorkPlanMonthlyRecap = () => {
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const recapTitle = selectedCategory === 'semua'
     ? 'REKAP RENCANA KERJA BULANAN'
-    : `REKAP RENCANA KERJA BULANAN KATEGORI ${selectedCategory.toUpperCase()}`;
+    : `REKAP RENCANA KERJA BULANAN ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -432,7 +432,7 @@ const WorkPlanMonthlyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0 border-t-0">
+                <table className="continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
                   {colGroup}
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
@@ -482,12 +482,6 @@ const WorkPlanMonthlyRecap = () => {
       <style dangerouslySetInnerHTML={{ __html: `
         .split-table-before-footer {
           border-bottom-width: 0 !important;
-        }
-        .continuation-table {
-          border-top-width: 0 !important;
-        }
-        .continuation-table tbody tr:first-child > td {
-          border-top-width: 0 !important;
         }
         .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
         @media print {

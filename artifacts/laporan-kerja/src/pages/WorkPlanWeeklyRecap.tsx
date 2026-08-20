@@ -131,7 +131,7 @@ const WorkPlanWeeklyRecap = () => {
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const recapTitle = selectedCategory === 'semua'
     ? 'REKAP RENCANA KERJA MINGGUAN'
-    : `REKAP RENCANA KERJA MINGGUAN KATEGORI ${selectedCategory.toUpperCase()}`;
+    : `REKAP RENCANA KERJA MINGGUAN ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");

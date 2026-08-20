@@ -120,7 +120,7 @@ const WorkPlanDailyRecap = () => {
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const recapTitle = selectedCategory === 'semua'
     ? 'REKAP RENCANA KERJA HARIAN'
-    : `REKAP RENCANA KERJA HARIAN KATEGORI ${selectedCategory.toUpperCase()}`;
+    : `REKAP RENCANA KERJA HARIAN ${selectedCategory.toUpperCase()}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -545,7 +545,7 @@ const WorkPlanDailyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="work-plan-table continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0 border-t-0">
+                <table className="work-plan-table continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
                   {colGroup}
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
@@ -609,12 +609,6 @@ const WorkPlanDailyRecap = () => {
         }
         .work-plan-table.split-table-before-footer {
           border-bottom-width: 0 !important;
-        }
-        .work-plan-table.continuation-table {
-          border-top-width: 0 !important;
-        }
-        .work-plan-table.continuation-table tbody tr:first-child > td {
-          border-top-width: 0 !important;
         }
         .print-area td > div.border-t.border-black { border-top-width: 1.5px !important; }
         @media print {
