@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { chromium } from "playwright";
+import { existsSync } from "node:fs";
 
 const router = Router();
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;
+const LOCAL_CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
 const safeFileName = (value: unknown) => {
   const name = typeof value === "string" ? value : "rekap";
@@ -25,8 +27,14 @@ router.post("/render-pdf", async (req, res) => {
 
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
-    browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ javaScriptEnabled: false });
+    browser = await chromium.launch({
+      headless: true,
+      ...(existsSync(LOCAL_CHROME_PATH) ? { executablePath: LOCAL_CHROME_PATH } : {}),
+      args: ["--disable-gpu", "--disable-software-rasterizer", "--no-sandbox"],
+    });
+    // Snapshot sudah membuang tag skrip. JavaScript tetap diaktifkan di konteks
+    // ini karena Playwright memerlukannya untuk menerapkan style cetak.
+    const context = await browser.newContext();
     const page = await context.newPage();
     await page.setContent(documentHtml, { waitUntil: "networkidle", timeout: 45_000 });
     await page.emulateMedia({ media: "print" });
