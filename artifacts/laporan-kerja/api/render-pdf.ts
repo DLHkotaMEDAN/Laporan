@@ -46,11 +46,12 @@ export default {
       await page.emulateMediaType("print");
       await page.addStyleTag({ content: `
         @media print {
-          table thead { display: table-header-group !important; }
+          table:not(.continuation-table) thead { display: table-header-group !important; }
+          table.continuation-table thead { display: none !important; }
           table tr { break-inside: avoid; page-break-inside: avoid; }
         }
       ` });
-      await page.evaluate("document.querySelectorAll('table thead').forEach((header) => header.style.setProperty('display', 'table-header-group', 'important'))");
+      await page.evaluate("document.querySelectorAll('table:not(.continuation-table) thead').forEach((header) => header.style.setProperty('display', 'table-header-group', 'important'))");
 
       const pdf = await page.pdf({
         format: "A3",
