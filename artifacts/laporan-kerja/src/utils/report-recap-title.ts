@@ -15,7 +15,20 @@ const joinLabels = (labels: string[]) => {
   return `${labels.slice(0, -1).join(", ")} DAN ${labels[labels.length - 1]}`;
 };
 
-export const getReportRecapTitle = (period: RecapPeriod, categories: string[]) => {
-  const labels = Array.from(new Set(categories.map((category) => categoryLabels[category]).filter(Boolean)));
-  return `LAPORAN ${period.toUpperCase()} ${joinLabels(labels)}`;
+export const getRecapCategoryLabel = (categories: string[]) => {
+  const labels = Array.from(
+    new Set(
+      categories
+        .map((category) => categoryLabels[category] || category.toUpperCase())
+        .filter(Boolean),
+    ),
+  );
+  return joinLabels(labels);
+};
+
+export const getReportRecapTitle = (
+  period: RecapPeriod,
+  categories: string[],
+) => {
+  return `LAPORAN ${period.toUpperCase()} ${getRecapCategoryLabel(categories)}`;
 };

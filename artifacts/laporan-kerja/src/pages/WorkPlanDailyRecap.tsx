@@ -26,6 +26,7 @@ import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { dailyPdfFileName } from '@/utils/pdf-file-name';
+import { getRecapCategoryLabel } from '@/utils/report-recap-title';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,9 +131,7 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
-  const recapTitle = selectedCategory === 'semua'
-    ? 'REKAP RENCANA KERJA HARIAN'
-    : `REKAP RENCANA KERJA HARIAN ${selectedCategory.toUpperCase()}`;
+  const recapTitle = `REKAP RENCANA KERJA HARIAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
