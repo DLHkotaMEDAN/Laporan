@@ -222,6 +222,9 @@ const WorkPlanDailyRecap = () => {
       ? displayItems.map(() => 1)
       : teamSpans;
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
+    // Gabungkan keterangan yang sama pada item berurutan agar tabel lebih ringkas.
+    // Nilai kosong memakai label yang sama dengan tampilan tabel ("-").
+    const remarksSpans = getSequentialSpans(displayItems, (item) => item.remarks?.trim() || "-");
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
@@ -237,6 +240,7 @@ const WorkPlanDailyRecap = () => {
       const descriptionSpan = descriptionSpans[itemIdx];
       const toolSpan = toolSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
+      const remarksSpan = remarksSpans[itemIdx];
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => (
@@ -304,8 +308,8 @@ const WorkPlanDailyRecap = () => {
           {basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
-          {hasRemarks && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
+          {hasRemarks && remarksSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, remarksSpan)}>{item.remarks || "-"}</td>
           )}
         </tr>
       ));
