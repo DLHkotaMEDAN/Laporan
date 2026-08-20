@@ -64,9 +64,20 @@ const WorkPlanDailyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const updateViewport = () => setIsCompactViewport(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener('change', updateViewport);
+    return () => mediaQuery.removeEventListener('change', updateViewport);
+  }, []);
+
   const getRegionOrder = (regionId: string | null | undefined) => {
     const regionIndex = regions.findIndex((region) => region.id === regionId);
     return regionIndex === -1 ? Number.MAX_SAFE_INTEGER : regionIndex;
@@ -458,32 +469,46 @@ const WorkPlanDailyRecap = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-64">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-48">
-                <DropdownMenuItem onClick={() => setLogoMode('with-logo')} className="cursor-pointer">Dengan Logo</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLogoMode('without-logo')} className="cursor-pointer">Tanpa Logo</DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-52">
-                <DropdownMenuItem onClick={() => setSignatureMode('with-signature')} className="cursor-pointer">Ada Tanda Tangan</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSignatureMode('without-signature')} className="cursor-pointer">Tanpa Tanda Tangan</DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            {isLoggedIn && plans.length > 0 && (
+            {isCompactViewport ? <>
+              <DropdownMenuItem onClick={() => setLogoMode(logoMode === 'with-logo' ? 'without-logo' : 'with-logo')} className="cursor-pointer py-2">
+                <Image className="mr-2 h-4 w-4 shrink-0 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSignatureMode(signatureMode === 'with-signature' ? 'without-signature' : 'with-signature')} className="cursor-pointer py-2">
+                <PenTool className="mr-2 h-4 w-4 shrink-0 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}
+              </DropdownMenuItem>
+              {isLoggedIn && plans.length > 0 && plans.map((plan) => (
+                <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer py-2 whitespace-normal">
+                  <Edit className="mr-2 h-4 w-4 shrink-0 text-blue-600" /> Edit: {plan.category} - {plan.items[0]?.description || "Rencana Kerja"}
+                </DropdownMenuItem>
+              ))}
+            </> : <>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-80">
-                  {plans.map((plan) => (
-                    <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer">
-                      {plan.category} - {plan.items[0]?.description || "Rencana Kerja"}
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuSubTrigger><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-48">
+                  <DropdownMenuItem onClick={() => setLogoMode('with-logo')} className="cursor-pointer">Dengan Logo</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLogoMode('without-logo')} className="cursor-pointer">Tanpa Logo</DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-            )}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-52">
+                  <DropdownMenuItem onClick={() => setSignatureMode('with-signature')} className="cursor-pointer">Ada Tanda Tangan</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSignatureMode('without-signature')} className="cursor-pointer">Tanpa Tanda Tangan</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {isLoggedIn && plans.length > 0 && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-80">
+                    {plans.map((plan) => (
+                      <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer">
+                        {plan.category} - {plan.items[0]?.description || "Rencana Kerja"}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+            </>}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => window.print()} className="cursor-pointer py-2"><Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini</DropdownMenuItem>
             <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2"><Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Simpan PDF untuk Dibagikan</DropdownMenuItem>
