@@ -15,6 +15,13 @@ export const getWorkPlanBasisKey = (basis?: string) => (
   normalizeText(basis).replace(/\s+/g, " ").toLocaleLowerCase("id-ID")
 );
 
+// Keterangan hanya boleh digabung jika masih merujuk ke detail kegiatan dan
+// isi keterangan yang sama. Wilayah serta kategori sudah menjadi konteks plan.
+export const getWorkPlanRemarkKey = (item: WorkPlanItem) => JSON.stringify({
+  description: normalizeText(item.description),
+  remarks: normalizeText(item.remarks) || "-",
+});
+
 const getUniqueTools = (tools: WorkPlanItem["tools"]) => {
   const seen = new Set<string>();
 

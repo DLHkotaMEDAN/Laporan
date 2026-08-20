@@ -17,6 +17,7 @@ import {
   getSequentialSpans,
   getUniqueWorkPlanItems,
   getWorkPlanBasisKey,
+  getWorkPlanRemarkKey,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
@@ -184,7 +185,7 @@ const WorkPlanDailyRecap = () => {
       return (
         <tr key={plan.id}>
           <td className="border-2 border-black p-1 text-center">{pIdx + 1}</td>
-          {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold">{getPlanRegionName(plan)}</td>}
+          {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold whitespace-normal break-words">{getPlanRegionName(plan)}</td>}
           <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
@@ -222,9 +223,9 @@ const WorkPlanDailyRecap = () => {
       ? displayItems.map(() => 1)
       : teamSpans;
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
-    // Gabungkan keterangan yang sama pada item berurutan agar tabel lebih ringkas.
-    // Nilai kosong memakai label yang sama dengan tampilan tabel ("-").
-    const remarksSpans = getSequentialSpans(displayItems, (item) => item.remarks?.trim() || "-");
+    // Satukan keterangan hanya untuk detail kegiatan yang sama dalam plan
+    // (wilayah dan kategori merupakan konteks plan yang sama).
+    const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
@@ -248,7 +249,7 @@ const WorkPlanDailyRecap = () => {
           {itemIdx === 0 && toolIdx === 0 && (
             <>
               <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
-              {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
+              {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
               <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>
             </>
           )}
@@ -319,8 +320,10 @@ const WorkPlanDailyRecap = () => {
   const columnWidths = hasRemarks
     ? ['3%', '6.5%', '13.5%', '15%', '13%', '3%', '11.5%', '3.5%', '9.5%', '10.5%', '11%']
     : ['3.5%', '7.5%', '15%', '16.5%', '14.5%', '3.5%', '13%', '4%', '10.5%', '12%'];
-  const displayColumnWidths = showRegionColumn
-    ? [columnWidths[0], "10%", ...columnWidths.slice(1)]
+  const displayColumnWidths = showRegionColumn && hasRemarks
+    ? [columnWidths[0], "6%", ...columnWidths.slice(1, -1), "15%"]
+    : showRegionColumn
+    ? [columnWidths[0], "6%", ...columnWidths.slice(1)]
     : columnWidths;
 
   const colGroup = (

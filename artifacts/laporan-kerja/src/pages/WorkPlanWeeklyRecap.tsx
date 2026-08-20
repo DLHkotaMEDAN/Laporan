@@ -17,6 +17,7 @@ import {
   getSequentialSpans,
   getUniqueWorkPlanItems,
   getWorkPlanBasisKey,
+  getWorkPlanRemarkKey,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
@@ -65,6 +66,8 @@ type WeeklyTableRow =
       showBasis: boolean;
       basisRows: number;
       descriptionSpanRows: number;
+      showRemarks: boolean;
+      remarkRows: number;
       alignTreeTools: boolean;
     };
 
@@ -192,6 +195,7 @@ const WorkPlanWeeklyRecap = () => {
         const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
         const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
         const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
+        const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
 
         displayItems.forEach((item, itemIndex) => {
           const isTreeLayout = plan.category === "Tim Pohon";
@@ -207,6 +211,7 @@ const WorkPlanWeeklyRecap = () => {
             const toolSpan = toolSpans[itemIndex];
             const teamSpan = teamSpans[itemIndex];
             const basisSpan = basisSpans[itemIndex];
+            const remarksSpan = remarksSpans[itemIndex];
 
             rows.push({
               plan,
@@ -224,6 +229,8 @@ const WorkPlanWeeklyRecap = () => {
               showBasis: toolIndex === 0 && basisSpan > 0,
               basisRows: basisSpan > 0 ? (isTreeLayout ? basisSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + basisSpan))) : 0,
               descriptionSpanRows: toolIndex === 0 && descriptionSpan > 0 ? (isTreeLayout ? descriptionSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + descriptionSpan))) : 0,
+              showRemarks: toolIndex === 0 && remarksSpan > 0,
+              remarkRows: remarksSpan > 0 ? (isTreeLayout ? remarksSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + remarksSpan))) : 0,
               alignTreeTools,
             });
           });
@@ -254,7 +261,7 @@ const WorkPlanWeeklyRecap = () => {
   const colGroup = (
     <colgroup>
       <col style={{ width: '30px' }} />
-      {showRegionColumn && <col style={{ width: '90px' }} />}
+      {showRegionColumn && <col style={{ width: '60px' }} />}
       <col style={{ width: '60px' }} />
       <col style={{ width: '60px' }} />
       <col style={{ width: '120px' }} />
@@ -265,7 +272,7 @@ const WorkPlanWeeklyRecap = () => {
       <col style={{ width: '40px' }} />
       <col style={{ width: '80px' }} />
       <col style={{ width: '100px' }} />
-      {hasRemarks && <col style={{ width: '100px' }} />}
+      {hasRemarks && <col style={{ width: '130px' }} />}
     </colgroup>
   );
 
@@ -418,7 +425,7 @@ const WorkPlanWeeklyRecap = () => {
                         return (
                           <tr key={`no-act-${idx}`}>
                             {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
-                            {showRegionColumn && <td className="border-2 border-black p-1 text-center align-middle font-bold">{getPlanRegionName(row.plan)}</td>}
+                            {showRegionColumn && <td className="border-2 border-black p-1 text-center align-middle font-bold whitespace-normal break-words">{getPlanRegionName(row.plan)}</td>}
                             {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                             <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
                             <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
@@ -434,7 +441,7 @@ const WorkPlanWeeklyRecap = () => {
                       return (
                         <tr key={`row-${idx}`}>
                           {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
-                          {showRegionColumn && isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{getPlanRegionName(plan)}</td>}
+                          {showRegionColumn && isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={planRows.length}>{getPlanRegionName(plan)}</td>}
                           {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                           {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
 
@@ -491,7 +498,7 @@ const WorkPlanWeeklyRecap = () => {
                           {row.showBasis && (
                             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.basisRows}>{item.basis}</td>
                           )}
-                          {toolIndex === 0 && hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.itemToolsLength}>{item.remarks || "-"}</td>}
+                          {hasRemarks && row.showRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.remarkRows}>{item.remarks || "-"}</td>}
                         </tr>
                       );
                     });

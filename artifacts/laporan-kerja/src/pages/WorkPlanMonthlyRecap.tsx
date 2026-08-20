@@ -16,6 +16,7 @@ import {
   getSequentialSpans,
   getUniqueWorkPlanItems,
   getWorkPlanBasisKey,
+  getWorkPlanRemarkKey,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
@@ -163,7 +164,7 @@ const WorkPlanMonthlyRecap = () => {
       return (
         <tr key={plan.id}>
           <td className="border-2 border-black p-1 text-center align-middle font-bold">{pIdx + 1}</td>
-          {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle">{getPlanRegionName(plan)}</td>}
+          {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words">{getPlanRegionName(plan)}</td>}
           <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
           <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
@@ -179,6 +180,7 @@ const WorkPlanMonthlyRecap = () => {
     const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
     const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
+    const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
@@ -195,13 +197,14 @@ const WorkPlanMonthlyRecap = () => {
       const toolSpan = toolSpans[itemIdx];
       const teamSpan = teamSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
+      const remarksSpan = remarksSpans[itemIdx];
 
       return toolsToRender.map((tool, toolIdx) => (
         <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
           {itemIdx === 0 && toolIdx === 0 && (
             <>
               <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
-              {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
+              {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
               <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={totalPlanRows}>
                 {format(parseISO(plan.date), 'dd/MM/yy')}
               </td>
@@ -264,8 +267,8 @@ const WorkPlanMonthlyRecap = () => {
           {basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
-          {hasRemarks && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.remarks || "-"}</td>
+          {hasRemarks && remarksSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, remarksSpan)}>{item.remarks || "-"}</td>
           )}
         </tr>
       ));
@@ -275,7 +278,7 @@ const WorkPlanMonthlyRecap = () => {
   const colGroup = (
     <colgroup>
       <col style={{ width: '25px' }} />
-      {showRegionColumn && <col style={{ width: '90px' }} />}
+      {showRegionColumn && <col style={{ width: '60px' }} />}
       <col style={{ width: '55px' }} />
       <col style={{ width: '55px' }} />
       <col style={{ width: '110px' }} />
@@ -286,7 +289,7 @@ const WorkPlanMonthlyRecap = () => {
       <col style={{ width: '35px' }} />
       <col style={{ width: '75px' }} />
       <col style={{ width: '90px' }} />
-      {hasRemarks && <col style={{ width: '90px' }} />}
+      {hasRemarks && <col style={{ width: '120px' }} />}
     </colgroup>
   );
 
