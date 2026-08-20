@@ -25,6 +25,11 @@ const getSnapshot = () => {
 
   const snapshot = printArea.cloneNode(true) as HTMLElement;
   snapshot.querySelectorAll("script, iframe").forEach((node) => node.remove());
+  // Rekap rencana kerja memisahkan kelompok terakhir ke tabel lanjutan agar
+  // blok tanda tangan tetap rapi. Header tabel itu hanya penanda layar/cetak,
+  // bukan header halaman baru. Hapus dari salinan PDF supaya mesin Chromium
+  // tidak menampilkannya kembali di tengah rekap.
+  snapshot.querySelectorAll("table.continuation-table thead").forEach((node) => node.remove());
   snapshot.querySelectorAll<HTMLLinkElement>("link[href]").forEach((link) => {
     link.href = new URL(link.getAttribute("href") || "", document.baseURI).href;
   });
