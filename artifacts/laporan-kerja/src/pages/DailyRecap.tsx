@@ -779,7 +779,7 @@ const DailyRecap = () => {
                           <p>Diketahui :</p>
                           <p className="font-bold">Kepala Koordinator Pemeliharaan Taman</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p>
                         </div>
-                        <div><SignatoryText position="kepala_koordinator_taman" regionId={profile?.region_id} fallbackName={coordinatorSignature.name} fallbackNip={coordinatorSignature.nip} /></div>
+                        <div><SignatoryText position="kepala_koordinator_taman" regionId={profile?.region_id} categories={selectedCategories} fallbackName={coordinatorSignature.name} fallbackNip={coordinatorSignature.nip} /></div>
                       </div>
                     </div>
                   </div>

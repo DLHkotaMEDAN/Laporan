@@ -4,16 +4,14 @@ create table if not exists public.signatory_settings (
   position text not null check (position in ('kabid_tata_lingkungan', 'ketua_tim_pemeliharaan_lingkungan', 'pengawas_taman_penghijauan', 'kepala_koordinator_taman', 'kepala_koordinator_pohon')),
   name text not null,
   nip text not null default '',
-  region_id uuid references public.regions(id) on delete cascade,
+  all_regions boolean not null default false,
+  region_ids uuid[] not null default '{}',
+  categories text[] not null default '{}',
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists signatory_settings_global_position_unique
-  on public.signatory_settings(position) where region_id is null and is_active;
-create unique index if not exists signatory_settings_regional_position_unique
-  on public.signatory_settings(position, region_id) where region_id is not null and is_active;
 
 alter table public.signatory_settings enable row level security;
 create policy "signed in users can read signatories" on public.signatory_settings for select to authenticated using (true);

@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
+import { WorkPlanColumnPicker } from '@/components/WorkPlanColumnPicker';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { monthlyPdfFileName } from '@/utils/pdf-file-name';
@@ -51,6 +52,12 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SignatureMode = "with-signature" | "without-signature";
 type LogoMode = "with-logo" | "without-logo";
 
+const workPlanColumnLabels = {
+  date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi",
+  tools: "Alat Operasional", unit: "Unit", usage: "Kegunaan", personnel: "Personel",
+  coordinator: "Koordinator", basis: "Dasar Pengerjaan", remarks: "Keterangan",
+};
+
 const WorkPlanMonthlyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -68,6 +75,7 @@ const WorkPlanMonthlyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, tools: true, unit: true, usage: true, personnel: true, coordinator: true, basis: true, remarks: true });
   const printRef = useRef<HTMLDivElement>(null);
 
   const isLoggedIn = !!session;
@@ -112,6 +120,7 @@ const WorkPlanMonthlyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
+  const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
   const recapTitle = `REKAP RENCANA KERJA BULANAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
 
   const handleExportExcel = async () => {
@@ -278,17 +287,17 @@ const WorkPlanMonthlyRecap = () => {
     <colgroup>
       <col style={{ width: '25px' }} />
       {showRegionColumn && <col style={{ width: '60px' }} />}
-      <col style={{ width: '55px' }} />
-      <col style={{ width: '55px' }} />
-      <col style={{ width: '110px' }} />
-      <col style={{ width: '120px' }} />
-      <col style={{ width: '110px' }} />
-      <col style={{ width: '25px' }} />
-      <col style={{ width: '90px' }} />
-      <col style={{ width: '35px' }} />
-      <col style={{ width: '75px' }} />
-      <col style={{ width: '90px' }} />
-      {hasRemarks && <col style={{ width: '120px' }} />}
+      <col style={{ width: '55px', display: visibleColumns.date ? undefined : 'none' }} />
+      <col style={{ width: '55px', display: visibleColumns.category ? undefined : 'none' }} />
+      <col style={{ width: '110px', display: visibleColumns.description ? undefined : 'none' }} />
+      <col style={{ width: '120px', display: visibleColumns.location ? undefined : 'none' }} />
+      <col style={{ width: '110px', display: visibleColumns.tools ? undefined : 'none' }} />
+      <col style={{ width: '25px', display: visibleColumns.unit ? undefined : 'none' }} />
+      <col style={{ width: '90px', display: visibleColumns.usage ? undefined : 'none' }} />
+      <col style={{ width: '35px', display: visibleColumns.personnel ? undefined : 'none' }} />
+      <col style={{ width: '75px', display: visibleColumns.coordinator ? undefined : 'none' }} />
+      <col style={{ width: '90px', display: visibleColumns.basis ? undefined : 'none' }} />
+      {hasRemarks && <col style={{ width: '120px', display: visibleColumns.remarks ? undefined : 'none' }} />}
     </colgroup>
   );
 
@@ -316,6 +325,7 @@ const WorkPlanMonthlyRecap = () => {
                 {availableCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
               </SelectContent>
             </Select>
+            <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} onToggle={toggleColumn} />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[110px] md:w-[150px] h-10 text-xs md:text-sm"><SelectValue placeholder="Bulan" /></SelectTrigger>
               <SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent>

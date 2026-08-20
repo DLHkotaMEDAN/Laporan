@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
+import { WorkPlanColumnPicker } from '@/components/WorkPlanColumnPicker';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { dailyPdfFileName } from '@/utils/pdf-file-name';
@@ -50,6 +51,12 @@ const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 type SignatureMode = "with-signature" | "without-signature";
 type LogoMode = "with-logo" | "without-logo";
 
+const workPlanColumnLabels = {
+  category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", tools: "Alat Operasional",
+  unit: "Unit", usage: "Kegunaan", personnel: "Personel", coordinator: "Koordinator",
+  basis: "Dasar Pengerjaan", remarks: "Keterangan",
+};
+
 const WorkPlanDailyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -67,6 +74,10 @@ const WorkPlanDailyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const [visibleColumns, setVisibleColumns] = useState({
+    category: true, description: true, location: true, tools: true, unit: true, usage: true,
+    personnel: true, coordinator: true, basis: true, remarks: true,
+  });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -132,6 +143,7 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
+  const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
   const recapTitle = `REKAP RENCANA KERJA HARIAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
 
   const handleExportExcel = async () => {
@@ -328,7 +340,10 @@ const WorkPlanDailyRecap = () => {
 
   const colGroup = (
     <colgroup>
-      {displayColumnWidths.map((width, index) => <col key={index} style={{ width }} />)}
+      {displayColumnWidths.map((width, index) => {
+        const column = (['no', ...(showRegionColumn ? ['region'] : []), 'category', 'description', 'location', 'tools', 'unit', 'usage', 'personnel', 'coordinator', 'basis', ...(hasRemarks ? ['remarks'] : [])] as const)[index];
+        return <col key={index} style={{ width, display: column in visibleColumns && !visibleColumns[column as keyof typeof visibleColumns] ? 'none' : undefined }} />;
+      })}
     </colgroup>
   );
 
@@ -363,6 +378,7 @@ const WorkPlanDailyRecap = () => {
                   {availableCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} onToggle={toggleColumn} />
               <Select value={selectedDate === "semua" ? "semua" : selectedDate === "" ? "" : "custom"} onValueChange={(v) => {
                 if (v === "semua") setSelectedDate("semua");
                 else if (v === "custom") setSelectedDate(new Date().toISOString().split('T')[0]);
@@ -615,12 +631,12 @@ const WorkPlanDailyRecap = () => {
                           {showTiurmaida && showArdiansyah && (<><p className="font-bold">Koordinator Taman & Tim Pohon</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></>)}
                         </div>
                         <div>
-                          {showTiurmaida && !showArdiansyah && (<SignatoryText position="kepala_koordinator_taman" regionId={regionId} fallbackName="Tiurmaida Silitonga" fallbackNip="NIP. 19690507 200701 2 042" />)}
-                          {showArdiansyah && !showTiurmaida && (<SignatoryText position="kepala_koordinator_pohon" regionId={regionId} fallbackName="Ardiansyah Siregar" fallbackNip="NIP. 19860404 201001 1 015" />)}
+                          {showTiurmaida && !showArdiansyah && (<SignatoryText position="kepala_koordinator_taman" regionId={regionId} categories={categoriesInPlans} fallbackName="Tiurmaida Silitonga" fallbackNip="NIP. 19690507 200701 2 042" />)}
+                          {showArdiansyah && !showTiurmaida && (<SignatoryText position="kepala_koordinator_pohon" regionId={regionId} categories={categoriesInPlans} fallbackName="Ardiansyah Siregar" fallbackNip="NIP. 19860404 201001 1 015" />)}
                           {showTiurmaida && showArdiansyah && (
                             <div className="flex justify-around gap-2">
-                              <div><SignatoryText position="kepala_koordinator_taman" regionId={regionId} fallbackName="Tiurmaida Silitonga" fallbackNip="NIP. 19690507 200701 2 042" nipClassName="text-[9px]" /></div>
-                              <div><SignatoryText position="kepala_koordinator_pohon" regionId={regionId} fallbackName="Ardiansyah Siregar" fallbackNip="NIP. 19860404 201001 1 015" nipClassName="text-[9px]" /></div>
+                              <div><SignatoryText position="kepala_koordinator_taman" regionId={regionId} categories={categoriesInPlans} fallbackName="Tiurmaida Silitonga" fallbackNip="NIP. 19690507 200701 2 042" nipClassName="text-[9px]" /></div>
+                              <div><SignatoryText position="kepala_koordinator_pohon" regionId={regionId} categories={categoriesInPlans} fallbackName="Ardiansyah Siregar" fallbackNip="NIP. 19860404 201001 1 015" nipClassName="text-[9px]" /></div>
                             </div>
                           )}
                         </div>

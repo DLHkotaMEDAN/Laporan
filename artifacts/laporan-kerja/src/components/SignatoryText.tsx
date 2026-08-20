@@ -4,24 +4,25 @@ import { findSignatory, signatoryService, type SignatoryPosition } from '@/servi
 type Props = {
   position: SignatoryPosition;
   regionId?: string | null;
+  categories?: string[];
   fallbackName?: string;
   fallbackNip?: string;
   nipClassName?: string;
 };
 
-export default function SignatoryText({ position, regionId, fallbackName = '____________________________', fallbackNip = '____________________________', nipClassName }: Props) {
+export default function SignatoryText({ position, regionId, categories = [], fallbackName = '____________________________', fallbackNip = '____________________________', nipClassName }: Props) {
   const [value, setValue] = useState({ name: fallbackName, nip: fallbackNip });
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      const saved = findSignatory(await signatoryService.getAll(), position, regionId);
+      const saved = findSignatory(await signatoryService.getAll(), position, regionId, categories);
       if (mounted && saved) setValue({ name: saved.name, nip: saved.nip || '____________________________' });
     };
     void load();
     window.addEventListener('signatories-updated', load);
     return () => { mounted = false; window.removeEventListener('signatories-updated', load); };
-  }, [position, regionId]);
+  }, [position, regionId, categories.join('|')]);
 
   return <><p className="font-bold underline">{value.name}</p><p className={nipClassName}>{value.nip}</p></>;
 }
