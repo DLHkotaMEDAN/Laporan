@@ -457,17 +457,17 @@ const WorkPlanDailyRecap = () => {
               <ChevronDown className="ml-2 h-4 w-4 opacity-70" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-64">
             <DropdownMenuSub>
               <DropdownMenuSubTrigger><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-48">
+              <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-48">
                 <DropdownMenuItem onClick={() => setLogoMode('with-logo')} className="cursor-pointer">Dengan Logo</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLogoMode('without-logo')} className="cursor-pointer">Tanpa Logo</DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-52">
+              <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-52">
                 <DropdownMenuItem onClick={() => setSignatureMode('with-signature')} className="cursor-pointer">Ada Tanda Tangan</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSignatureMode('without-signature')} className="cursor-pointer">Tanpa Tanda Tangan</DropdownMenuItem>
               </DropdownMenuSubContent>
@@ -475,7 +475,7 @@ const WorkPlanDailyRecap = () => {
             {isLoggedIn && plans.length > 0 && (
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="max-h-72 w-80 overflow-y-auto">
+                <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-80">
                   {plans.map((plan) => (
                     <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer">
                       {plan.category} - {plan.items[0]?.description || "Rencana Kerja"}
