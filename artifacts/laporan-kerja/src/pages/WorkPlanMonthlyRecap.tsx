@@ -436,6 +436,23 @@ const WorkPlanMonthlyRecap = () => {
               <div className="keep-together">
                 <table className="continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
                   {colGroup}
+                  <thead className="hidden print:table-header-group">
+                    <tr className="bg-slate-100">
+                      <th className="border-2 border-black p-1">No</th>
+                      {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
+                      <th className="border-2 border-black p-1">Hari/Tgl</th>
+                      <th className="border-2 border-black p-1">Tim/Kec</th>
+                      <th className="border-2 border-black p-1">Detail Kegiatan</th>
+                      <th className="border-2 border-black p-1">Lokasi</th>
+                      <th className="border-2 border-black p-1">Alat Operasional</th>
+                      <th className="border-2 border-black p-1">Unit</th>
+                      <th className="border-2 border-black p-1">Kegunaan</th>
+                      <th className="border-2 border-black p-1">Pers</th>
+                      <th className="border-2 border-black p-1">Koordinator</th>
+                      <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
+                      {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
+                    </tr>
+                  </thead>
                   <tbody>
                     {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
                   </tbody>
