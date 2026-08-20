@@ -142,7 +142,10 @@ const WorkPlanWeeklyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
-  const recapTitle = `REKAP RENCANA KERJA MINGGUAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
+  const usesRegionalAllCategoryTitle = !isAdmin && selectedCategory === 'semua';
+  const recapTitle = usesRegionalAllCategoryTitle
+    ? `RENCANA KERJA MINGGUAN ${regionName}`
+    : `REKAP RENCANA KERJA MINGGUAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -394,7 +397,7 @@ const WorkPlanWeeklyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle}{usesRegionalAllCategoryTitle ? '' : ` ${regionName}`}</h3>
           <p className="text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>
         </div>
 

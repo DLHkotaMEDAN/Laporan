@@ -121,7 +121,10 @@ const WorkPlanMonthlyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
-  const recapTitle = `REKAP RENCANA KERJA BULANAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
+  const usesRegionalAllCategoryTitle = !isAdmin && selectedCategory === 'semua';
+  const recapTitle = usesRegionalAllCategoryTitle
+    ? `RENCANA KERJA BULANAN ${regionName}`
+    : `REKAP RENCANA KERJA BULANAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -412,7 +415,7 @@ const WorkPlanMonthlyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle}{usesRegionalAllCategoryTitle ? '' : ` ${regionName}`}</h3>
           <p className="text-lg font-bold">Bulan: {months[parseInt(selectedMonth)-1]} {selectedYear}</p>
         </div>
 
@@ -532,6 +535,7 @@ const WorkPlanMonthlyRecap = () => {
           .overflow-x-auto { overflow: visible !important; }
           table { width: 100% !important; }
           table thead { display: table-header-group !important; }
+          table.continuation-table thead { display: none !important; }
           table tr { break-inside: avoid; page-break-inside: avoid; }
           .keep-together { page-break-inside: avoid; break-inside: avoid; }
           ::-webkit-scrollbar { display: none; }

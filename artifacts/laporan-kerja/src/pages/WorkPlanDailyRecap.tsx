@@ -144,7 +144,10 @@ const WorkPlanDailyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
-  const recapTitle = `REKAP RENCANA KERJA HARIAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
+  const usesRegionalAllCategoryTitle = !isAdmin && selectedCategory === 'semua';
+  const recapTitle = usesRegionalAllCategoryTitle
+    ? `RENCANA KERJA HARIAN ${regionName}`
+    : `REKAP RENCANA KERJA HARIAN ${getRecapCategoryLabel(plans.map((plan) => plan.category))}`;
 
   const handleExportExcel = async () => {
     const toastId = showLoading("Menyiapkan rekap Excel...");
@@ -560,7 +563,7 @@ const WorkPlanDailyRecap = () => {
         </div>
 
         <div className="text-center mb-5">
-          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle}{usesRegionalAllCategoryTitle ? '' : ` ${regionName}`}</h3>
           <p className="text-lg font-bold">
             Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
           </p>
@@ -694,6 +697,9 @@ const WorkPlanDailyRecap = () => {
           .overflow-x-auto { overflow: visible !important; }
           table { width: 100% !important; }
           table thead { display: table-header-group !important; }
+          /* Tabel lanjutan hanya memuat kelompok kegiatan terakhir; jangan
+             tampilkan ulang judul kolom di tengah rekap. */
+          table.continuation-table thead { display: none !important; }
           table tr { break-inside: avoid; page-break-inside: avoid; }
           .keep-together { page-break-inside: avoid; break-inside: avoid; }
           ::-webkit-scrollbar { display: none; }
