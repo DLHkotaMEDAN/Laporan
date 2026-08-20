@@ -43,6 +43,12 @@ export default {
       const page = await browser.newPage();
       await page.setJavaScriptEnabled(false);
       await page.setContent(documentHtml, { waitUntil: "load", timeout: 40_000 });
+      await page.addStyleTag({ content: `
+        @media print {
+          table thead { display: table-header-group !important; }
+          table tr { break-inside: avoid; page-break-inside: avoid; }
+        }
+      ` });
       await page.emulateMediaType("print");
 
       const pdf = await page.pdf({

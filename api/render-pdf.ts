@@ -62,6 +62,14 @@ export default async function handler(request: RequestLike, response: ResponseLi
     const page = await browser.newPage();
     await page.setJavaScriptEnabled(false);
     await page.setContent(documentHtml, { waitUntil: "load", timeout: 40_000 });
+    // Enforce repeated column headers in Chromium. Some captured recap styles
+    // can otherwise cause <thead> to be treated like a regular table row.
+    await page.addStyleTag({ content: `
+      @media print {
+        table thead { display: table-header-group !important; }
+        table tr { break-inside: avoid; page-break-inside: avoid; }
+      }
+    ` });
     await page.emulateMediaType("print");
 
     const pdf = await page.pdf({

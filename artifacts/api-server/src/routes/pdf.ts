@@ -29,6 +29,12 @@ router.post("/render-pdf", async (req, res) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
     const page = await context.newPage();
     await page.setContent(documentHtml, { waitUntil: "networkidle", timeout: 45_000 });
+    await page.addStyleTag({ content: `
+      @media print {
+        table thead { display: table-header-group !important; }
+        table tr { break-inside: avoid; page-break-inside: avoid; }
+      }
+    ` });
     await page.emulateMedia({ media: "print" });
 
     const pdf = await page.pdf({
