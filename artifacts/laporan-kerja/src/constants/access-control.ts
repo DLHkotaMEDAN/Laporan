@@ -1,6 +1,7 @@
 export const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
+  LAPORAN: 'laporan',
   ADMIN_HARIAN: 'admin_harian',
   ADMIN_LAPORAN_MINGGUAN: 'admin_laporan_mingguan',
   ADMIN_LAPORAN_BULANAN: 'admin_laporan_bulanan',
@@ -24,6 +25,7 @@ export const USER_ROLE_VALUES = Object.values(USER_ROLES) as readonly UserRole[]
 export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN, label: 'Super Admin / Administrator' },
   { value: USER_ROLES.ADMIN_WILAYAH, label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
+  { value: USER_ROLES.LAPORAN, label: 'Laporan (Hanya Laporan Harian)' },
   { value: USER_ROLES.ADMIN_HARIAN, label: 'Admin Laporan Harian' },
   { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN, label: 'Admin Laporan Mingguan' },
   { value: USER_ROLES.ADMIN_LAPORAN_BULANAN, label: 'Admin Laporan Bulanan' },
@@ -50,6 +52,7 @@ export type RecapPeriod = 'daily' | 'weekly' | 'monthly';
 
 const REGION_REQUIRED_ROLES = [
   USER_ROLES.ADMIN_WILAYAH,
+  USER_ROLES.LAPORAN,
   USER_ROLES.ADMIN_HARIAN,
   USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
@@ -102,6 +105,7 @@ export const isAdminHarianAccess = (role: string | null | undefined, email?: str
 export const canManageReportEntries = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email)
   || role === USER_ROLES.ADMIN_WILAYAH
+  || role === USER_ROLES.LAPORAN
   || isAdminHarianAccess(role, email)
   || role === USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA
   || role === USER_ROLES.USER;
@@ -145,6 +149,8 @@ export const getRoleBadgeClass = (role: string | null | undefined) => {
       return 'text-amber-600 border-amber-200 bg-amber-50';
     case USER_ROLES.ADMIN_HARIAN:
       return 'text-purple-600 border-purple-200 bg-purple-50';
+    case USER_ROLES.LAPORAN:
+      return 'text-sky-700 border-sky-200 bg-sky-50';
     case USER_ROLES.ADMIN_LAPORAN_MINGGUAN:
       return 'text-indigo-600 border-indigo-200 bg-indigo-50';
     case USER_ROLES.ADMIN_LAPORAN_BULANAN:

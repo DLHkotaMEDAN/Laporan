@@ -137,6 +137,16 @@ const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => 
   return <>{children}</>;
 };
 
+const WorkPlanAccessRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+  if (profile?.role === USER_ROLES.LAPORAN) return <Navigate to="/" replace />;
+
+  return <NonFuelSpecialistRoute>{children}</NonFuelSpecialistRoute>;
+};
+
 const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, profile, loading } = useAuth();
 
@@ -166,12 +176,12 @@ const App = () => (
             <Route path="/weekly-rekap" element={<NonFuelSpecialistRoute><WeeklyRecap /></NonFuelSpecialistRoute>} />
             
             <Route path="/work-plans" element={<Navigate to="/work-plans/daily-rekap" replace />} />
-            <Route path="/work-plans/print/:id" element={<NonFuelSpecialistRoute><PrintWorkPlan /></NonFuelSpecialistRoute>} />
-            <Route path="/work-plans/daily-rekap" element={<NonFuelSpecialistRoute><WorkPlanDailyRecap /></NonFuelSpecialistRoute>} />
-            <Route path="/work-plans/weekly-rekap" element={<NonFuelSpecialistRoute><WorkPlanWeeklyRecap /></NonFuelSpecialistRoute>} />
-            <Route path="/work-plans/monthly-rekap" element={<NonFuelSpecialistRoute><WorkPlanMonthlyRecap /></NonFuelSpecialistRoute>} />
-            <Route path="/work-plans/create" element={<AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute>} />
-            <Route path="/work-plans/edit/:id" element={<AuthorizeRoute resource="work_plans" action="update"><EditWorkPlan /></AuthorizeRoute>} />
+            <Route path="/work-plans/print/:id" element={<WorkPlanAccessRoute><PrintWorkPlan /></WorkPlanAccessRoute>} />
+            <Route path="/work-plans/daily-rekap" element={<WorkPlanAccessRoute><WorkPlanDailyRecap /></WorkPlanAccessRoute>} />
+            <Route path="/work-plans/weekly-rekap" element={<WorkPlanAccessRoute><WorkPlanWeeklyRecap /></WorkPlanAccessRoute>} />
+            <Route path="/work-plans/monthly-rekap" element={<WorkPlanAccessRoute><WorkPlanMonthlyRecap /></WorkPlanAccessRoute>} />
+            <Route path="/work-plans/create" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />
+            <Route path="/work-plans/edit/:id" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="update"><EditWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />
             
             <Route path="/fuel-reports" element={<FuelReportRoute><FuelReportList /></FuelReportRoute>} />
             <Route path="/fuel-reports/create" element={<FuelReportRoute><CreateFuelReport /></FuelReportRoute>} />

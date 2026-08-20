@@ -89,6 +89,14 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
   ],
 
+  // Petugas Laporan – hanya mengelola laporan harian dalam wilayah yang ditetapkan.
+  [USER_ROLES.LAPORAN]: [
+    { resource: 'reports', action: 'create' },
+    { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+  ],
+
   // Admin Spesialis BBM – only fuel reports and fuel prices
   [USER_ROLES.ADMIN_BBM]: [
     { resource: 'fuel_reports', action: 'create' },

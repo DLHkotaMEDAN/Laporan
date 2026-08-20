@@ -32,6 +32,7 @@ type ListUserEmailsInput = {
 const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
+  LAPORAN: 'laporan',
   ADMIN_HARIAN: 'admin_harian',
   ADMIN_LAPORAN_MINGGUAN: 'admin_laporan_mingguan',
   ADMIN_LAPORAN_BULANAN: 'admin_laporan_bulanan',
@@ -51,6 +52,7 @@ const USER_ROLES = {
 const validRoles = new Set(Object.values(USER_ROLES));
 const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_WILAYAH,
+  USER_ROLES.LAPORAN,
   USER_ROLES.ADMIN_HARIAN,
   USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,

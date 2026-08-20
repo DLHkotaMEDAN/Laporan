@@ -142,6 +142,7 @@ const Index = () => {
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja';
   const isAdminWilayah = profile?.role === 'admin_wilayah';
+  const isLaporanOnly = profile?.role === 'laporan';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
   const canManageWorkPlans = isLoggedIn && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
@@ -157,6 +158,8 @@ const Index = () => {
   );
   const loginScopeLabel = isPimpinan
     ? "Pimpinan"
+    : isLaporanOnly
+      ? "Petugas Laporan"
     : isAdminHarian
       ? "Admin Harian"
       : isUserRestricted
@@ -428,7 +431,7 @@ const Index = () => {
               <div className="flex items-center gap-3">
                 <div className="hidden sm:flex flex-col items-end">
                   <p className="text-[11px] font-black text-slate-900 leading-none uppercase">
-                    {isPimpinan ? 'Pimpinan' : isAdminHarian ? 'Admin Harian' : isAdmin ? 'Administrator' : 'User Lapangan'}
+                    {isPimpinan ? 'Pimpinan' : isLaporanOnly ? 'Petugas Laporan' : isAdminHarian ? 'Admin Harian' : isAdmin ? 'Administrator' : 'User Lapangan'}
                   </p>
                   <p className="text-[9px] font-bold text-emerald-700 mt-1">
                     {isPimpinan || isAdminHarian ? 'Semua Wilayah' : (profile?.category || 'Umum')}
@@ -613,7 +616,7 @@ const Index = () => {
               >
                 <FileText size={16} /> Laporan Harian
               </TabsTrigger>}
-              {!isAdminHarian && !isFuelSpecialist && <TabsTrigger
+              {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && <TabsTrigger
                 value="workplans" 
                 className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
@@ -897,7 +900,7 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {!isAdminHarian && !isFuelSpecialist && <TabsContent value="workplans" className="mt-0">
+          {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && <TabsContent value="workplans" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />
