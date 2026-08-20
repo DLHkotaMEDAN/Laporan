@@ -51,13 +51,7 @@ export const signatoryService = {
       : supabase.from('signatory_settings').insert(payload).select('id, position, name, nip, all_regions, region_ids, categories, is_active').single();
     const { data, error } = await query;
     if (error || !data) {
-      const cached = readCache();
-      const saved: Signatory = { ...payload, id: signatory.id || crypto.randomUUID() };
-      const next = signatory.id ? cached.map((item) => item.id === signatory.id ? saved : item) : [...cached, saved];
-      writeCache(next);
-      window.dispatchEvent(new Event('signatories-updated'));
-      if (error) throw new Error('Tabel pengaturan penandatangan belum tersedia. Jalankan SQL migrasi terlebih dahulu.');
-      return saved;
+      throw new Error(error?.message || 'Data penandatangan gagal disimpan.');
     }
     const saved = data as Signatory;
     const cached = readCache().filter((item) => item.id !== saved.id);
