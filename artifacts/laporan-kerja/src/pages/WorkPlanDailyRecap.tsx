@@ -661,6 +661,8 @@ const WorkPlanDailyRecap = () => {
           @page { size: A3 landscape; margin: 1.5cm; }
           .overflow-x-auto { overflow: visible !important; }
           table { width: 100% !important; }
+          table thead { display: table-header-group !important; }
+          table tr { break-inside: avoid; page-break-inside: avoid; }
           .keep-together { page-break-inside: avoid; break-inside: avoid; }
           ::-webkit-scrollbar { display: none; }
         }
