@@ -27,6 +27,7 @@ import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { dailyPdfFileName } from '@/utils/pdf-file-name';
 import { getRecapCategoryLabel } from '@/utils/report-recap-title';
+import SignatoryText from '@/components/SignatoryText';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -603,9 +604,9 @@ const WorkPlanDailyRecap = () => {
                   <div className="pdf-footer mt-12">
                     <div className="flex justify-end mb-4 text-[11px]"><p className="w-1/4 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
                     <div className="grid grid-cols-4 gap-4 text-[11px] leading-normal">
-                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Heni Rustati, ST, M.Si</p><p>NIP. 19720223 200604 2 002</p></div></div>
-                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Anitha Florida Ginting, ST, M. Si</p><p>NIP. 19811128 201001 2 011</p></div></div>
-                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Pengawas Taman Penghijauan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Jhosua Sibarani, S.T</p><p>NIP. 19740907 200903 1 002</p></div></div>
+                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="kabid_tata_lingkungan" fallbackName="Heni Rustati, ST, M.Si" fallbackNip="NIP. 19720223 200604 2 002" /></div></div>
+                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="ketua_tim_pemeliharaan_lingkungan" fallbackName="Anitha Florida Ginting, ST, M. Si" fallbackNip="NIP. 19811128 201001 2 011" /></div></div>
+                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Pengawas Taman Penghijauan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="pengawas_taman_penghijauan" /></div></div>
                       <div className="text-center flex flex-col justify-between min-h-[200px] pb-4">
                         <div>
                           <p>Diketahui :</p>
@@ -614,12 +615,12 @@ const WorkPlanDailyRecap = () => {
                           {showTiurmaida && showArdiansyah && (<><p className="font-bold">Koordinator Taman & Tim Pohon</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></>)}
                         </div>
                         <div>
-                          {showTiurmaida && !showArdiansyah && (<><p className="font-bold underline">Tiurmaida Silitonga</p><p>NIP. 19690507 200701 2 042</p></>)}
-                          {showArdiansyah && !showTiurmaida && (<><p className="font-bold underline">Ardiansyah Siregar</p><p>NIP. 19860404 201001 1 015</p></>)}
+                          {showTiurmaida && !showArdiansyah && (<SignatoryText position="kepala_koordinator_taman" regionId={regionId} fallbackName="Tiurmaida Silitonga" fallbackNip="NIP. 19690507 200701 2 042" />)}
+                          {showArdiansyah && !showTiurmaida && (<SignatoryText position="kepala_koordinator_pohon" regionId={regionId} fallbackName="Ardiansyah Siregar" fallbackNip="NIP. 19860404 201001 1 015" />)}
                           {showTiurmaida && showArdiansyah && (
                             <div className="flex justify-around gap-2">
-                              <div><p className="font-bold underline">Tiurmaida Silitonga</p><p className="text-[9px]">NIP. 19690507 200701 2 042</p></div>
-                              <div><p className="font-bold underline">Ardiansyah Siregar</p><p className="text-[9px]">NIP. 19860404 201001 1 015</p></div>
+                              <div><SignatoryText position="kepala_koordinator_taman" regionId={regionId} fallbackName="Tiurmaida Silitonga" fallbackNip="NIP. 19690507 200701 2 042" nipClassName="text-[9px]" /></div>
+                              <div><SignatoryText position="kepala_koordinator_pohon" regionId={regionId} fallbackName="Ardiansyah Siregar" fallbackNip="NIP. 19860404 201001 1 015" nipClassName="text-[9px]" /></div>
                             </div>
                           )}
                         </div>

@@ -31,6 +31,7 @@ import { workPlanService } from '@/services/workPlanService';
 import { format, isSameDay, isSameMonth, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import ImageUpload from '@/components/ImageUpload';
+import SignatoryManagement from '@/components/SignatoryManagement';
 import {
   getStoredLandingPhotoUrl,
   removeLandingPhoto,
@@ -366,9 +367,10 @@ const Maintenance = () => {
 
         <Tabs defaultValue="storage" className="w-full">
           <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-full lg:grid lg:grid-cols-5 mb-8 h-12 bg-white border shadow-sm p-1 min-w-max">
+            <TabsList className="inline-flex w-full lg:grid lg:grid-cols-6 mb-8 h-12 bg-white border shadow-sm p-1 min-w-max">
               <TabsTrigger value="storage" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex items-center gap-2 px-6"><HardDrive size={16} /> Storage & File</TabsTrigger>
               <TabsTrigger value="landing" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex items-center gap-2 px-6"><Globe size={16} /> Halaman Depan</TabsTrigger>
+              <TabsTrigger value="signatories" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white flex items-center gap-2 px-6"><FileText size={16} /> Penandatangan</TabsTrigger>
               <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex items-center gap-2 px-6"><Users size={16} /> Pengguna</TabsTrigger>
               <TabsTrigger value="history" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex items-center gap-2 px-6"><History size={16} /> Riwayat</TabsTrigger>
               <TabsTrigger value="trash" className="data-[state=active]:bg-red-600 data-[state=active]:text-white flex items-center gap-2 px-6"><Trash2 size={16} /> Tempat Sampah</TabsTrigger>
@@ -473,6 +475,13 @@ const Maintenance = () => {
                   })}
                 </div>
               </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="signatories">
+            <Card className="shadow-md border-t-4 border-t-violet-600">
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><FileText className="text-violet-600" /> Pengaturan Penandatangan</CardTitle></CardHeader>
+              <CardContent><SignatoryManagement /></CardContent>
             </Card>
           </TabsContent>
 

@@ -25,6 +25,7 @@ import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
+import SignatoryText from '@/components/SignatoryText';
 import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
@@ -770,15 +771,15 @@ const DailyRecap = () => {
                   <div className="pdf-footer mt-12">
                     <div className="flex justify-end mb-4 text-[11px]"><p className="w-1/4 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
                     <div className="grid grid-cols-4 gap-4 text-[11px] leading-normal">
-                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Heni Rustati, ST, M.Si</p><p>NIP. 19720223 200604 2 002</p></div></div>
-                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Anitha Florida Ginting, ST, M. Si</p><p>NIP. 19811128 201001 2 011</p></div></div>
-                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Pengawas Taman Penghijauan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">____________________________</p><p>____________________________</p></div></div>
+                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="kabid_tata_lingkungan" fallbackName="Heni Rustati, ST, M.Si" fallbackNip="NIP. 19720223 200604 2 002" /></div></div>
+                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="ketua_tim_pemeliharaan_lingkungan" fallbackName="Anitha Florida Ginting, ST, M. Si" fallbackNip="NIP. 19811128 201001 2 011" /></div></div>
+                      <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Pengawas Taman Penghijauan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="pengawas_taman_penghijauan" /></div></div>
                       <div className="text-center flex flex-col justify-between min-h-[200px] pb-4">
                         <div>
                           <p>Diketahui :</p>
                           <p className="font-bold">Kepala Koordinator Pemeliharaan Taman</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p>
                         </div>
-                        <div><p className="font-bold underline">{coordinatorSignature.name}</p><p>{coordinatorSignature.nip}</p></div>
+                        <div><SignatoryText position="kepala_koordinator_taman" regionId={profile?.region_id} fallbackName={coordinatorSignature.name} fallbackNip={coordinatorSignature.nip} /></div>
                       </div>
                     </div>
                   </div>

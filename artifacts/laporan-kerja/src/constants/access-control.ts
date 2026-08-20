@@ -25,7 +25,7 @@ export const USER_ROLE_VALUES = Object.values(USER_ROLES) as readonly UserRole[]
 export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN, label: 'Super Admin / Administrator' },
   { value: USER_ROLES.ADMIN_WILAYAH, label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
-  { value: USER_ROLES.LAPORAN, label: 'Laporan (Hanya Laporan Harian)' },
+  { value: USER_ROLES.LAPORAN, label: 'Laporan' },
   { value: USER_ROLES.ADMIN_HARIAN, label: 'Admin Laporan Harian' },
   { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN, label: 'Admin Laporan Mingguan' },
   { value: USER_ROLES.ADMIN_LAPORAN_BULANAN, label: 'Admin Laporan Bulanan' },
@@ -64,6 +64,7 @@ const REGION_REQUIRED_ROLES = [
 const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
   daily: [
     USER_ROLES.ADMIN,
+    USER_ROLES.LAPORAN,
     USER_ROLES.ADMIN_HARIAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_MINGGUAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_BULANAN,
@@ -71,6 +72,7 @@ const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
   ],
   weekly: [
     USER_ROLES.ADMIN,
+    USER_ROLES.LAPORAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_MINGGUAN,
@@ -78,6 +80,7 @@ const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
   ],
   monthly: [
     USER_ROLES.ADMIN,
+    USER_ROLES.LAPORAN,
     USER_ROLES.ADMIN_LAPORAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_BULANAN,

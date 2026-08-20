@@ -95,6 +95,7 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'print' },
   ],
 
   // Admin Spesialis BBM – only fuel reports and fuel prices
