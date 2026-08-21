@@ -2,8 +2,11 @@ import { RecapPeriod, canPrintReportRecapByRole, getRoleLabel } from '@/constant
 
 export type { RecapPeriod };
 
-export const canPrintReportRecap = (role: string | null | undefined, period: RecapPeriod) =>
-  canPrintReportRecapByRole(role, period);
+export const canPrintReportRecap = (
+  role: string | null | undefined,
+  period: RecapPeriod,
+  email?: string | null,
+) => canPrintReportRecapByRole(role, period, email);
 
 export const getRecapPrintDeniedMessage = (role: string | null | undefined, period: RecapPeriod) => {
   if (!role) return 'Anda harus login untuk mencetak rekap.';

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fuelService } from '@/services/fuelService';
 import { FuelReport } from '@/types/fuelReport';
@@ -47,6 +47,7 @@ const FuelMonthlyRecap = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
+  const dataRequestId = useRef(0);
 
   const [visibleColumns, setVisibleColumns] = useState({
     date: true,
@@ -67,6 +68,7 @@ const FuelMonthlyRecap = () => {
   }, [selectedMonth, selectedYear]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       const year = parseInt(selectedYear);
@@ -76,11 +78,11 @@ const FuelMonthlyRecap = () => {
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
       const filtered = await fuelService.getReportsByDateRange(startDate, endDate);
       filtered.sort((a, b) => a.date.localeCompare(b.date) || a.region.localeCompare(b.region));
-      setReports(filtered);
+      if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) setLoading(false);
     }
   };
 
@@ -207,7 +209,7 @@ const FuelMonthlyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
+            <Button variant="ghost" onClick={() => navigate('/?tab=fuel_reports')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[130px] md:w-[150px]"><SelectValue placeholder="Bulan" /></SelectTrigger>
               <SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent>
@@ -394,7 +396,7 @@ const FuelMonthlyRecap = () => {
                   </tr>
                 </>
               ) : (
-                <tr><td colSpan={11} className="border-2 border-black p-8 text-center italic text-slate-400">Tidak ada data untuk periode ini</td></tr>
+                <tr><td colSpan={11} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada data untuk periode ini'}</td></tr>
               )}
             </tbody>
           </table>

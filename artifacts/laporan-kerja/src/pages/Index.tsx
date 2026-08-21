@@ -11,7 +11,7 @@ import {
   ArrowUpDown, ChevronUp, Edit, Eye, EyeOff, Leaf, MapPin, ShieldCheck,
   Activity, Clock3, Plus
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Report } from '@/types/report';
 import { WorkPlan } from '@/types/workPlan';
 import { showSuccess, showError } from '@/utils/toast';
@@ -113,6 +113,7 @@ const PointList = ({ values, fallback }: { values: string[]; fallback: string })
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { session, profile, signOut, loading: authLoading } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
@@ -146,9 +147,9 @@ const Index = () => {
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
   const canManageWorkPlans = isLoggedIn && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
-  const canPrintDailyRecap = canPrintReportRecap(profile?.role, 'daily');
-  const canPrintWeeklyRecap = canPrintReportRecap(profile?.role, 'weekly');
-  const canPrintMonthlyRecap = canPrintReportRecap(profile?.role, 'monthly');
+  const canPrintDailyRecap = canPrintReportRecap(profile?.role, 'daily', session?.user?.email);
+  const canPrintWeeklyRecap = canPrintReportRecap(profile?.role, 'weekly', session?.user?.email);
+  const canPrintMonthlyRecap = canPrintReportRecap(profile?.role, 'monthly', session?.user?.email);
   const canPrintAnyReportRecap = canPrintDailyRecap || canPrintWeeklyRecap || canPrintMonthlyRecap;
   const showExecutiveHero = isAdmin;
   const { regions, teams: regionTeams } = useRegionFilterOptions(isAdmin, selectedRegion);
@@ -175,14 +176,19 @@ const Index = () => {
   }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, authLoading, navigate]);
 
   useEffect(() => {
-    if (isAdminBbm) {
+    const requestedTab = searchParams.get('tab');
+    const validTabs = ['reports', 'workplans', 'fuel_reports', 'fuel_spj'];
+
+    if (requestedTab && validTabs.includes(requestedTab)) {
+      setActiveTab(requestedTab);
+    } else if (isAdminBbm) {
       setActiveTab("fuel_reports");
     } else if (isAdminSpj) {
       setActiveTab("fuel_spj");
     } else {
       setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja]);
+  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, searchParams]);
 
   useEffect(() => {
     if (selectedCategory !== 'semua' && !categories.includes(selectedCategory)) {

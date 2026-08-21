@@ -69,6 +69,7 @@ const DailyRecap = () => {
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasSetDefaults, setHasSetDefaults] = useState(false);
+  const dataRequestId = useRef(0);
 
   const [visibleColumns, setVisibleColumns] = useState({
     category: true,
@@ -95,7 +96,7 @@ const DailyRecap = () => {
 
   // Check permission for printing daily recap
   const canPrintDailyRecap = () => {
-    return canPrintReportRecap(profile?.role, 'daily');
+    return canPrintReportRecap(profile?.role, 'daily', session?.user?.email);
   };
 
   const printAccessDeniedMessage = () => getRecapPrintDeniedMessage(profile?.role, 'daily');
@@ -111,7 +112,9 @@ const DailyRecap = () => {
   }, [profile, isAdminHarian, hasSetDefaults]);
 
   useEffect(() => {
+    const dateParam = searchParams.get('date');
     const catsParam = searchParams.get('categories');
+    setSelectedDate(dateParam || new Date().toISOString().split('T')[0]);
     if (catsParam) {
       setSelectedCategories(catsParam.split(','));
     } else if (isLoggedIn && profile) {
@@ -129,9 +132,10 @@ const DailyRecap = () => {
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [selectedDate, selectedCategories, regionId]);
+  }, [selectedDate, selectedCategories, regionId, isLoggedIn, profile?.role, profile?.category, isPimpinan, isAdminHarian, isUserRestricted]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       let data = await reportService.getAllReports(undefined, false, regionId);
@@ -153,11 +157,15 @@ const DailyRecap = () => {
         return sortByCategory(a.category, b.category);
       });
       
-      setReports(data);
+      if (requestId === dataRequestId.current) {
+        setReports(data);
+      }
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -528,7 +536,7 @@ const DailyRecap = () => {
       <div className="max-w-[1400px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
+            <Button variant="ghost" onClick={() => navigate('/?tab=reports')} className="px-2 md:px-4 h-9">
               <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Kembali</span>
             </Button>
             {isLoggedIn ? (
@@ -709,10 +717,10 @@ const DailyRecap = () => {
                 {canPrintDailyRecap() && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
                 </DropdownMenuItem>}
-                {canPrintReportRecap(profile?.role, 'weekly') && <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
+                {canPrintReportRecap(profile?.role, 'weekly', session?.user?.email) && <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-purple-500" /> Rekap Mingguan
                 </DropdownMenuItem>}
-                {canPrintReportRecap(profile?.role, 'monthly') && <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
+                {canPrintReportRecap(profile?.role, 'monthly', session?.user?.email) && <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
                   <FileText className="mr-2 h-4 w-4 text-orange-500" /> Rekap Bulanan
                 </DropdownMenuItem>}
               </DropdownMenuContent>
@@ -789,7 +797,7 @@ const DailyRecap = () => {
           ) : (
             <table className="w-full border-collapse border-2 border-black text-[11px] table-fixed">
               <tbody>
-                <tr><td colSpan={20} className="border-2 border-black p-12 text-center text-slate-400 italic text-lg">Tidak ada data laporan untuk periode ini</td></tr>
+                <tr><td colSpan={20} className="border-2 border-black p-12 text-center text-slate-400 italic text-lg">{loading ? 'Memuat data rekap...' : 'Tidak ada data laporan untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}

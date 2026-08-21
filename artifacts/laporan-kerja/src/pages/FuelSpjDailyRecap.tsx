@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fuelSpjService } from '@/services/fuelSpjService';
 import { FuelSpjReport } from '@/types/fuelSpjReport';
@@ -47,6 +47,7 @@ const FuelSpjDailyRecap = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [groupBy, setGroupBy] = useState<"region" | "team">("region");
+  const dataRequestId = useRef(0);
   
   const [visibleColumns, setVisibleColumns] = useState({
     spj_no: true,
@@ -66,15 +67,16 @@ const FuelSpjDailyRecap = () => {
   }, [selectedDate, isAllowed]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       const data = await fuelSpjService.getAllReports();
       const filtered = data.filter(r => r.date === selectedDate);
-      setReports(filtered);
+      if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) setLoading(false);
     }
   };
 
@@ -257,7 +259,7 @@ const FuelSpjDailyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Kembali" title="Kembali" className="h-10 w-10 shrink-0 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
+            <Button variant="ghost" onClick={() => navigate('/?tab=fuel_spj')} aria-label="Kembali" title="Kembali" className="h-10 w-10 shrink-0 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
             <div className="relative flex-1 min-w-[168px] sm:flex-none">
               <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-10 w-full pl-10 sm:w-[200px]" />
@@ -446,7 +448,7 @@ const FuelSpjDailyRecap = () => {
                   </tr>
                 </>
               ) : (
-                <tr><td colSpan={12} className="border-2 border-black p-8 text-center italic text-slate-400">Tidak ada data untuk tanggal ini</td></tr>
+                <tr><td colSpan={12} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada data untuk tanggal ini'}</td></tr>
               )}
             </tbody>
           </table>

@@ -370,7 +370,12 @@ const PrintWorkPlan = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .print-container td > div.border-t.border-black { border-top-width: 2px !important; }
+        /* Tumpangkan pemisah isi sel dengan garis antarbaris tabel saat cetak. */
+        .print-container td > div.border-t.border-black {
+          border-top-width: 1px !important;
+          position: relative;
+          top: -1px;
+        }
         @media print {
           body { background: white !important; }
           .no-print { display: none !important; }

@@ -32,30 +32,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    setLoading(true);
 
-      if (error) {
-        if (error.code === 'PGRST116') {
+    // Kegagalan jaringan singkat saat login sebelumnya membuat profil tetap
+    // null sampai halaman di-refresh. Coba kembali sekali sebelum melanjutkan.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (error?.code === 'PGRST116') {
           const { data: newData, error: createError } = await supabase
             .from('profiles')
             .insert([{ id: userId, role: 'user', updated_at: new Date().toISOString() }])
             .select()
             .single();
-          if (!createError) setProfile(newData);
+
+          if (createError) throw createError;
+          setProfile(newData);
+          setLoading(false);
+          return;
         }
-      } else {
+
+        if (error) throw error;
+
         setProfile(data);
+        setLoading(false);
+        return;
+      } catch (error) {
+        if (attempt === 1) {
+          console.error("Error fetching profile:", error);
+          break;
+        }
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
       }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    } finally {
-      setLoading(false);
     }
+
+    setProfile(null);
+    setLoading(false);
   };
 
   useEffect(() => {

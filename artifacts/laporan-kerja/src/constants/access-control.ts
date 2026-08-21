@@ -64,6 +64,8 @@ const REGION_REQUIRED_ROLES = [
 const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
   daily: [
     USER_ROLES.ADMIN,
+    USER_ROLES.ADMIN_WILAYAH,
+    USER_ROLES.PIMPINAN,
     USER_ROLES.LAPORAN,
     USER_ROLES.ADMIN_HARIAN,
     USER_ROLES.ADMIN_LAPORAN_HARIAN_MINGGUAN,
@@ -72,6 +74,8 @@ const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
   ],
   weekly: [
     USER_ROLES.ADMIN,
+    USER_ROLES.ADMIN_WILAYAH,
+    USER_ROLES.PIMPINAN,
     USER_ROLES.LAPORAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN,
@@ -80,6 +84,8 @@ const REPORT_RECAP_ROLES_BY_PERIOD: Record<RecapPeriod, readonly UserRole[]> = {
   ],
   monthly: [
     USER_ROLES.ADMIN,
+    USER_ROLES.ADMIN_WILAYAH,
+    USER_ROLES.PIMPINAN,
     USER_ROLES.LAPORAN,
     USER_ROLES.ADMIN_LAPORAN_BULANAN,
     USER_ROLES.ADMIN_LAPORAN_MINGGUAN_BULANAN,
@@ -131,8 +137,14 @@ export const canAccessFuelArea = (role: string | null | undefined, email?: strin
 export const canPrintAdminRecap = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email);
 
-export const canPrintReportRecapByRole = (role: string | null | undefined, period: RecapPeriod) =>
-  isKnownRole(role) && REPORT_RECAP_ROLES_BY_PERIOD[period].includes(role);
+export const canPrintReportRecapByRole = (
+  role: string | null | undefined,
+  period: RecapPeriod,
+  email?: string | null,
+) =>
+  isSuperAdminAccess(role, email)
+  || (period === 'daily' && isAdminHarianAccess(role, email))
+  || (isKnownRole(role) && REPORT_RECAP_ROLES_BY_PERIOD[period].includes(role));
 
 export const getRoleLandingPath = (role: string | null | undefined) => {
   if (role === USER_ROLES.ADMIN_BBM) return '/fuel-reports';

@@ -81,7 +81,9 @@ const WorkPlanDailyRecap = () => {
   const [isCompactViewport, setIsCompactViewport] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
+  const dataRequestId = useRef(0);
   const isLoggedIn = !!session;
+  const regionOrderKey = regions.map((region) => region.id).join(',');
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1023px)');
@@ -99,12 +101,21 @@ const WorkPlanDailyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, selectedCategory, regionId, regions]);
+  }, [selectedDate, selectedCategory, regionId, regionOrderKey]);
+
+  useEffect(() => {
+    setSelectedRegion(searchParams.get('region') || 'semua');
+    setSelectedDate(searchParams.get('date') || '');
+    setSelectedCategory(searchParams.get('category') || 'semua');
+  }, [searchParams]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
+
+      if (requestId !== dataRequestId.current) return;
 
       setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
       let targetDate = selectedDate;
@@ -134,11 +145,11 @@ const WorkPlanDailyRecap = () => {
         return sortByCategory(a.category, b.category);
       });
 
-      setPlans(filtered);
+      if (requestId === dataRequestId.current) setPlans(filtered);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) setLoading(false);
     }
   };
 
@@ -355,7 +366,7 @@ const WorkPlanDailyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
+            <Button variant="ghost" onClick={() => navigate('/?tab=workplans')} className="px-2 md:px-4 h-9">
               <ArrowLeft className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Kembali</span>
             </Button>
@@ -652,7 +663,7 @@ const WorkPlanDailyRecap = () => {
           ) : (
             <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed">
               <tbody>
-                <tr><td colSpan={hasRemarks ? 11 : 10} className="border-2 border-black p-8 text-center italic text-slate-400">Tidak ada rencana kerja untuk periode ini</td></tr>
+                <tr><td colSpan={hasRemarks ? 11 : 10} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}
@@ -677,7 +688,21 @@ const WorkPlanDailyRecap = () => {
         .work-plan-table.split-table-before-footer {
           border-bottom-width: 0 !important;
         }
-        .print-area td > div.border-t.border-black { border-top-width: 1.5px !important; }
+        /* Tabel lanjutan langsung mengikuti tabel utama. Hilangkan sisi atas
+           tabel kedua agar tidak menumpuk dengan batas bawah baris terakhir. */
+        .work-plan-table.continuation-table {
+          border-top-width: 0 !important;
+        }
+        .work-plan-table.continuation-table tbody tr:first-child > td {
+          border-top-width: 0 !important;
+        }
+        /* Pemisah di dalam sel rowspan ditumpangkan ke garis baris tabel.
+           Dengan begitu tetap ada garis sambung, tanpa terlihat dobel/tebal saat dicetak. */
+        .print-area td > div.border-t.border-black {
+          border-top-width: 1px !important;
+          position: relative;
+          top: -1px;
+        }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster {

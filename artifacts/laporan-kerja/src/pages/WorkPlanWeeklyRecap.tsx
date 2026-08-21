@@ -97,10 +97,12 @@ const WorkPlanWeeklyRecap = () => {
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, tools: true, unit: true, usage: true, personnel: true, coordinator: true, basis: true, remarks: true });
   const printRef = useRef<HTMLDivElement>(null);
+  const dataRequestId = useRef(0);
 
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const isLoggedIn = !!session;
+  const regionOrderKey = regions.map((region) => region.id).join(',');
   const getRegionOrder = (regionId: string | null | undefined) => {
     const regionIndex = regions.findIndex((region) => region.id === regionId);
     return regionIndex === -1 ? Number.MAX_SAFE_INTEGER : regionIndex;
@@ -108,12 +110,20 @@ const WorkPlanWeeklyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, selectedCategory, regionId, regions]);
+  }, [selectedDate, selectedCategory, regionId, regionOrderKey]);
+
+  useEffect(() => {
+    setSelectedRegion(searchParams.get('region') || 'semua');
+    setSelectedDate(searchParams.get('date') || new Date().toISOString().split('T')[0]);
+    setSelectedCategory(searchParams.get('category') || 'semua');
+  }, [searchParams]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
+      if (requestId !== dataRequestId.current) return;
       setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
       const filtered = data.filter(p => {
         const pDate = parseISO(p.date);
@@ -132,11 +142,11 @@ const WorkPlanWeeklyRecap = () => {
         return sortByCategory(a.category, b.category);
       });
 
-      setPlans(filtered);
+      if (requestId === dataRequestId.current) setPlans(filtered);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) setLoading(false);
     }
   };
 
@@ -292,7 +302,7 @@ const WorkPlanWeeklyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
+            <Button variant="ghost" onClick={() => navigate('/?tab=workplans')} className="px-2 md:px-4 h-9">
               <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Kembali</span>
             </Button>
             {isAdmin && (
@@ -550,7 +560,7 @@ const WorkPlanWeeklyRecap = () => {
           ) : (
             <table className="w-full border-collapse border-2 border-black text-[11px] table-fixed">
               <tbody>
-                <tr><td colSpan={20} className="border-2 border-black p-12 text-center text-slate-400 italic text-lg">Tidak ada data laporan untuk periode ini</td></tr>
+                <tr><td colSpan={20} className="border-2 border-black p-12 text-center text-slate-400 italic text-lg">{loading ? 'Memuat data rekap...' : 'Tidak ada data laporan untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}
@@ -558,7 +568,12 @@ const WorkPlanWeeklyRecap = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .print-area td > div.border-t.border-black { border-top-width: 2px !important; }
+        /* Tumpangkan pemisah isi sel dengan garis antarbaris tabel saat cetak. */
+        .print-area td > div.border-t.border-black {
+          border-top-width: 1px !important;
+          position: relative;
+          top: -1px;
+        }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster {

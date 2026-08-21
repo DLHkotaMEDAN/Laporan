@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Report, Task, Equipment, HeavyEquipment } from '@/types/report';
 import { reportService } from '@/services/reportService';
-import { getUnitByCategory, sortByCategory } from '@/utils/report-helpers';
+import { getReportTasks, getUnitByCategory, sortByCategory } from '@/utils/report-helpers';
 import { 
   ArrowLeft, Printer, Fuel, FileText, ChevronsUpDown, 
   Table, LogOut, LogIn, CloudUpload, 
@@ -62,7 +62,7 @@ type SignatureMode = "with-signature" | "without-signature";
 const WeeklyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session, profile, signOut } = useAuth();
+  const { session, profile, signOut, loading: authLoading } = useAuth();
   const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +72,7 @@ const WeeklyRecap = () => {
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasSetDefaults, setHasSetDefaults] = useState(false);
+  const dataRequestId = useRef(0);
 
   const [visibleColumns, setVisibleColumns] = useState({
     date: true,
@@ -100,7 +101,7 @@ const WeeklyRecap = () => {
 
   // Check permission for printing weekly recap
   const canPrintWeeklyRecap = () => {
-    return canPrintReportRecap(profile?.role, 'weekly');
+    return canPrintReportRecap(profile?.role, 'weekly', session?.user?.email);
   };
 
   const printAccessDeniedMessage = () => getRecapPrintDeniedMessage(profile?.role, 'weekly');
@@ -116,7 +117,9 @@ const WeeklyRecap = () => {
   }, [profile, isAdminHarian, hasSetDefaults]);
 
   useEffect(() => {
+    const dateParam = searchParams.get('date');
     const catsParam = searchParams.get('categories');
+    setSelectedDate(dateParam || new Date().toISOString().split('T')[0]);
     if (catsParam) {
       setSelectedCategories(catsParam.split(','));
     } else if (isLoggedIn && profile) {
@@ -131,12 +134,14 @@ const WeeklyRecap = () => {
   }, [profile, isLoggedIn, isUserRestricted, searchParams]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [selectedDate, selectedCategories]);
+  }, [authLoading, selectedDate, selectedCategories, isLoggedIn, profile?.role, profile?.category, isPimpinan, isAdminHarian, isUserRestricted]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       let data = await reportService.getAllReports();
@@ -144,12 +149,11 @@ const WeeklyRecap = () => {
         const reportDate = parseISO(r.date);
         const matchDate = isWithinInterval(reportDate, { start: weekStart, end: weekEnd });
         
-        let matchCategory = false;
-        if (!isLoggedIn || profile?.role === 'admin' || isPimpinan || isAdminHarian) {
-          matchCategory = selectedCategories.includes('semua') || selectedCategories.includes(r.category);
-        } else {
-          matchCategory = r.category === profile?.category;
-        }
+        // Admin Wilayah dapat melihat seluruh kategori di wilayahnya. Hanya
+        // pengguna tim yang dibatasi pada satu kategori dari profilnya.
+        const matchCategory = isUserRestricted
+          ? r.category === profile?.category
+          : selectedCategories.includes('semua') || selectedCategories.includes(r.category);
         return matchDate && matchCategory;
       });
       
@@ -159,11 +163,15 @@ const WeeklyRecap = () => {
         return sortByCategory(a.category, b.category);
       });
       
-      setReports(data);
+      if (requestId === dataRequestId.current) {
+        setReports(data);
+      }
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -314,8 +322,9 @@ const WeeklyRecap = () => {
           lastDate = report.date;
         }
 
-        for (let i = 0; i < report.tasks.length; i++) {
-          const task = report.tasks[i];
+        const reportTasks = getReportTasks(report);
+        for (let i = 0; i < reportTasks.length; i++) {
+          const task = reportTasks[i];
           const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
           const rowData: any = {
             no: (i === 0 && report === reports.find(r => r.date === report.date)) ? currentNo : '',
@@ -382,7 +391,15 @@ const WeeklyRecap = () => {
     let currentNo = 0;
     let lastDate = "";
     
-    const flatTasks = reports.flatMap(r => r.tasks.map(t => ({ ...t, reportDate: r.date, reportId: r.id, category: r.category, reportRemarks: r.remarks })));
+    const flatTasks = reports.flatMap(report =>
+      getReportTasks(report).map(task => ({
+        ...task,
+        reportDate: report.date,
+        reportId: report.id,
+        category: report.category,
+        reportRemarks: report.remarks,
+      })),
+    );
     
     flatTasks.forEach((task, idx) => {
       if (task.reportDate !== lastDate) {
@@ -539,7 +556,7 @@ const WeeklyRecap = () => {
       <div className="max-w-[1400px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate('/')} className="px-2 md:px-4 h-9">
+            <Button variant="ghost" onClick={() => navigate('/?tab=reports')} className="px-2 md:px-4 h-9">
               <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Kembali</span>
             </Button>
             {isLoggedIn ? (
@@ -676,13 +693,13 @@ const WeeklyRecap = () => {
                   <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
-                {canPrintReportRecap(profile?.role, 'daily') && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
+                {canPrintReportRecap(profile?.role, 'daily', session?.user?.email) && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
                 </DropdownMenuItem>}
                 {canPrintWeeklyRecap() && <DropdownMenuItem onClick={() => navigate('/weekly-rekap')} className="cursor-pointer py-2">
                   <Table className="mr-2 h-4 w-4 text-purple-500" /> Rekap Mingguan
                 </DropdownMenuItem>}
-                {canPrintReportRecap(profile?.role, 'monthly') && <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
+                {canPrintReportRecap(profile?.role, 'monthly', session?.user?.email) && <DropdownMenuItem onClick={() => navigate('/monthly-rekap')} className="cursor-pointer py-2">
                   <FileText className="mr-2 h-4 w-4 text-orange-500" /> Rekap Bulanan
                 </DropdownMenuItem>}
               </DropdownMenuContent>
@@ -758,7 +775,7 @@ const WeeklyRecap = () => {
           ) : (
             <table className="w-full border-collapse border-2 border-black text-[11px] table-fixed">
               <tbody>
-                <tr><td colSpan={20} className="border-2 border-black p-12 text-center text-slate-400 italic text-lg">Tidak ada data laporan untuk periode ini</td></tr>
+                <tr><td colSpan={20} className="border-2 border-black p-12 text-center text-slate-400 italic text-lg">{loading ? 'Memuat data rekap...' : 'Tidak ada data laporan untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}

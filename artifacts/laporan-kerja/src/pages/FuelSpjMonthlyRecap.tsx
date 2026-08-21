@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fuelSpjService } from '@/services/fuelSpjService';
 import { FuelSpjReport } from '@/types/fuelSpjReport';
@@ -49,6 +49,7 @@ const FuelSpjMonthlyRecap = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [groupBy, setGroupBy] = useState<"region" | "team">("region");
+  const dataRequestId = useRef(0);
   
   const [visibleColumns, setVisibleColumns] = useState({
     date: true,
@@ -72,6 +73,7 @@ const FuelSpjMonthlyRecap = () => {
   }, [selectedMonth, selectedYear, isAllowed]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       const data = await fuelSpjService.getAllReports();
@@ -79,11 +81,11 @@ const FuelSpjMonthlyRecap = () => {
         const rDate = parseISO(r.date);
         return (rDate.getMonth() + 1).toString() === selectedMonth && rDate.getFullYear().toString() === selectedYear;
       });
-      setReports(filtered);
+      if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) setLoading(false);
     }
   };
 
@@ -268,7 +270,7 @@ const FuelSpjMonthlyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
+            <Button variant="ghost" onClick={() => navigate('/?tab=fuel_spj')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="w-[130px] md:w-[150px]"><SelectValue placeholder="Bulan" /></SelectTrigger><SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="w-[90px] md:w-[100px]"><SelectValue placeholder="Tahun" /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>
@@ -439,7 +441,7 @@ const FuelSpjMonthlyRecap = () => {
                   </tr>
                 </>
               ) : (
-                <tr><td colSpan={13} className="border-2 border-black p-8 text-center italic text-slate-400">Tidak ada data untuk periode ini</td></tr>
+                <tr><td colSpan={13} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada data untuk periode ini'}</td></tr>
               )}
             </tbody>
           </table>

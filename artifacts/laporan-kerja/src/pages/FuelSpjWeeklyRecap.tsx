@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fuelSpjService } from '@/services/fuelSpjService';
 import { FuelSpjReport } from '@/types/fuelSpjReport';
@@ -47,6 +47,7 @@ const FuelSpjWeeklyRecap = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [groupBy, setGroupBy] = useState<"region" | "team">("region");
+  const dataRequestId = useRef(0);
   
   const [visibleColumns, setVisibleColumns] = useState({
     date: true,
@@ -69,6 +70,7 @@ const FuelSpjWeeklyRecap = () => {
   }, [selectedDate, isAllowed]);
 
   const loadData = async () => {
+    const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
       const data = await fuelSpjService.getAllReports();
@@ -76,11 +78,11 @@ const FuelSpjWeeklyRecap = () => {
         const rDate = parseISO(r.date);
         return isWithinInterval(rDate, { start: weekStart, end: weekEnd });
       });
-      setReports(filtered);
+      if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestId.current) setLoading(false);
     }
   };
 
@@ -265,7 +267,7 @@ const FuelSpjWeeklyRecap = () => {
       <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3">
+            <Button variant="ghost" onClick={() => navigate('/?tab=fuel_spj')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3">
               <ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span>
             </Button>
             
@@ -470,7 +472,7 @@ const FuelSpjWeeklyRecap = () => {
                   </tr>
                 </>
               ) : (
-                <tr><td colSpan={13} className="border-2 border-black p-8 text-center italic text-slate-400">Tidak ada data untuk periode ini</td></tr>
+                <tr><td colSpan={13} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada data untuk periode ini'}</td></tr>
               )}
             </tbody>
           </table>
