@@ -70,6 +70,24 @@ interface EditUserFormState {
   teamId: string;
 }
 
+/**
+ * Supabase wraps every non-2xx Edge Function response in a generic
+ * FunctionsHttpError. The function still sends a useful `{ error: string }`
+ * body, so read it before showing the toast to the administrator.
+ */
+const getEdgeFunctionErrorMessage = async (error: unknown) => {
+  const functionError = error as Error & { context?: unknown };
+  const response = functionError?.context;
+
+  if (response instanceof Response) {
+    const payload = await response.clone().json().catch(() => null) as { error?: unknown; message?: unknown } | null;
+    if (typeof payload?.error === 'string') return payload.error;
+    if (typeof payload?.message === 'string') return payload.message;
+  }
+
+  return error instanceof Error ? error.message : 'Terjadi kesalahan saat menghubungi layanan akun.';
+};
+
 const UserManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,8 +159,8 @@ const UserManagement = () => {
       ]);
       setNewUser({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, regionId: '', teamId: '' });
       await fetchProfiles();
-    } catch (error: any) {
-      showError('Gagal membuat akun: ' + error.message);
+    } catch (error: unknown) {
+      showError('Gagal membuat akun: ' + await getEdgeFunctionErrorMessage(error));
     } finally {
       setCreating(false);
     }
