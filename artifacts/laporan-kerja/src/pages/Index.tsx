@@ -27,7 +27,7 @@ import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -436,11 +436,11 @@ const Index = () => {
             {isLoggedIn ? (
               <div className="flex items-center gap-3">
                 <div className="hidden sm:flex flex-col items-end">
-                  <p className="text-[11px] font-black text-slate-900 leading-none uppercase">
-                    {isPimpinan ? 'Pimpinan' : isLaporanOnly ? 'Petugas Laporan' : isAdminHarian ? 'Admin Harian' : isAdmin ? 'Administrator' : 'User Lapangan'}
+                  <p className="max-w-40 truncate text-[11px] font-black leading-none text-slate-900">
+                    {profile?.username || session?.user?.email || 'Pengguna'}
                   </p>
-                  <p className="text-[9px] font-bold text-emerald-700 mt-1">
-                    {isPimpinan || isAdminHarian ? 'Semua Wilayah' : (profile?.category || 'Umum')}
+                  <p className="max-w-40 truncate text-[9px] font-bold text-emerald-700 mt-1">
+                    Hak akses: {getRoleLabel(profile?.role)}
                   </p>
                 </div>
                 <DropdownMenu>
