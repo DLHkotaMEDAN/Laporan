@@ -1,7 +1,7 @@
 -- Aman dijalankan ulang di Supabase SQL Editor.
 create table if not exists public.signatory_settings (
   id uuid primary key default gen_random_uuid(),
-  position text not null check (position in ('kabid_tata_lingkungan', 'ketua_tim_pemeliharaan_lingkungan', 'pengawas_taman_penghijauan', 'kepala_koordinator_taman', 'kepala_koordinator_pohon')),
+  position text not null check (position in ('kabid_tata_lingkungan', 'ketua_tim_pemeliharaan_lingkungan', 'kepala_koordinator_taman', 'kepala_koordinator_pohon')),
   name text not null,
   nip text not null default '',
   all_regions boolean not null default false,

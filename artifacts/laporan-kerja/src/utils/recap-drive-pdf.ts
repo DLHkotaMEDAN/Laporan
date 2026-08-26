@@ -328,11 +328,10 @@ const addSignatures = (pdf: jsPDF, options: GenerateRecapDrivePdfOptions, margin
   pdf.setFontSize(8);
   drawText(pdf, `Medan, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, pageWidth - margin - 50, y + 4, { align: 'center' });
 
-  const columnWidth = (pageWidth - margin * 2) / 4;
+  const columnWidth = (pageWidth - margin * 2) / 3;
   const blocks = [
     ['Mengetahui :', 'Kabid Tata Lingkungan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Heni Rustati, ST, M.Si', 'NIP. 19720223 200604 2 002'],
     ['Diketahui :', 'Ketua Tim Pemeliharaan Lingkungan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', 'Anitha Florida Ginting, ST, M. Si', 'NIP. 19811128 201001 2 011'],
-    ['Diketahui :', 'Pengawas Taman Penghijauan', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', '____________________________', '____________________________'],
   ];
 
   const coordinatorBlock = ['Diketahui :', 'Kepala Koordinator Pemeliharaan Taman', 'Dinas Lingkungan Hidup', 'Kota Medan', '', '', options.coordinatorName, options.coordinatorNip];

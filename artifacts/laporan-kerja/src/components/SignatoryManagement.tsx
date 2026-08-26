@@ -12,7 +12,6 @@ import { showError, showSuccess } from '@/utils/toast';
 const labels: Record<SignatoryPosition, string> = {
   kabid_tata_lingkungan: 'Kabid Tata Lingkungan',
   ketua_tim_pemeliharaan_lingkungan: 'Ketua Tim Pemeliharaan Lingkungan',
-  pengawas_taman_penghijauan: 'Pengawas Taman Penghijauan',
   kepala_koordinator_taman: 'Kepala Koordinator Taman',
   kepala_koordinator_pohon: 'Kepala Koordinator Pohon',
 };
@@ -37,7 +36,7 @@ export default function SignatoryManagement() {
       signatoryService.getAll(),
       supabase.from('regions').select('id, name').eq('is_active', true).order('sort_order'),
     ]);
-    setItems(signatories);
+    setItems(signatories.filter((item) => item.position in labels));
     setRegions(regionResult.data || []);
     setLoading(false);
   };

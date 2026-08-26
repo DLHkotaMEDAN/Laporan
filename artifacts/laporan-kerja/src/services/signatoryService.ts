@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 export const SIGNATORY_POSITIONS = [
   'kabid_tata_lingkungan',
   'ketua_tim_pemeliharaan_lingkungan',
-  'pengawas_taman_penghijauan',
   'kepala_koordinator_taman',
   'kepala_koordinator_pohon',
 ] as const;

@@ -632,7 +632,7 @@ const WorkPlanDailyRecap = () => {
               <div className="keep-together">
                 {signatureMode === "with-signature" && (
                   <div className="pdf-footer mt-12">
-                    <div className="flex justify-end mb-4 text-[11px]"><p className="w-1/4 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+                    <div className="flex justify-end mb-4 text-[11px]"><p className="w-1/3 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
                     <div className="grid grid-cols-3 gap-4 text-[11px] leading-normal">
                       <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="kabid_tata_lingkungan" fallbackName="Heni Rustati, ST, M.Si" fallbackNip="NIP. 19720223 200604 2 002" /></div></div>
                       <div className="text-center flex flex-col justify-between min-h-[200px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><SignatoryText position="ketua_tim_pemeliharaan_lingkungan" fallbackName="Anitha Florida Ginting, ST, M. Si" fallbackNip="NIP. 19811128 201001 2 011" /></div></div>
