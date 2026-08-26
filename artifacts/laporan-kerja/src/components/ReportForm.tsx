@@ -26,6 +26,7 @@ import { fuelPriceService } from '@/services/fuelPriceService';
 import { useAuth } from '@/context/AuthContext';
 import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import {
   Dialog,
   DialogContent,
@@ -167,8 +168,14 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   const selectedTeamId = teams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
   const selectedDate = form.watch("date");
   const { fields: taskFields, append: appendTask, remove: removeTask, replace: replaceTasks } = useFieldArray({ control: form.control, name: "tasks" });
+  const draftKey = session?.user?.id ? `report:${session.user.id}:${initialData?.id ?? "new"}` : undefined;
+  const { clearDraft, lastSavedAt, restoredAt } = useFormDraft(form, draftKey);
 
   const isTamanCategory = ["Taman Kota", "Taman Area", "Taman Amplas"].includes(selectedCategory);
+
+  useEffect(() => {
+    if (restoredAt) showSuccess("Draf laporan sebelumnya dipulihkan");
+  }, [restoredAt]);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -385,6 +392,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
         }
         showSuccess(isDuplicateMode ? "Laporan baru berhasil dibuat dari duplikat!" : "Laporan disimpan!");
       }
+      await clearDraft();
       navigate('/');
     } catch (error) {
       console.error(error);
@@ -422,6 +430,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
           <div className="flex flex-col items-center">
             <h1 className="text-lg md:text-2xl font-bold text-primary">{isEditing && !isDuplicateMode ? "Edit Laporan" : "Input Laporan Baru"}</h1>
             {isDuplicateMode && <Badge className="bg-amber-100 text-amber-700 border-amber-200 mt-1 animate-pulse"><Copy size={10} className="mr-1" /> Mode Duplikat: Belum Tersimpan</Badge>}
+            <p className="text-[10px] text-slate-500 mt-1">{lastSavedAt ? "Draf tersimpan otomatis di perangkat ini" : "Draf akan tersimpan otomatis di perangkat ini"}</p>
           </div>
           <div className="flex gap-2">
             {isEditing && !isDuplicateMode && (
