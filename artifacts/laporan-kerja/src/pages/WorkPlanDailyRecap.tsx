@@ -203,14 +203,38 @@ const WorkPlanDailyRecap = () => {
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
   const showRegionColumn = isAdmin && selectedRegion === 'semua';
   const getPlanRegionName = (plan: WorkPlan) => regions.find((region) => region.id === plan.region_id)?.name || '-';
+  const getPlanRowCount = (plan: WorkPlan) => {
+    if (plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN") return 1;
+    const items = getUniqueWorkPlanItems(plan.items);
+    return plan.category === "Tim Pohon" ? items.length : getRowsInWorkPlanItems(items);
+  };
+  // Data sudah diurutkan berdasarkan wilayah. Hitung seluruh tinggi baris tiap
+  // kelompok wilayah supaya satu sel Wilayah dapat mencakup beberapa Tim/Kec.
+  const regionCells = new Map<string, { rowSpan: number; isFirst: boolean; number: number }>();
+  let regionNumber = 1;
+  for (let start = 0; start < plans.length;) {
+    const regionId = plans[start].region_id || "-";
+    let end = start;
+    let rowSpan = 0;
+    while (end < plans.length && (plans[end].region_id || "-") === regionId) {
+      rowSpan += getPlanRowCount(plans[end]);
+      end += 1;
+    }
+    for (let index = start; index < end; index += 1) {
+      regionCells.set(plans[index].id, { rowSpan, isFirst: index === start, number: regionNumber });
+    }
+    start = end;
+    regionNumber += 1;
+  }
 
   const renderPlanRows = (plan: WorkPlan, pIdx: number) => {
+    const regionCell = regionCells.get(plan.id);
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
     if (isNoActivity) {
       return (
         <tr key={plan.id}>
-          <td className="border-2 border-black p-1 text-center">{pIdx + 1}</td>
-          {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold whitespace-normal break-words">{getPlanRegionName(plan)}</td>}
+          {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : 1}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
+          {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
           <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>
           <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
@@ -273,8 +297,8 @@ const WorkPlanDailyRecap = () => {
         <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
           {itemIdx === 0 && toolIdx === 0 && (
             <>
-              <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
-              {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
+              {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : totalPlanRows}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
+              {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
               <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>
             </>
           )}
@@ -582,7 +606,7 @@ const WorkPlanDailyRecap = () => {
         <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="work-plan-table split-table-before-footer w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
+              <table className="work-plan-table w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
@@ -601,34 +625,11 @@ const WorkPlanDailyRecap = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {plans.slice(0, -1).map((plan, pIdx) => renderPlanRows(plan, pIdx))}
+                  {plans.map((plan, pIdx) => renderPlanRows(plan, pIdx))}
                 </tbody>
               </table>
 
               <div className="keep-together">
-                <table className="work-plan-table continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
-                  {colGroup}
-                  <thead className="hidden print:table-header-group">
-                    <tr className="bg-slate-100">
-                      <th className="border-2 border-black p-1">No</th>
-                      {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
-                      <th className="border-2 border-black p-1">Tim/ Kec</th>
-                      <th className="border-2 border-black p-1">Detail Kegiatan</th>
-                      <th className="border-2 border-black p-1">Lokasi</th>
-                      <th className="border-2 border-black p-1">Alat Operasional</th>
-                      <th className="border-2 border-black p-1">Unit</th>
-                      <th className="border-2 border-black p-1">Kegunaan</th>
-                      <th className="border-2 border-black p-1">Pers</th>
-                      <th className="border-2 border-black p-1">Koordinator</th>
-                      <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
-                      {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {renderPlanRows(plans[plans.length - 1], plans.length - 1)}
-                  </tbody>
-                </table>
-
                 {signatureMode === "with-signature" && (
                   <div className="pdf-footer mt-12">
                     <div className="flex justify-end mb-4 text-[11px]"><p className="w-1/4 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
