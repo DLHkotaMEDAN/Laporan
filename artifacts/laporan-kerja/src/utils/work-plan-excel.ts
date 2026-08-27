@@ -43,18 +43,18 @@ export const exportWorkPlanExcel = async ({
   });
   sheet.views = [{ state: "frozen", ySplit: 5 }];
 
-  sheet.mergeCells("A1:L1");
+  sheet.mergeCells("A1:O1");
   sheet.getCell("A1").value = title.toUpperCase();
   sheet.getCell("A1").font = { bold: true, size: 16 };
   sheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(1).height = includeLogo ? 34 : 24;
 
-  sheet.mergeCells("A2:L2");
+  sheet.mergeCells("A2:O2");
   sheet.getCell("A2").value = "DINAS LINGKUNGAN HIDUP KOTA MEDAN";
   sheet.getCell("A2").font = { bold: true, size: 13 };
   sheet.getCell("A2").alignment = { horizontal: "center" };
 
-  sheet.mergeCells("A3:L3");
+  sheet.mergeCells("A3:O3");
   sheet.getCell("A3").value = periodLabel;
   sheet.getCell("A3").font = { bold: true, size: 11 };
   sheet.getCell("A3").alignment = { horizontal: "center" };
@@ -75,8 +75,8 @@ export const exportWorkPlanExcel = async ({
   }
 
   const headers = [
-    "No", "Tanggal", "Kategori", "Uraian Rencana", "Lokasi", "Alat",
-    "Jumlah Alat", "Kegunaan", "Jumlah Personel", "Koordinator", "Basis", "Keterangan",
+    "No", "Tanggal", "Kategori", "Uraian Rencana", "Lokasi", "Target Luas (M²)", "Alat",
+    "Jumlah Alat", "Jumlah Personel", "Koordinator", "Mandor", "Kegunaan", "Dasar\nPengerjaan", "Kebutuhan\nBBM\n(Liter)", "Keterangan",
   ];
   const headerRow = sheet.getRow(5);
   headerRow.values = headers;
@@ -92,7 +92,7 @@ export const exportWorkPlanExcel = async ({
   plans.forEach((plan) => {
     const items = plan.items?.length ? plan.items : [];
     if (!items.length) {
-      sheet.addRow([rowNumber++, plan.date, plan.category, "Tidak ada rencana kerja/kegiatan", "-", "-", "-", "-", "-", "-", "-", "-"]);
+      sheet.addRow([rowNumber++, plan.date, plan.category, "Tidak ada rencana kerja/kegiatan", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]);
       return;
     }
 
@@ -111,12 +111,15 @@ export const exportWorkPlanExcel = async ({
           plan.category,
           item.description || "-",
           location || "-",
+          item.target_area ? Number(item.target_area) : "-",
           tool.name || "-",
           tool.unit || 0,
-          tool.usage || "-",
           tool.members ?? item.personnel?.members ?? 0,
           item.coordinator || "-",
+          item.foreman || "-",
+          tool.usage || "-",
           item.basis || "-",
+          item.fuel_need_liters ? Number(item.fuel_need_liters) : "-",
           item.remarks || "-",
         ]);
       });
@@ -125,7 +128,7 @@ export const exportWorkPlanExcel = async ({
   });
 
   if (!plans.length) {
-    sheet.mergeCells("A6:L6");
+    sheet.mergeCells("A6:O6");
     sheet.getCell("A6").value = "Tidak ada rencana kerja pada periode yang dipilih.";
     sheet.getCell("A6").alignment = { horizontal: "center", vertical: "middle" };
   }
@@ -139,10 +142,10 @@ export const exportWorkPlanExcel = async ({
   }
 
   sheet.columns = [
-    { width: 6 }, { width: 13 }, { width: 18 }, { width: 34 }, { width: 35 }, { width: 22 },
-    { width: 12 }, { width: 24 }, { width: 15 }, { width: 22 }, { width: 20 }, { width: 25 },
+    { width: 6 }, { width: 13 }, { width: 18 }, { width: 34 }, { width: 35 }, { width: 16 }, { width: 22 },
+    { width: 12 }, { width: 15 }, { width: 22 }, { width: 22 }, { width: 24 }, { width: 14 }, { width: 16 }, { width: 25 },
   ];
-  sheet.autoFilter = { from: "A5", to: "L5" };
+  sheet.autoFilter = { from: "A5", to: "O5" };
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), fileName.endsWith(".xlsx") ? fileName : `${fileName}.xlsx`);

@@ -12,8 +12,11 @@ export interface WorkPlanTool {
 export interface WorkPlanItem {
   description: string;
   location: Location;
+  target_area?: number;
+  fuel_need_liters?: number;
   tools: WorkPlanTool[];
   coordinator: string;
+  foreman?: string;
   personnel: {
     members: number;
   };

@@ -57,9 +57,9 @@ type SignatureMode = "with-signature" | "without-signature";
 type LogoMode = "with-logo" | "without-logo";
 
 const workPlanColumnLabels = {
-  date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi",
-  tools: "Alat Operasional", unit: "Unit", usage: "Kegunaan", personnel: "Personel",
-  coordinator: "Koordinator", basis: "Dasar Pengerjaan", remarks: "Keterangan",
+  date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", target_area: "Target Luas (M²)",
+  tools: "Alat Operasional", unit: "Unit", personnel: "Personel",
+  coordinator: "Koordinator", foreman: "Mandor", basis: "Dasar Pengerjaan", fuel_need_liters: "Kebutuhan BBM/Liter", remarks: "Keterangan",
 };
 
 const WorkPlanMonthlyRecap = () => {
@@ -79,7 +79,7 @@ const WorkPlanMonthlyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
-  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, tools: true, unit: true, usage: true, personnel: true, coordinator: true, basis: true, remarks: true });
+  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: true, remarks: true });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const dataRequestId = useRef(0);
@@ -199,7 +199,7 @@ const WorkPlanMonthlyRecap = () => {
           {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words">{getPlanRegionName(plan)}</td>}
           <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
           <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>
-          <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
+          <td colSpan={10} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
           </td>
           {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
@@ -210,7 +210,7 @@ const WorkPlanMonthlyRecap = () => {
     const displayItems = getUniqueWorkPlanItems(plan.items);
     const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
     const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
-    const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
+    const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? `${item.coordinator}|${item.foreman || ""}` : `${item.coordinator}|${item.foreman || ""}|${item.personnel.members}`);
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
     const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
     const isTreeLayout = plan.category === "Tim Pohon";
@@ -253,18 +253,19 @@ const WorkPlanMonthlyRecap = () => {
               {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
             </td>
           )}
+          {toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
+          )}
 
           {isTreeLayout ? (alignTreeTools ? (
             <>
               <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>
               <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>
-              <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.usage || "-"}</td>
             </>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <>
               <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
-              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
             </>
           ) : null) : toolSpan > 0 && toolIdx === 0 && (
             <>
@@ -276,11 +277,6 @@ const WorkPlanMonthlyRecap = () => {
               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
                   <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>
-                )) : "-"}
-              </td>
-              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
-                {item.tools.length > 0 ? item.tools.map((t, idx) => (
-                  <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>
                 )) : "-"}
               </td>
             </>
@@ -296,8 +292,14 @@ const WorkPlanMonthlyRecap = () => {
           {teamSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.coordinator}</td>
           )}
+          {teamSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.foreman || "-"}</td>
+          )}
           {basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
+          )}
+          {toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
           )}
           {hasRemarks && remarksSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, remarksSpan)}>{item.remarks || "-"}</td>
@@ -315,12 +317,14 @@ const WorkPlanMonthlyRecap = () => {
       <col style={{ width: '55px', display: visibleColumns.category ? undefined : 'none' }} />
       <col style={{ width: '110px', display: visibleColumns.description ? undefined : 'none' }} />
       <col style={{ width: '120px', display: visibleColumns.location ? undefined : 'none' }} />
+      <col style={{ width: '55px', display: visibleColumns.target_area ? undefined : 'none' }} />
       <col style={{ width: '110px', display: visibleColumns.tools ? undefined : 'none' }} />
       <col style={{ width: '25px', display: visibleColumns.unit ? undefined : 'none' }} />
-      <col style={{ width: '90px', display: visibleColumns.usage ? undefined : 'none' }} />
       <col style={{ width: '35px', display: visibleColumns.personnel ? undefined : 'none' }} />
       <col style={{ width: '75px', display: visibleColumns.coordinator ? undefined : 'none' }} />
-      <col style={{ width: '90px', display: visibleColumns.basis ? undefined : 'none' }} />
+      <col style={{ width: '75px', display: visibleColumns.foreman ? undefined : 'none' }} />
+      <col style={{ width: '65px', display: visibleColumns.basis ? undefined : 'none' }} />
+      <col style={{ width: '65px', display: visibleColumns.fuel_need_liters ? undefined : 'none' }} />
       {hasRemarks && <col style={{ width: '120px', display: visibleColumns.remarks ? undefined : 'none' }} />}
     </colgroup>
   );
@@ -484,12 +488,14 @@ const WorkPlanMonthlyRecap = () => {
                     <th className="border-2 border-black p-1">Tim/Kec</th>
                     <th className="border-2 border-black p-1">Detail Kegiatan</th>
                     <th className="border-2 border-black p-1">Lokasi</th>
+                    <th className="border-2 border-black p-1">Target Luas (M²)</th>
                     <th className="border-2 border-black p-1">Alat Operasional</th>
                     <th className="border-2 border-black p-1">Unit</th>
-                    <th className="border-2 border-black p-1">Kegunaan</th>
                     <th className="border-2 border-black p-1">Pers</th>
                     <th className="border-2 border-black p-1">Koordinator</th>
-                    <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
+                    <th className="border-2 border-black p-1">Mandor</th>
+                    <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
+                    <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
                     {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
@@ -509,12 +515,14 @@ const WorkPlanMonthlyRecap = () => {
                       <th className="border-2 border-black p-1">Tim/Kec</th>
                       <th className="border-2 border-black p-1">Detail Kegiatan</th>
                       <th className="border-2 border-black p-1">Lokasi</th>
+                      <th className="border-2 border-black p-1">Target Luas (M²)</th>
                       <th className="border-2 border-black p-1">Alat Operasional</th>
                       <th className="border-2 border-black p-1">Unit</th>
-                      <th className="border-2 border-black p-1">Kegunaan</th>
                       <th className="border-2 border-black p-1">Pers</th>
                       <th className="border-2 border-black p-1">Koordinator</th>
-                      <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
+                      <th className="border-2 border-black p-1">Mandor</th>
+                      <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
+                      <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
                       {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
                     </tr>
                   </thead>
@@ -555,7 +563,7 @@ const WorkPlanMonthlyRecap = () => {
           ) : (
             <table className="w-full border-collapse border-2 border-black text-[9px] table-fixed">
               <tbody>
-                <tr><td colSpan={hasRemarks ? 12 : 11} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
+                <tr><td colSpan={hasRemarks ? 14 : 13} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}

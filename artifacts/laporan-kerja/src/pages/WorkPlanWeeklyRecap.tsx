@@ -51,9 +51,9 @@ type SignatureMode = "with-signature" | "without-signature";
 type LogoMode = "with-logo" | "without-logo";
 
 const workPlanColumnLabels = {
-  date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi",
-  tools: "Alat Operasional", unit: "Unit", usage: "Kegunaan", personnel: "Personel",
-  coordinator: "Koordinator", basis: "Dasar Pengerjaan", remarks: "Keterangan",
+  date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", target_area: "Target Luas (M²)",
+  tools: "Alat Operasional", unit: "Unit", personnel: "Personel",
+  coordinator: "Koordinator", foreman: "Mandor", basis: "Dasar Pengerjaan", fuel_need_liters: "Kebutuhan BBM/Liter", remarks: "Keterangan",
 };
 
 type WeeklyTableRow =
@@ -99,7 +99,7 @@ const WorkPlanWeeklyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
-  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, tools: true, unit: true, usage: true, personnel: true, coordinator: true, basis: true, remarks: true });
+  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: true, remarks: true });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const dataRequestId = useRef(0);
@@ -226,7 +226,7 @@ const WorkPlanWeeklyRecap = () => {
         const displayItems = getUniqueWorkPlanItems(plan.items);
         const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
         const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
-        const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? item.coordinator : `${item.coordinator}|${item.personnel.members}`);
+        const teamSpans = getSequentialSpans(displayItems, (item) => plan.category === "Tim Pohon" ? `${item.coordinator}|${item.foreman || ""}` : `${item.coordinator}|${item.foreman || ""}|${item.personnel.members}`);
         const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
         const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
 
@@ -299,12 +299,14 @@ const WorkPlanWeeklyRecap = () => {
       <col style={{ width: '60px', display: visibleColumns.category ? undefined : 'none' }} />
       <col style={{ width: '120px', display: visibleColumns.description ? undefined : 'none' }} />
       <col style={{ width: '130px', display: visibleColumns.location ? undefined : 'none' }} />
+      <col style={{ width: '55px', display: visibleColumns.target_area ? undefined : 'none' }} />
       <col style={{ width: '120px', display: visibleColumns.tools ? undefined : 'none' }} />
       <col style={{ width: '30px', display: visibleColumns.unit ? undefined : 'none' }} />
-      <col style={{ width: '100px', display: visibleColumns.usage ? undefined : 'none' }} />
       <col style={{ width: '40px', display: visibleColumns.personnel ? undefined : 'none' }} />
       <col style={{ width: '80px', display: visibleColumns.coordinator ? undefined : 'none' }} />
-      <col style={{ width: '100px', display: visibleColumns.basis ? undefined : 'none' }} />
+      <col style={{ width: '80px', display: visibleColumns.foreman ? undefined : 'none' }} />
+      <col style={{ width: '70px', display: visibleColumns.basis ? undefined : 'none' }} />
+      <col style={{ width: '65px', display: visibleColumns.fuel_need_liters ? undefined : 'none' }} />
       {hasRemarks && <col style={{ width: '130px', display: visibleColumns.remarks ? undefined : 'none' }} />}
     </colgroup>
   );
@@ -467,12 +469,14 @@ const WorkPlanWeeklyRecap = () => {
                     <th className="border-2 border-black p-1">Tim/Kec</th>
                     <th className="border-2 border-black p-1">Detail Kegiatan</th>
                     <th className="border-2 border-black p-1">Lokasi</th>
+                    <th className="border-2 border-black p-1">Target Luas (M²)</th>
                     <th className="border-2 border-black p-1">Alat Operasional</th>
                     <th className="border-2 border-black p-1">Unit</th>
-                    <th className="border-2 border-black p-1">Kegunaan</th>
                     <th className="border-2 border-black p-1">Pers</th>
                     <th className="border-2 border-black p-1">Koordinator</th>
-                    <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
+                    <th className="border-2 border-black p-1">Mandor</th>
+                    <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
+                    <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
                     {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
@@ -493,7 +497,7 @@ const WorkPlanWeeklyRecap = () => {
                             {showRegionColumn && <td className="border-2 border-black p-1 text-center align-middle font-bold whitespace-normal break-words">{getPlanRegionName(row.plan)}</td>}
                             {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
                             <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
-                            <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
+                            <td colSpan={10} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
                             {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{row.plan.items[0]?.remarks || "-"}</td>}
                           </tr>
                         );
@@ -517,18 +521,19 @@ const WorkPlanWeeklyRecap = () => {
                           {toolIndex === 0 && (
                             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={row.itemToolsLength}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           )}
+                          {toolIndex === 0 && (
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.itemToolsLength}>{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
+                          )}
 
                           {row.plan.category === "Tim Pohon" ? (row.alignTreeTools ? (
                             <>
                               <td className="border-2 border-black p-1 text-center align-middle break-words">{row.tool.name ? `• ${row.tool.name}` : "-"}</td>
                               <td className="border-2 border-black p-1 text-center align-middle">{row.tool.unit || "-"}</td>
-                              <td className="border-2 border-black p-1 text-center align-middle break-words">{row.tool.usage || "-"}</td>
                             </>
                           ) : row.showTools ? (
                             <>
                               <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>
                               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>
-                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>)}</td>
                             </>
                           ) : null) : row.showTools && (
                             <>
@@ -540,11 +545,6 @@ const WorkPlanWeeklyRecap = () => {
                               <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
                                   <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>
-                                )) : "-"}
-                              </td>
-                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>
-                                {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
-                                  <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.usage || "-"}</div>
                                 )) : "-"}
                               </td>
                             </>
@@ -560,8 +560,14 @@ const WorkPlanWeeklyRecap = () => {
                           {row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.coordinator}</td>
                           )}
+                          {row.showTeam && (
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.foreman || "-"}</td>
+                          )}
                           {row.showBasis && (
                             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.basisRows}>{item.basis}</td>
+                          )}
+                          {toolIndex === 0 && (
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.itemToolsLength}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
                           )}
                           {hasRemarks && row.showRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.remarkRows}>{item.remarks || "-"}</td>}
                         </tr>

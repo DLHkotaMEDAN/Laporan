@@ -91,7 +91,7 @@ const PrintWorkPlan = () => {
 
   const descriptionSpans = getSequentialSpans(displayItems, (it) => it.description.trim());
   const toolSpans = getSequentialSpans(displayItems, (it) => JSON.stringify(it.tools));
-  const teamSpans = getSequentialSpans(displayItems, (it) => plan.category === "Tim Pohon" ? it.coordinator : `${it.coordinator}|${it.personnel.members}`);
+  const teamSpans = getSequentialSpans(displayItems, (it) => plan.category === "Tim Pohon" ? `${it.coordinator}|${it.foreman || ""}` : `${it.coordinator}|${it.foreman || ""}|${it.personnel.members}`);
   const basisSpans = getSequentialSpans(displayItems, (it) => getWorkPlanBasisKey(it.basis));
   const isTreeLayout = plan.category === "Tim Pohon";
   const getSpanRows = (itemIndex: number, span: number) => isTreeLayout ? span : getItemSpanRows(displayItems, itemIndex, span);
@@ -173,12 +173,15 @@ const PrintWorkPlan = () => {
               <th className="border-2 border-black p-1 w-[60px]">Tim/ Kec</th>
               <th className="border-2 border-black p-1 w-[120px]">Detail Kegiatan</th>
               <th className="border-2 border-black p-1 w-[140px]">Lokasi</th>
+              <th className="border-2 border-black p-1 w-[55px]">Target Luas (M²)</th>
               <th className="border-2 border-black p-1 w-[110px]">Alat Operasional</th>
               <th className="border-2 border-black p-1 w-[40px]">Unit</th>
-              <th className="border-2 border-black p-1 w-[100px]">Kegunaan</th>
               <th className="border-2 border-black p-1 w-[50px]">Personil</th>
               <th className="border-2 border-black p-1 w-[80px]">Koordinator</th>
-              <th className="border-2 border-black p-1 w-[100px]">Dasar Pengerjaan</th>
+              <th className="border-2 border-black p-1 w-[80px]">Mandor</th>
+              <th className="border-2 border-black p-1 w-[100px]">Kegunaan</th>
+              <th className="border-2 border-black p-1 w-[70px] whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
+              <th className="border-2 border-black p-1 w-[65px] leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
               {hasRemarks && <th className="border-2 border-black p-1 w-[100px]">Keterangan</th>}
             </tr>
           </thead>
@@ -187,7 +190,7 @@ const PrintWorkPlan = () => {
               <tr>
                 <td className="border-2 border-black p-1 text-center">1</td>
                 <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>
-                <td colSpan={8} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
+                <td colSpan={11} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
                   TIDAK ADA RENCANA KERJA/ KEGIATAN
                 </td>
                 {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
@@ -214,11 +217,15 @@ const PrintWorkPlan = () => {
                           {item.description}
                         </td>
                       )}
-
+                      
                       {item && (
                         <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={rowIndex === allItems.length - 1 ? maxRows - rowIndex : 1}>
                           {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
                         </td>
+                      )}
+                      
+                      {item && (
+                        <td className="border-2 border-black p-1 text-center align-middle">{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
                       )}
 
                       {rowIndex === 0 && (
@@ -237,6 +244,9 @@ const PrintWorkPlan = () => {
                               </div>
                             ))}
                           </td>
+                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].personnel.members} Org</td>
+                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].coordinator}</td>
+                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].foreman || "-"}</td>
                           <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={maxRows}>
                             {allTools.map((t, i) => (
                               <div key={i} className={`h-16 flex items-center justify-center text-center ${i > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
@@ -244,9 +254,8 @@ const PrintWorkPlan = () => {
                               </div>
                             ))}
                           </td>
-                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].personnel.members} Org</td>
-                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].coordinator}</td>
                           <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].basis}</td>
+                          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].fuel_need_liters ? Number(displayItems[0].fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
                           {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].remarks || "-"}</td>}
                         </>
                       )}
@@ -288,18 +297,20 @@ const PrintWorkPlan = () => {
                         {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
                       </td>
                     )}
+                    
+                    {toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
+                    )}
 
                     {isTreeLayout ? (alignTreeTools ? (
                       <>
                         <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>
                         <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>
-                        <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.usage || "-"}</td>
                       </>
                     ) : toolSpan > 0 && toolIdx === 0 ? (
                       <>
                         <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
                         <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
-                        <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
                       </>
                     ) : null) : toolSpan > 0 && toolIdx === 0 ? (
                       <>
@@ -314,13 +325,6 @@ const PrintWorkPlan = () => {
                           {item.tools.map((t, ti) => (
                             <div key={ti} className={`h-16 flex items-center justify-center ${ti > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
                               {t.unit || "-"}
-                            </div>
-                          ))}
-                        </td>
-                        <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
-                          {item.tools.map((t, ti) => (
-                            <div key={ti} className={`h-16 flex items-center justify-center text-center ${ti > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
-                              {t.usage || "-"}
                             </div>
                           ))}
                         </td>
@@ -340,12 +344,33 @@ const PrintWorkPlan = () => {
                         {item.coordinator}
                       </td>
                     )}
+                    {teamSpan > 0 && toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>
+                        {item.foreman || "-"}
+                      </td>
+                    )}
+                    {isTreeLayout ? (alignTreeTools ? (
+                      <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.usage || "-"}</td>
+                    ) : toolSpan > 0 && toolIdx === 0 ? (
+                      <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.usage || "-"}</div>)}</td>
+                    ) : null) : toolSpan > 0 && toolIdx === 0 ? (
+                      <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+                        {item.tools.map((t, ti) => (
+                          <div key={ti} className={`h-16 flex items-center justify-center text-center ${ti > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>
+                            {t.usage || "-"}
+                          </div>
+                        ))}
+                      </td>
+                    ) : null}
                     {basisSpan > 0 && toolIdx === 0 && (
                       <>
                         <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>
                           {item.basis}
                         </td>
                       </>
+                    )}
+                    {toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
                     )}
                     {hasRemarks && toolIdx === 0 && (
                       <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
