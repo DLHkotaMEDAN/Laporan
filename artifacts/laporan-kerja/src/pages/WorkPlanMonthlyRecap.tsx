@@ -143,6 +143,19 @@ const WorkPlanMonthlyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
+  const showRemarksColumn = hasRemarks && visibleColumns.remarks;
+  const noActivityColSpan = Math.max(1, [
+    visibleColumns.description,
+    visibleColumns.location,
+    visibleColumns.target_area,
+    visibleColumns.tools,
+    visibleColumns.unit,
+    visibleColumns.personnel,
+    visibleColumns.coordinator,
+    visibleColumns.foreman,
+    visibleColumns.basis,
+    visibleColumns.fuel_need_liters,
+  ].filter(Boolean).length);
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
   const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
   const recapTitle = `REKAP RENCANA KERJA BULANAN${showCategoryInTitle ? ` ${getRecapCategoryLabel(plans.map((plan) => plan.category))}` : ''}`;
@@ -197,12 +210,12 @@ const WorkPlanMonthlyRecap = () => {
         <tr key={plan.id}>
           <td className="border-2 border-black p-1 text-center align-middle font-bold">{pIdx + 1}</td>
           {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words">{getPlanRegionName(plan)}</td>}
-          <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>
-          <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>
-          <td colSpan={10} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
+          {visibleColumns.date && <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>}
+          {visibleColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>}
+          <td colSpan={noActivityColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
           </td>
-          {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
+          {showRemarksColumn && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
         </tr>
       );
     }
@@ -237,71 +250,71 @@ const WorkPlanMonthlyRecap = () => {
             <>
               <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={totalPlanRows}>{pIdx + 1}</td>
               {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={totalPlanRows}>{getPlanRegionName(plan)}</td>}
-              <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={totalPlanRows}>
+              {visibleColumns.date && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={totalPlanRows}>
                 {format(parseISO(plan.date), 'dd/MM/yy')}
-              </td>
-              <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>
+              </td>}
+              {visibleColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>}
             </>
           )}
 
-          {descriptionSpan > 0 && toolIdx === 0 && (
+          {visibleColumns.description && descriptionSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>{item.description}</td>
           )}
 
-          {toolIdx === 0 && (
+          {visibleColumns.location && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
               {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
             </td>
           )}
-          {toolIdx === 0 && (
+          {visibleColumns.target_area && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
           )}
 
-          {isTreeLayout ? (alignTreeTools ? (
+          {(visibleColumns.tools || visibleColumns.unit) && (isTreeLayout ? (alignTreeTools ? (
             <>
-              <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>
-              <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>
+              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>}
+              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>}
             </>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <>
-              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>
-              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>
+              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>}
+              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>}
             </>
           ) : null) : toolSpan > 0 && toolIdx === 0 && (
             <>
-              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
                   <div key={idx} className={`h-16 flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
                 )) : "-"}
-              </td>
-              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              </td>}
+              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
                   <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>
                 )) : "-"}
-              </td>
+              </td>}
             </>
-          )}
+          ))}
 
-          {isTreeLayout ? (alignTreeTools ? (
+          {visibleColumns.personnel && (isTreeLayout ? (alignTreeTools ? (
             <td className="border-2 border-black p-1 text-center align-middle">{tool.members ?? 0}</td>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`h-16 flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
           ) : null) : teamSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + teamSpan))}>{item.personnel.members}</td>
-          )}
-          {teamSpan > 0 && toolIdx === 0 && (
+          ))}
+          {visibleColumns.coordinator && teamSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.coordinator}</td>
           )}
-          {teamSpan > 0 && toolIdx === 0 && (
+          {visibleColumns.foreman && teamSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, teamSpan)}>{item.foreman || "-"}</td>
           )}
-          {basisSpan > 0 && toolIdx === 0 && (
+          {visibleColumns.basis && basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
-          {toolIdx === 0 && (
+          {visibleColumns.fuel_need_liters && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
           )}
-          {hasRemarks && remarksSpan > 0 && toolIdx === 0 && (
+          {showRemarksColumn && remarksSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, remarksSpan)}>{item.remarks || "-"}</td>
           )}
         </tr>
@@ -313,19 +326,19 @@ const WorkPlanMonthlyRecap = () => {
     <colgroup>
       <col style={{ width: '25px' }} />
       {showRegionColumn && <col style={{ width: '60px' }} />}
-      <col style={{ width: '55px', display: visibleColumns.date ? undefined : 'none' }} />
-      <col style={{ width: '55px', display: visibleColumns.category ? undefined : 'none' }} />
-      <col style={{ width: '110px', display: visibleColumns.description ? undefined : 'none' }} />
-      <col style={{ width: '120px', display: visibleColumns.location ? undefined : 'none' }} />
-      <col style={{ width: '55px', display: visibleColumns.target_area ? undefined : 'none' }} />
-      <col style={{ width: '110px', display: visibleColumns.tools ? undefined : 'none' }} />
-      <col style={{ width: '25px', display: visibleColumns.unit ? undefined : 'none' }} />
-      <col style={{ width: '35px', display: visibleColumns.personnel ? undefined : 'none' }} />
-      <col style={{ width: '75px', display: visibleColumns.coordinator ? undefined : 'none' }} />
-      <col style={{ width: '75px', display: visibleColumns.foreman ? undefined : 'none' }} />
-      <col style={{ width: '65px', display: visibleColumns.basis ? undefined : 'none' }} />
-      <col style={{ width: '65px', display: visibleColumns.fuel_need_liters ? undefined : 'none' }} />
-      {hasRemarks && <col style={{ width: '120px', display: visibleColumns.remarks ? undefined : 'none' }} />}
+      {visibleColumns.date && <col style={{ width: '55px' }} />}
+      {visibleColumns.category && <col style={{ width: '55px' }} />}
+      {visibleColumns.description && <col style={{ width: '110px' }} />}
+      {visibleColumns.location && <col style={{ width: '120px' }} />}
+      {visibleColumns.target_area && <col style={{ width: '55px' }} />}
+      {visibleColumns.tools && <col style={{ width: '110px' }} />}
+      {visibleColumns.unit && <col style={{ width: '25px' }} />}
+      {visibleColumns.personnel && <col style={{ width: '35px' }} />}
+      {visibleColumns.coordinator && <col style={{ width: '75px' }} />}
+      {visibleColumns.foreman && <col style={{ width: '75px' }} />}
+      {visibleColumns.basis && <col style={{ width: '65px' }} />}
+      {visibleColumns.fuel_need_liters && <col style={{ width: '65px' }} />}
+      {showRemarksColumn && <col style={{ width: '120px' }} />}
     </colgroup>
   );
 
@@ -484,19 +497,19 @@ const WorkPlanMonthlyRecap = () => {
                   <tr className="bg-slate-100">
                     <th className="border-2 border-black p-1">No</th>
                     {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
-                    <th className="border-2 border-black p-1">Hari/Tgl</th>
-                    <th className="border-2 border-black p-1">Tim/Kec</th>
-                    <th className="border-2 border-black p-1">Detail Kegiatan</th>
-                    <th className="border-2 border-black p-1">Lokasi</th>
-                    <th className="border-2 border-black p-1">Target Luas (M²)</th>
-                    <th className="border-2 border-black p-1">Alat Operasional</th>
-                    <th className="border-2 border-black p-1">Unit</th>
-                    <th className="border-2 border-black p-1">Pers</th>
-                    <th className="border-2 border-black p-1">Koordinator</th>
-                    <th className="border-2 border-black p-1">Mandor</th>
-                    <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
-                    <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
-                    {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
+                    {visibleColumns.date && <th className="border-2 border-black p-1">Hari/Tgl</th>}
+                    {visibleColumns.category && <th className="border-2 border-black p-1">Tim/Kec</th>}
+                    {visibleColumns.description && <th className="border-2 border-black p-1">Detail Kegiatan</th>}
+                    {visibleColumns.location && <th className="border-2 border-black p-1">Lokasi</th>}
+                    {visibleColumns.target_area && <th className="border-2 border-black p-1">Target Luas (M²)</th>}
+                    {visibleColumns.tools && <th className="border-2 border-black p-1">Alat Operasional</th>}
+                    {visibleColumns.unit && <th className="border-2 border-black p-1">Unit</th>}
+                    {visibleColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
+                    {visibleColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
+                    {visibleColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
+                    {visibleColumns.basis && <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>}
+                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {showRemarksColumn && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -511,19 +524,19 @@ const WorkPlanMonthlyRecap = () => {
                     <tr className="bg-slate-100">
                       <th className="border-2 border-black p-1">No</th>
                       {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
-                      <th className="border-2 border-black p-1">Hari/Tgl</th>
-                      <th className="border-2 border-black p-1">Tim/Kec</th>
-                      <th className="border-2 border-black p-1">Detail Kegiatan</th>
-                      <th className="border-2 border-black p-1">Lokasi</th>
-                      <th className="border-2 border-black p-1">Target Luas (M²)</th>
-                      <th className="border-2 border-black p-1">Alat Operasional</th>
-                      <th className="border-2 border-black p-1">Unit</th>
-                      <th className="border-2 border-black p-1">Pers</th>
-                      <th className="border-2 border-black p-1">Koordinator</th>
-                      <th className="border-2 border-black p-1">Mandor</th>
-                      <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
-                      <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
-                      {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
+                      {visibleColumns.date && <th className="border-2 border-black p-1">Hari/Tgl</th>}
+                      {visibleColumns.category && <th className="border-2 border-black p-1">Tim/Kec</th>}
+                      {visibleColumns.description && <th className="border-2 border-black p-1">Detail Kegiatan</th>}
+                      {visibleColumns.location && <th className="border-2 border-black p-1">Lokasi</th>}
+                      {visibleColumns.target_area && <th className="border-2 border-black p-1">Target Luas (M²)</th>}
+                      {visibleColumns.tools && <th className="border-2 border-black p-1">Alat Operasional</th>}
+                      {visibleColumns.unit && <th className="border-2 border-black p-1">Unit</th>}
+                      {visibleColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
+                      {visibleColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
+                      {visibleColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
+                      {visibleColumns.basis && <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>}
+                      {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>}
+                      {showRemarksColumn && <th className="border-2 border-black p-1">Keterangan</th>}
                     </tr>
                   </thead>
                   <tbody>

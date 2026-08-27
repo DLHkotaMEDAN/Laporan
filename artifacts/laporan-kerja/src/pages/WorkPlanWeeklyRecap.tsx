@@ -165,6 +165,19 @@ const WorkPlanWeeklyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
+  const showRemarksColumn = hasRemarks && visibleColumns.remarks;
+  const noActivityColSpan = [
+    visibleColumns.description,
+    visibleColumns.location,
+    visibleColumns.target_area,
+    visibleColumns.tools,
+    visibleColumns.unit,
+    visibleColumns.personnel,
+    visibleColumns.coordinator,
+    visibleColumns.foreman,
+    visibleColumns.basis,
+    visibleColumns.fuel_need_liters,
+  ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
   const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
   const recapTitle = `REKAP RENCANA KERJA MINGGUAN${showCategoryInTitle ? ` ${getRecapCategoryLabel(plans.map((plan) => plan.category))}` : ''}`;
@@ -295,19 +308,19 @@ const WorkPlanWeeklyRecap = () => {
     <colgroup>
       <col style={{ width: '30px' }} />
       {showRegionColumn && <col style={{ width: '60px' }} />}
-      <col style={{ width: '60px', display: visibleColumns.date ? undefined : 'none' }} />
-      <col style={{ width: '60px', display: visibleColumns.category ? undefined : 'none' }} />
-      <col style={{ width: '120px', display: visibleColumns.description ? undefined : 'none' }} />
-      <col style={{ width: '130px', display: visibleColumns.location ? undefined : 'none' }} />
-      <col style={{ width: '55px', display: visibleColumns.target_area ? undefined : 'none' }} />
-      <col style={{ width: '120px', display: visibleColumns.tools ? undefined : 'none' }} />
-      <col style={{ width: '30px', display: visibleColumns.unit ? undefined : 'none' }} />
-      <col style={{ width: '40px', display: visibleColumns.personnel ? undefined : 'none' }} />
-      <col style={{ width: '80px', display: visibleColumns.coordinator ? undefined : 'none' }} />
-      <col style={{ width: '80px', display: visibleColumns.foreman ? undefined : 'none' }} />
-      <col style={{ width: '70px', display: visibleColumns.basis ? undefined : 'none' }} />
-      <col style={{ width: '65px', display: visibleColumns.fuel_need_liters ? undefined : 'none' }} />
-      {hasRemarks && <col style={{ width: '130px', display: visibleColumns.remarks ? undefined : 'none' }} />}
+      {visibleColumns.date && <col style={{ width: '60px' }} />}
+      {visibleColumns.category && <col style={{ width: '60px' }} />}
+      {visibleColumns.description && <col style={{ width: '120px' }} />}
+      {visibleColumns.location && <col style={{ width: '130px' }} />}
+      {visibleColumns.target_area && <col style={{ width: '55px' }} />}
+      {visibleColumns.tools && <col style={{ width: '120px' }} />}
+      {visibleColumns.unit && <col style={{ width: '30px' }} />}
+      {visibleColumns.personnel && <col style={{ width: '40px' }} />}
+      {visibleColumns.coordinator && <col style={{ width: '80px' }} />}
+      {visibleColumns.foreman && <col style={{ width: '80px' }} />}
+      {visibleColumns.basis && <col style={{ width: '70px' }} />}
+      {visibleColumns.fuel_need_liters && <col style={{ width: '65px' }} />}
+      {showRemarksColumn && <col style={{ width: '130px' }} />}
     </colgroup>
   );
 
@@ -465,19 +478,19 @@ const WorkPlanWeeklyRecap = () => {
                   <tr className="bg-slate-100">
                     <th className="border-2 border-black p-1">No</th>
                     {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
-                    <th className="border-2 border-black p-1">Hari/Tgl</th>
-                    <th className="border-2 border-black p-1">Tim/Kec</th>
-                    <th className="border-2 border-black p-1">Detail Kegiatan</th>
-                    <th className="border-2 border-black p-1">Lokasi</th>
-                    <th className="border-2 border-black p-1">Target Luas (M²)</th>
-                    <th className="border-2 border-black p-1">Alat Operasional</th>
-                    <th className="border-2 border-black p-1">Unit</th>
-                    <th className="border-2 border-black p-1">Pers</th>
-                    <th className="border-2 border-black p-1">Koordinator</th>
-                    <th className="border-2 border-black p-1">Mandor</th>
-                    <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
-                    <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
-                    {hasRemarks && <th className="border-2 border-black p-1">Keterangan</th>}
+                    {visibleColumns.date && <th className="border-2 border-black p-1">Hari/Tgl</th>}
+                    {visibleColumns.category && <th className="border-2 border-black p-1">Tim/Kec</th>}
+                    {visibleColumns.description && <th className="border-2 border-black p-1">Detail Kegiatan</th>}
+                    {visibleColumns.location && <th className="border-2 border-black p-1">Lokasi</th>}
+                    {visibleColumns.target_area && <th className="border-2 border-black p-1">Target Luas (M²)</th>}
+                    {visibleColumns.tools && <th className="border-2 border-black p-1">Alat Operasional</th>}
+                    {visibleColumns.unit && <th className="border-2 border-black p-1">Unit</th>}
+                    {visibleColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
+                    {visibleColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
+                    {visibleColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
+                    {visibleColumns.basis && <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>}
+                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {showRemarksColumn && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -495,10 +508,10 @@ const WorkPlanWeeklyRecap = () => {
                           <tr key={`no-act-${idx}`}>
                             {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
                             {showRegionColumn && <td className="border-2 border-black p-1 text-center align-middle font-bold whitespace-normal break-words">{getPlanRegionName(row.plan)}</td>}
-                            {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
-                            <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>
-                            <td colSpan={10} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>
-                            {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{row.plan.items[0]?.remarks || "-"}</td>}
+                            {visibleColumns.date && dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
+                            {visibleColumns.category && <td className="border-2 border-black p-1 text-center align-middle font-bold">{row.plan.category}</td>}
+                            {noActivityColSpan > 0 && <td colSpan={noActivityColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">TIDAK ADA RENCANA KERJA/ KEGIATAN</td>}
+                            {showRemarksColumn && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{row.plan.items[0]?.remarks || "-"}</td>}
                           </tr>
                         );
                       }
@@ -511,65 +524,65 @@ const WorkPlanWeeklyRecap = () => {
                         <tr key={`row-${idx}`}>
                           {noSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={noSpans[idx]}>{currentNo}</td>}
                           {showRegionColumn && isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={planRows.length}>{getPlanRegionName(plan)}</td>}
-                          {dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
-                          {isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
+                          {visibleColumns.date && dateSpans[idx] > 0 && <td className="border-2 border-black p-1 text-center align-middle text-[8px]" rowSpan={dateSpans[idx]}>{format(parseISO(row.date), 'eee, dd/MM', { locale: localeId })}</td>}
+                          {visibleColumns.category && isFirstInPlan && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={planRows.length}>{plan.category}</td>}
 
-                          {row.descriptionSpanRows > 0 && (
+                          {visibleColumns.description && row.descriptionSpanRows > 0 && (
                             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={row.descriptionSpanRows}>{item.description}</td>
                           )}
 
-                          {toolIndex === 0 && (
+                          {visibleColumns.location && toolIndex === 0 && (
                             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={row.itemToolsLength}>{item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}</td>
                           )}
-                          {toolIndex === 0 && (
+                          {visibleColumns.target_area && toolIndex === 0 && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.itemToolsLength}>{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
                           )}
 
-                          {row.plan.category === "Tim Pohon" ? (row.alignTreeTools ? (
+                          {(visibleColumns.tools || visibleColumns.unit) && (row.plan.category === "Tim Pohon" ? (row.alignTreeTools ? (
                             <>
-                              <td className="border-2 border-black p-1 text-center align-middle break-words">{row.tool.name ? `• ${row.tool.name}` : "-"}</td>
-                              <td className="border-2 border-black p-1 text-center align-middle">{row.tool.unit || "-"}</td>
+                              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words">{row.tool.name ? `• ${row.tool.name}` : "-"}</td>}
+                              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle">{row.tool.unit || "-"}</td>}
                             </>
                           ) : row.showTools ? (
                             <>
-                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>
-                              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>
+                              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>)}</td>}
+                              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>)}</td>}
                             </>
                           ) : null) : row.showTools && (
                             <>
-                              <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>
+                              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
                                   <div key={toolIdx} className={`h-16 flex items-center justify-center text-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.name ? `• ${tool.name}` : "-"}</div>
                                 )) : "-"}
-                              </td>
-                              <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>
+                              </td>}
+                              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>
                                 {item.tools.length > 0 ? item.tools.map((tool, toolIdx) => (
                                   <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.unit || "-"}</div>
                                 )) : "-"}
-                              </td>
+                              </td>}
                             </>
-                          )}
+                          ))}
 
-                          {row.plan.category === "Tim Pohon" ? (row.alignTreeTools ? (
+                          {visibleColumns.personnel && (row.plan.category === "Tim Pohon" ? (row.alignTreeTools ? (
                             <td className="border-2 border-black p-1 text-center align-middle">{row.tool.members ?? 0}</td>
                           ) : row.showTools ? (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{item.tools.map((tool, toolIdx) => <div key={toolIdx} className={`h-16 flex items-center justify-center ${toolIdx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{tool.members ?? 0}</div>)}</td>
                           ) : null) : row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.personnel.members}</td>
-                          )}
-                          {row.showTeam && (
+                          ))}
+                          {visibleColumns.coordinator && row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.coordinator}</td>
                           )}
-                          {row.showTeam && (
+                          {visibleColumns.foreman && row.showTeam && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.teamRows}>{item.foreman || "-"}</td>
                           )}
-                          {row.showBasis && (
+                          {visibleColumns.basis && row.showBasis && (
                             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.basisRows}>{item.basis}</td>
                           )}
-                          {toolIndex === 0 && (
+                          {visibleColumns.fuel_need_liters && toolIndex === 0 && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.itemToolsLength}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
                           )}
-                          {hasRemarks && row.showRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.remarkRows}>{item.remarks || "-"}</td>}
+                          {showRemarksColumn && row.showRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.remarkRows}>{item.remarks || "-"}</td>}
                         </tr>
                       );
                     });
