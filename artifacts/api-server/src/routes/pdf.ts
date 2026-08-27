@@ -36,9 +36,31 @@ router.post("/render-pdf", async (req, res) => {
     // ini karena Playwright memerlukannya untuk menerapkan style cetak.
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.setContent(documentHtml, { waitUntil: "networkidle", timeout: 45_000 });
+    await page.setContent(documentHtml, { waitUntil: "load", timeout: 45_000 });
     await page.emulateMedia({ media: "print" });
     await page.addStyleTag({ content: `
+      .pdf-export {
+        border: 0 !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        max-width: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      .pdf-export .recap-table-scroll {
+        overflow: visible !important;
+      }
+      .pdf-export table {
+        table-layout: fixed !important;
+        width: 100% !important;
+      }
+      .pdf-export table.min-w-\\[1200px\\],
+      .pdf-export table.min-w-\\[297mm\\],
+      .pdf-export table.min-w-\\[420mm\\] {
+        min-width: 0 !important;
+      }
       @media print {
         table:not(.continuation-table) thead { display: table-header-group !important; }
         table.continuation-table thead { display: none !important; }

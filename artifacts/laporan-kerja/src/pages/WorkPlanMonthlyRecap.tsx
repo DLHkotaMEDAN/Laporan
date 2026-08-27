@@ -62,6 +62,8 @@ const workPlanColumnLabels = {
   coordinator: "Koordinator", foreman: "Mandor", basis: "Dasar Pengerjaan", fuel_need_liters: "Kebutuhan BBM/Liter", remarks: "Keterangan",
 };
 
+const formatFuelLiters = (value?: number) => value ? `${Number(value).toLocaleString('id-ID')} L` : "-";
+
 const WorkPlanMonthlyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -144,7 +146,7 @@ const WorkPlanMonthlyRecap = () => {
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
   const showRemarksColumn = hasRemarks && visibleColumns.remarks;
-  const noActivityColSpan = Math.max(1, [
+  const noActivityColSpan = [
     visibleColumns.description,
     visibleColumns.location,
     visibleColumns.target_area,
@@ -155,7 +157,7 @@ const WorkPlanMonthlyRecap = () => {
     visibleColumns.foreman,
     visibleColumns.basis,
     visibleColumns.fuel_need_liters,
-  ].filter(Boolean).length);
+  ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
   const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
   const recapTitle = `REKAP RENCANA KERJA BULANAN${showCategoryInTitle ? ` ${getRecapCategoryLabel(plans.map((plan) => plan.category))}` : ''}`;
@@ -183,7 +185,10 @@ const WorkPlanMonthlyRecap = () => {
   };
 
   const handleSharePdf = async () => {
-    if (!printRef.current) return;
+    if (!printRef.current || plans.length === 0) {
+      showError("Tidak ada data rencana kerja untuk dibuatkan PDF");
+      return;
+    }
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
       await openShareablePdfPreview({
@@ -212,9 +217,9 @@ const WorkPlanMonthlyRecap = () => {
           {showRegionColumn && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words">{getPlanRegionName(plan)}</td>}
           {visibleColumns.date && <td className="border-2 border-black p-1 text-center align-middle text-[8px]">{format(parseISO(plan.date), 'dd/MM/yy')}</td>}
           {visibleColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle">{plan.category}</td>}
-          <td colSpan={noActivityColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
+          {noActivityColSpan > 0 && <td colSpan={noActivityColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
-          </td>
+          </td>}
           {showRemarksColumn && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
         </tr>
       );
@@ -229,6 +234,9 @@ const WorkPlanMonthlyRecap = () => {
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
+    const getFuelRemarkSource = (itemIdx: number, span: number) => displayItems
+      .slice(itemIdx, itemIdx + span)
+      .reduce((source, current) => (current.fuel_need_liters || current.remarks?.trim() ? current : source), displayItems[itemIdx]);
 
     return displayItems.flatMap((item, itemIdx) => {
       let toolGroupStart = itemIdx;
@@ -243,6 +251,8 @@ const WorkPlanMonthlyRecap = () => {
       const teamSpan = teamSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
       const remarksSpan = remarksSpans[itemIdx];
+      const fuelRemarkSource = toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
+      const fuelRemarkRows = toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
 
       return toolsToRender.map((tool, toolIdx) => (
         <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
@@ -311,11 +321,11 @@ const WorkPlanMonthlyRecap = () => {
           {visibleColumns.basis && basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
-          {visibleColumns.fuel_need_liters && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
+          {visibleColumns.fuel_need_liters && toolSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(fuelRemarkSource.fuel_need_liters)}</td>
           )}
-          {showRemarksColumn && remarksSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, remarksSpan)}>{item.remarks || "-"}</td>
+          {showRemarksColumn && toolSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.remarks || "-"}</td>
           )}
         </tr>
       ));

@@ -56,6 +56,8 @@ const workPlanColumnLabels = {
   coordinator: "Koordinator", foreman: "Mandor", basis: "Dasar Pengerjaan", fuel_need_liters: "Kebutuhan BBM/Liter", remarks: "Keterangan",
 };
 
+const formatFuelLiters = (value?: number) => value ? `${Number(value).toLocaleString('id-ID')} L` : "-";
+
 type WeeklyTableRow =
   | {
       type: "noActivity";
@@ -71,6 +73,8 @@ type WeeklyTableRow =
       itemIndex: number;
       toolIndex: number;
       date: string;
+      fuelNeedLiters: number;
+      remarks: string;
       showTools: boolean;
       toolRows: number;
       showTeam: boolean;
@@ -206,7 +210,10 @@ const WorkPlanWeeklyRecap = () => {
   };
 
   const handleSharePdf = async () => {
-    if (!printRef.current) return;
+    if (!printRef.current || plans.length === 0) {
+      showError("Tidak ada data rencana kerja untuk dibuatkan PDF");
+      return;
+    }
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
       await openShareablePdfPreview({
@@ -268,6 +275,12 @@ const WorkPlanWeeklyRecap = () => {
               itemIndex,
               toolIndex,
               date: plan.date,
+              fuelNeedLiters: displayItems
+                .slice(itemIndex, itemIndex + Math.max(toolSpan, 1))
+                .reduce((value, current) => current.fuel_need_liters ? Number(current.fuel_need_liters) : value, Number(item.fuel_need_liters || 0)),
+              remarks: displayItems
+                .slice(itemIndex, itemIndex + Math.max(toolSpan, 1))
+                .reduce((value, current) => current.remarks?.trim() ? current.remarks : value, item.remarks || ""),
               showTools: toolIndex === 0 && toolSpan > 0,
               toolRows: toolSpan > 0 ? (isTreeLayout ? toolSpan : getRowsInWorkPlanItems(displayItems.slice(itemIndex, itemIndex + toolSpan))) : 0,
               showTeam: toolIndex === 0 && teamSpan > 0,
@@ -579,10 +592,10 @@ const WorkPlanWeeklyRecap = () => {
                           {visibleColumns.basis && row.showBasis && (
                             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.basisRows}>{item.basis}</td>
                           )}
-                          {visibleColumns.fuel_need_liters && toolIndex === 0 && (
-                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.itemToolsLength}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
+                          {visibleColumns.fuel_need_liters && row.showTools && (
+                            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{formatFuelLiters(row.fuelNeedLiters)}</td>
                           )}
-                          {showRemarksColumn && row.showRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.remarkRows}>{item.remarks || "-"}</td>}
+                          {showRemarksColumn && row.showTools && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.toolRows}>{row.remarks || "-"}</td>}
                         </tr>
                       );
                     });

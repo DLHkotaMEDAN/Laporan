@@ -57,6 +57,8 @@ const workPlanColumnLabels = {
   basis: "Dasar Pengerjaan", remarks: "Keterangan",
 };
 
+const formatFuelLiters = (value?: number) => value ? `${Number(value).toLocaleString('id-ID')} L` : "-";
+
 const WorkPlanDailyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -197,7 +199,10 @@ const WorkPlanDailyRecap = () => {
   };
 
   const handleSharePdf = async () => {
-    if (!printRef.current) return;
+    if (!printRef.current || plans.length === 0) {
+      showError("Tidak ada data rencana kerja untuk dibuatkan PDF");
+      return;
+    }
     const toastId = showLoading("Menyiapkan pratinjau PDF...");
     try {
       await openShareablePdfPreview({
@@ -292,6 +297,9 @@ const WorkPlanDailyRecap = () => {
     const isTreeLayout = plan.category === "Tim Pohon";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
+    const getFuelRemarkSource = (itemIdx: number, span: number) => displayItems
+      .slice(itemIdx, itemIdx + span)
+      .reduce((source, current) => (current.fuel_need_liters || current.remarks?.trim() ? current : source), displayItems[itemIdx]);
 
     return displayItems.flatMap((item, itemIdx) => {
       let toolGroupStart = itemIdx;
@@ -305,6 +313,8 @@ const WorkPlanDailyRecap = () => {
       const toolSpan = toolSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
       const remarksSpan = remarksSpans[itemIdx];
+      const fuelRemarkSource = toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
+      const fuelRemarkRows = toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => (
@@ -371,11 +381,11 @@ const WorkPlanDailyRecap = () => {
           {visibleColumns.basis && basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
-          {visibleColumns.fuel_need_liters && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
+          {visibleColumns.fuel_need_liters && toolSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(fuelRemarkSource.fuel_need_liters)}</td>
           )}
-          {showRemarksColumn && remarksSpan > 0 && toolIdx === 0 && (
-            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, remarksSpan)}>{item.remarks || "-"}</td>
+          {showRemarksColumn && toolSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.remarks || "-"}</td>
           )}
         </tr>
       ));

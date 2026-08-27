@@ -24,6 +24,7 @@ const getSnapshot = () => {
   head.prepend(base);
 
   const snapshot = printArea.cloneNode(true) as HTMLElement;
+  snapshot.classList.add("pdf-export");
   snapshot.querySelectorAll("script, iframe").forEach((node) => node.remove());
   // Rekap rencana kerja memisahkan kelompok terakhir ke tabel lanjutan agar
   // blok tanda tangan tetap rapi. Header tabel itu hanya penanda layar/cetak,
@@ -33,6 +34,33 @@ const getSnapshot = () => {
   snapshot.querySelectorAll<HTMLLinkElement>("link[href]").forEach((link) => {
     link.href = new URL(link.getAttribute("href") || "", document.baseURI).href;
   });
+
+  const pdfStyle = document.createElement("style");
+  pdfStyle.textContent = `
+    .pdf-export {
+      border: 0 !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+      max-width: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      width: 100% !important;
+    }
+    .pdf-export .recap-table-scroll {
+      overflow: visible !important;
+    }
+    .pdf-export table {
+      table-layout: fixed !important;
+      width: 100% !important;
+    }
+    .pdf-export table.min-w-\\[1200px\\],
+    .pdf-export table.min-w-\\[297mm\\],
+    .pdf-export table.min-w-\\[420mm\\] {
+      min-width: 0 !important;
+    }
+  `;
+  head.append(pdfStyle);
 
   // Send only the actual report plus the styles it needs. This keeps the
   // request safely below mobile and serverless payload limits.
@@ -133,17 +161,27 @@ export const openShareablePdfPreview = async ({ fileName }: PdfPreviewOptions) =
   if (!popup) throw new Error("Popup diblokir. Izinkan popup untuk menampilkan PDF.");
 
   try {
+    const documentHtml = getSnapshot();
     const response = await fetch("/api/render-pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentHtml: getSnapshot(), fileName }),
+      body: JSON.stringify({ documentHtml, fileName }),
     });
     if (!response.ok) {
       if (response.status === 405 || response.status === 404) {
         throw new Error("Fitur PDF belum aktif di server online. Jalankan deploy ulang Vercel.");
       }
-      const responseBody = await response.json().catch(() => null) as { message?: string } | null;
-      throw new Error(responseBody?.message || "PDF tidak dapat dibuat.");
+      const contentType = response.headers.get("content-type") || "";
+      const responseBody = contentType.includes("application/json")
+        ? await response.json().catch(() => null) as { message?: string } | null
+        : null;
+      if (response.status === 413) {
+        throw new Error(responseBody?.message || "Rekap terlalu besar untuk dibuatkan PDF. Kurangi periode atau kolom yang ditampilkan.");
+      }
+      if (response.status >= 500 && !responseBody?.message) {
+        throw new Error("Server pembuat PDF belum aktif atau sedang gagal. Pastikan API render PDF berjalan, lalu coba lagi.");
+      }
+      throw new Error(responseBody?.message || `PDF tidak dapat dibuat. Kode error: ${response.status}.`);
     }
     const previewKey = await savePdfPreview({ fileName, pdf: await response.blob() });
     popup.location.replace(new URL(`/pdf-preview?id=${encodeURIComponent(previewKey)}`, window.location.origin).href);
