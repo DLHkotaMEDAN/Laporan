@@ -13,7 +13,7 @@ export interface WorkPlanItem {
   description: string;
   location: Location;
   target_area?: number;
-  fuel_need_liters?: number;
+  fuel_need_liters?: number | string;
   tools: WorkPlanTool[];
   coordinator: string;
   foreman?: string;
