@@ -272,6 +272,15 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     let defaultCoord = isGlobalStyle ? form.getValues("globalCoordinator") : (categoryCoordinatorMapping[selectedCategory] || lastItem?.coordinator || "");
     const defaultForeman = isGlobalStyle ? form.getValues("globalForeman") : (lastItem?.foreman || "");
     const defaultDesc = defaultActivityMapping[selectedCategory] || "";
+    const isSameToolLocation = mode === 'activity_location' || mode === 'location_only';
+    const movedFuelNeedLiters = isSameToolLocation ? Number(lastItem?.fuel_need_liters || 0) : 0;
+    const movedRemarks = isSameToolLocation ? lastItem?.remarks || "" : "";
+
+    if (isSameToolLocation && items.length > 0) {
+      const lastIndex = items.length - 1;
+      form.setValue(`items.${lastIndex}.fuel_need_liters`, 0);
+      form.setValue(`items.${lastIndex}.remarks`, "");
+    }
 
     if (mode === 'full') {
       appendItem({ 
@@ -288,9 +297,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         uiMode: 'full' 
       });
     } else if (mode === 'activity_location') {
-      appendItem({ description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: 0, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: lastItem.remarks, uiMode: 'activity_location' });
+      appendItem({ description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'activity_location' });
     } else if (mode === 'location_only') {
-      appendItem({ description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: 0, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: lastItem.remarks, uiMode: 'location_only' });
+      appendItem({ description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'location_only' });
     }
     setShowWizard(false);
   };
@@ -641,7 +650,10 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                           <div className={`grid grid-cols-1 ${selectedCategory === "Tim Pohon" ? "md:grid-cols-2" : "md:grid-cols-3"} gap-4 pt-4 border-t`}><FormField control={form.control} name={`items.${index}.coordinator`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Users size={16} /> Koordinator</FormLabel><FormControl><Input {...field} list="wp-history-coordinators" /></FormControl></FormItem>)} /><FormField control={form.control} name={`items.${index}.foreman`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><Users size={16} /> Mandor</FormLabel><FormControl><Input {...field} list="wp-history-foremen" /></FormControl></FormItem>)} />{selectedCategory !== "Tim Pohon" && <FormField control={form.control} name={`items.${index}.personnel.members`} render={({ field }) => (<FormItem><FormLabel>Jumlah Personil</FormLabel><FormControl><Input type="text" {...field} /></FormControl></FormItem>)} />}</div>
                         </>
                       )}
-                      {uiMode !== 'location_only' && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t"><FormField control={form.control} name={`items.${index}.basis`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText size={16} /> Dasar Pengerjaan</FormLabel><FormControl><Input {...field} list="wp-history-basis" placeholder="Contoh: SPT No. 123..." /></FormControl></FormItem>)} /><FormField control={form.control} name={`items.${index}.remarks`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><MessageSquare size={16} /> Keterangan</FormLabel><FormControl><Input {...field} list="wp-history-remarks" placeholder="Tambahkan keterangan kegiatan..." /></FormControl></FormItem>)} /></div>}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                        {uiMode !== 'location_only' && <FormField control={form.control} name={`items.${index}.basis`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText size={16} /> Dasar Pengerjaan</FormLabel><FormControl><Input {...field} list="wp-history-basis" placeholder="Contoh: SPT No. 123..." /></FormControl></FormItem>)} />}
+                        <FormField control={form.control} name={`items.${index}.remarks`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><MessageSquare size={16} /> Keterangan</FormLabel><FormControl><Input {...field} list="wp-history-remarks" placeholder="Tambahkan keterangan kegiatan..." /></FormControl></FormItem>)} />
+                      </div>
                     </CardContent>
                   </Card>
                 );
