@@ -276,12 +276,6 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     const movedFuelNeedLiters = isSameToolLocation ? Number(lastItem?.fuel_need_liters || 0) : 0;
     const movedRemarks = isSameToolLocation ? lastItem?.remarks || "" : "";
 
-    if (isSameToolLocation && items.length > 0) {
-      const lastIndex = items.length - 1;
-      form.setValue(`items.${lastIndex}.fuel_need_liters`, 0);
-      form.setValue(`items.${lastIndex}.remarks`, "");
-    }
-
     if (mode === 'full') {
       appendItem({ 
         description: defaultDesc, 
@@ -297,9 +291,17 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         uiMode: 'full' 
       });
     } else if (mode === 'activity_location') {
-      appendItem({ description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'activity_location' });
+      replaceItems([
+        ...items.slice(0, -1),
+        { ...lastItem, fuel_need_liters: 0, remarks: "" },
+        { description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'activity_location' }
+      ]);
     } else if (mode === 'location_only') {
-      appendItem({ description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'location_only' });
+      replaceItems([
+        ...items.slice(0, -1),
+        { ...lastItem, fuel_need_liters: 0, remarks: "" },
+        { description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'location_only' }
+      ]);
     }
     setShowWizard(false);
   };
@@ -616,6 +618,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold flex items-center gap-2"><ClipboardList className="text-blue-600" /> Daftar Lokasi & Kegiatan</h2></div>
               {itemFields.map((item, index) => {
                 const uiMode = form.watch(`items.${index}.uiMode`);
+                const nextItemMode = form.watch("items")[index + 1]?.uiMode;
+                const hasMovedFuelAndRemarks = nextItemMode === 'activity_location' || nextItemMode === 'location_only';
                 return (
                   <Card key={item.id} className="border-l-4 border-l-blue-400 shadow-md overflow-hidden">
                     <CardHeader className="bg-slate-50/50 py-3 flex flex-row items-center justify-between"><div className="flex items-center gap-3"><Badge className="bg-blue-600">Lokasi #{index + 1}</Badge>{uiMode !== 'full' && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]"><Check size={10} className="mr-1" /> {uiMode === 'location_only' ? 'Alat & Kegiatan Sama' : 'Alat Sama'}</Badge>}</div><div className="flex items-center gap-2">{uiMode !== 'full' && <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px] text-blue-600" onClick={() => form.setValue(`items.${index}.uiMode`, 'full')}>Tampilkan Semua</Button>}{itemFields.length > 1 && <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4" /></Button>}</div></CardHeader>
@@ -626,7 +630,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                         <FormField control={form.control} name={`items.${index}.location.subDistrict`} render={({ field }) => (<FormItem><FormLabel>Kecamatan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{Object.keys(medanDistricts).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.location.village.0`} render={({ field }) => (<FormItem><FormLabel>Kelurahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{form.watch(`items.${index}.location.subDistrict`) && form.watch(`items.${index}.location.subDistrict`) !== " " && medanDistricts[form.watch(`items.${index}.location.subDistrict`)].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.target_area`} render={({ field }) => (<FormItem><FormLabel>Target Luas Kerja (M²)</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name={`items.${index}.fuel_need_liters`} render={({ field }) => (<FormItem><FormLabel>Kebutuhan BBM/Liter</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />
+                        {!hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_need_liters`} render={({ field }) => (<FormItem><FormLabel>Kebutuhan BBM/Liter</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />}
                       </div>
                       {uiMode === 'full' && !isGlobalStyle && (
                         <>
@@ -652,7 +656,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                       )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                         {uiMode !== 'location_only' && <FormField control={form.control} name={`items.${index}.basis`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><FileText size={16} /> Dasar Pengerjaan</FormLabel><FormControl><Input {...field} list="wp-history-basis" placeholder="Contoh: SPT No. 123..." /></FormControl></FormItem>)} />}
-                        <FormField control={form.control} name={`items.${index}.remarks`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><MessageSquare size={16} /> Keterangan</FormLabel><FormControl><Input {...field} list="wp-history-remarks" placeholder="Tambahkan keterangan kegiatan..." /></FormControl></FormItem>)} />
+                        {!hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.remarks`} render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-2"><MessageSquare size={16} /> Keterangan</FormLabel><FormControl><Input {...field} list="wp-history-remarks" placeholder="Tambahkan keterangan kegiatan..." /></FormControl></FormItem>)} />}
                       </div>
                     </CardContent>
                   </Card>

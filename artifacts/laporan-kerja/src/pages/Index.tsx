@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,6 +79,40 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
+const validMainTabs = ['reports', 'workplans', 'fuel_reports', 'fuel_spj'] as const;
+type MainTab = typeof validMainTabs[number];
+type IndexViewState = {
+  activeTab?: MainTab;
+  searchQuery?: string;
+  selectedRegion?: string;
+  selectedDate?: string;
+  selectedMonth?: string;
+  selectedYear?: string;
+  selectedCategory?: string;
+  scrollY?: number;
+};
+
+const INDEX_VIEW_STATE_KEY = "laporan-kerja:index-view-state";
+
+const isMainTab = (value: string | null | undefined): value is MainTab => {
+  return !!value && validMainTabs.includes(value as MainTab);
+};
+
+const readIndexViewState = (): IndexViewState => {
+  if (typeof window === "undefined") return {};
+
+  try {
+    return JSON.parse(window.sessionStorage.getItem(INDEX_VIEW_STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+};
+
+const writeIndexViewState = (state: IndexViewState) => {
+  if (typeof window === "undefined") return;
+
+  window.sessionStorage.setItem(INDEX_VIEW_STATE_KEY, JSON.stringify(state));
+};
 
 const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
   if (!Array.isArray(plan.items)) return [];
@@ -115,20 +149,22 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { session, profile, signOut, loading: authLoading } = useAuth();
+  const savedViewStateRef = useRef<IndexViewState>(readIndexViewState());
+  const hasRestoredScrollRef = useRef(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("reports");
-  const [selectedRegion, setSelectedRegion] = useState("semua");
+  const [searchQuery, setSearchQuery] = useState(savedViewStateRef.current.searchQuery || "");
+  const [activeTab, setActiveTab] = useState<MainTab>(savedViewStateRef.current.activeTab || "reports");
+  const [selectedRegion, setSelectedRegion] = useState(savedViewStateRef.current.selectedRegion || "semua");
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isDailyRecapDateOpen, setIsDailyRecapDateOpen] = useState(false);
   const [dailyRecapDate, setDailyRecapDate] = useState(new Date().toISOString().split('T')[0]);
   
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("semua");
-  const [selectedYear, setSelectedYear] = useState("semua");
-  const [selectedCategory, setSelectedCategory] = useState("semua");
+  const [selectedDate, setSelectedDate] = useState(savedViewStateRef.current.selectedDate || "");
+  const [selectedMonth, setSelectedMonth] = useState(savedViewStateRef.current.selectedMonth || "semua");
+  const [selectedYear, setSelectedYear] = useState(savedViewStateRef.current.selectedYear || "semua");
+  const [selectedCategory, setSelectedCategory] = useState(savedViewStateRef.current.selectedCategory || "semua");
   const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("date");
   const [reportSortDirection, setReportSortDirection] = useState<SortDirection>("desc");
   const [workPlanSortKey, setWorkPlanSortKey] = useState<WorkPlanSortKey>("date");
@@ -177,18 +213,66 @@ const Index = () => {
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
-    const validTabs = ['reports', 'workplans', 'fuel_reports', 'fuel_spj'];
+    const savedTab = savedViewStateRef.current.activeTab;
 
-    if (requestedTab && validTabs.includes(requestedTab)) {
+    if (isMainTab(requestedTab)) {
       setActiveTab(requestedTab);
     } else if (isAdminBbm) {
       setActiveTab("fuel_reports");
     } else if (isAdminSpj) {
       setActiveTab("fuel_spj");
+    } else if (savedTab) {
+      setActiveTab(isAdminRencanaKerja && savedTab === "reports" ? "workplans" : savedTab);
     } else {
       setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
     }
   }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, searchParams]);
+
+  useEffect(() => {
+    const state: IndexViewState = {
+      activeTab,
+      searchQuery,
+      selectedRegion,
+      selectedDate,
+      selectedMonth,
+      selectedYear,
+      selectedCategory,
+      scrollY: window.scrollY,
+    };
+
+    writeIndexViewState(state);
+  }, [activeTab, searchQuery, selectedRegion, selectedDate, selectedMonth, selectedYear, selectedCategory]);
+
+  useEffect(() => {
+    const saveScrollPosition = () => {
+      writeIndexViewState({
+        ...readIndexViewState(),
+        scrollY: window.scrollY,
+      });
+    };
+
+    window.addEventListener("pagehide", saveScrollPosition);
+    window.addEventListener("blur", saveScrollPosition);
+    document.addEventListener("visibilitychange", saveScrollPosition);
+
+    return () => {
+      saveScrollPosition();
+      window.removeEventListener("pagehide", saveScrollPosition);
+      window.removeEventListener("blur", saveScrollPosition);
+      document.removeEventListener("visibilitychange", saveScrollPosition);
+    };
+  }, []);
+
+  useEffect(() => {
+    const savedScrollY = savedViewStateRef.current.scrollY;
+
+    if (hasRestoredScrollRef.current || loading || typeof savedScrollY !== "number") return;
+
+    hasRestoredScrollRef.current = true;
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: savedScrollY });
+    });
+  }, [loading]);
 
   useEffect(() => {
     if (selectedCategory !== 'semua' && !categories.includes(selectedCategory)) {
@@ -327,6 +411,17 @@ const Index = () => {
   const handleRegionChange = (regionId: string) => {
     setSelectedRegion(regionId);
     setSelectedCategory('semua');
+  };
+
+  const handleTabChange = (tab: string) => {
+    if (!isMainTab(tab)) return;
+
+    writeIndexViewState({
+      ...readIndexViewState(),
+      activeTab: tab,
+      scrollY: window.scrollY,
+    });
+    setActiveTab(tab);
   };
 
   const formatWorkPlanLocation = (plan: WorkPlan) => {
@@ -613,7 +708,7 @@ const Index = () => {
           canManageFuel={isAdmin}
         />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
             <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
               {!isAdminRencanaKerja && !isFuelSpecialist && <TabsTrigger
