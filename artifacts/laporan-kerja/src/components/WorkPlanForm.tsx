@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -85,6 +85,32 @@ const matchesGlobalSearch = (query: string, searchableValues: string[]) => {
   return normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean).every(queryToken => searchableText.includes(queryToken));
 };
 
+type WorkPlanItemFormValue = WorkPlan["items"][number] & {
+  uiMode?: 'full' | 'activity_location' | 'location_only';
+};
+
+const getToolsSignature = (item: Pick<WorkPlanItemFormValue, "tools">) => JSON.stringify(
+  (item.tools || []).map(tool => ({
+    name: tool.name || "",
+    unit: Number(tool.unit || 0),
+    usage: tool.usage || "",
+    members: Number(tool.members || 0),
+  }))
+);
+
+const withInferredUiModes = <T extends WorkPlanItemFormValue>(items: T[]) => items.map((item, index) => {
+  const previous = items[index - 1];
+  const hasSameToolsAsPrevious = previous && getToolsSignature(previous) === getToolsSignature(item);
+  const hasSameDescriptionAsPrevious = previous && (previous.description || "").trim() === (item.description || "").trim();
+
+  return {
+    ...item,
+    uiMode: hasSameToolsAsPrevious
+      ? (hasSameDescriptionAsPrevious ? 'location_only' as const : 'activity_location' as const)
+      : 'full' as const,
+  };
+});
+
 const toolSchema = z.object({
   name: z.string().optional().default(""),
   unit: z.coerce.number().default(0),
@@ -167,7 +193,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       category: initialData.category,
       has_no_activity: initialData.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN",
       no_activity_remarks: initialData.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN" ? initialData.items[0]?.remarks : "",
-      items: initialData.items.map(item => ({
+      items: withInferredUiModes(initialData.items.map(item => ({
         ...item,
         target_area: item.target_area ?? 0,
         fuel_need_liters: item.fuel_need_liters ?? 0,
@@ -178,7 +204,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           members: tool.members ?? (initialData.category === "Tim Pohon" && toolIndex === 0 ? item.personnel.members : 0),
         })),
         uiMode: 'full' as const,
-      })),
+      }))),
       globalTools: initialData.category === "Tim Babat" ? initialData.items[0].tools.map(tool => ({ ...tool, members: tool.members ?? 0 })) : [{ name: "", unit: 1, usage: "", members: 0 }],
       globalCoordinator: initialData.category === "Tim Babat" ? initialData.items[0].coordinator : "",
       globalForeman: initialData.category === "Tim Babat" ? initialData.items[0].foreman || "" : "",
@@ -204,10 +230,67 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const hasNoActivity = form.watch("has_no_activity");
   const isGlobalStyle = selectedCategory === "Tim Babat";
   const useWizard = selectedCategory === "Tim Siram" || selectedCategory === "Tim Pohon";
+  const lastFocusState = useRef<{ selector?: string; selectionStart?: number | null; selectionEnd?: number | null; scrollX: number; scrollY: number } | null>(null);
 
   useEffect(() => {
     if (restoredAt) showSuccess("Draf rencana kerja sebelumnya dipulihkan");
   }, [restoredAt]);
+
+  useEffect(() => {
+    const getFocusSelector = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return undefined;
+      if (element.id) return `#${CSS.escape(element.id)}`;
+      const name = element.getAttribute("name");
+      if (name) return `[name="${CSS.escape(name)}"]`;
+      return undefined;
+    };
+
+    const storeViewState = () => {
+      const activeElement = document.activeElement;
+      lastFocusState.current = {
+        selector: getFocusSelector(activeElement),
+        selectionStart: activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement ? activeElement.selectionStart : null,
+        selectionEnd: activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement ? activeElement.selectionEnd : null,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+      };
+    };
+
+    const restoreViewState = () => {
+      const state = lastFocusState.current;
+      if (!state) return;
+      window.requestAnimationFrame(() => {
+        window.scrollTo(state.scrollX, state.scrollY);
+        if (!state.selector) return;
+        const element = document.querySelector(state.selector);
+        if (!(element instanceof HTMLElement)) return;
+        element.focus({ preventScroll: true });
+        if (
+          (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)
+          && state.selectionStart !== null
+          && state.selectionEnd !== null
+        ) {
+          element.setSelectionRange(state.selectionStart, state.selectionEnd);
+        }
+        window.scrollTo(state.scrollX, state.scrollY);
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") storeViewState();
+      if (document.visibilityState === "visible") restoreViewState();
+    };
+
+    window.addEventListener("blur", storeViewState);
+    window.addEventListener("focus", restoreViewState);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("blur", storeViewState);
+      window.removeEventListener("focus", restoreViewState);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -485,6 +568,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         },
         target_area: Number(item.target_area || 0),
         fuel_need_liters: Number(item.fuel_need_liters || 0),
+        fuel_usage_estimate: item.fuel_usage_estimate || "",
         tools: (item.tools || []).map(tool => ({ ...tool, members: tool.members ?? 0 })),
         coordinator: item.coordinator || "",
         foreman: item.foreman || "",
@@ -498,7 +582,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     const hasOnlyEmptyItem = currentItems.length === 1
       && !currentItems[0].description
       && !currentItems[0].location?.street;
-    replaceItems(hasOnlyEmptyItem ? copiedItems : [...currentItems, ...copiedItems]);
+    replaceItems(withInferredUiModes(hasOnlyEmptyItem ? copiedItems : [...currentItems, ...copiedItems]));
     form.setValue("category", selectedSourcePlan.category);
     form.setValue("has_no_activity", false);
 

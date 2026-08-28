@@ -55,11 +55,17 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const readyRef = useRef(!key);
   const savingRef = useRef(false);
+  const pendingSaveRef = useRef(false);
   const shouldPersistRef = useRef(Boolean(key));
 
   const save = useCallback(async () => {
-    if (!key || !readyRef.current || !shouldPersistRef.current || savingRef.current) return;
+    if (!key || !readyRef.current || !shouldPersistRef.current) return;
+    if (savingRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
     savingRef.current = true;
+    pendingSaveRef.current = false;
     const savedAt = Date.now();
     try {
       await writeDraft(key, { savedAt, values: form.getValues() });
@@ -73,6 +79,9 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
       console.warn("Tidak dapat menyimpan draf formulir", error);
     } finally {
       savingRef.current = false;
+      if (pendingSaveRef.current && shouldPersistRef.current) {
+        void save();
+      }
     }
   }, [form, key]);
 
