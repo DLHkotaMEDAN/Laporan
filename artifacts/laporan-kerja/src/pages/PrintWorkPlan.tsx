@@ -180,8 +180,9 @@ const PrintWorkPlan = () => {
               <th className="border-2 border-black p-1 w-[80px]">Koordinator</th>
               <th className="border-2 border-black p-1 w-[80px]">Mandor</th>
               <th className="border-2 border-black p-1 w-[100px]">Kegunaan</th>
-              <th className="border-2 border-black p-1 w-[70px] whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>
-              <th className="border-2 border-black p-1 w-[65px] leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>
+              <th className="border-2 border-black p-1 w-[86px] text-[8px] leading-tight whitespace-normal">Dasar<br />Pengerjaan</th>
+              <th className="border-2 border-black p-1 w-[86px] text-[8px] leading-tight whitespace-normal">Kebutuhan<br />BBM<br />(Liter)</th>
+              <th className="border-2 border-black p-1 w-[124px] text-[8px] leading-tight whitespace-normal">Estimasi<br />Penggunaan<br />BBM (Liter)</th>
               {hasRemarks && <th className="border-2 border-black p-1 w-[100px]">Keterangan</th>}
             </tr>
           </thead>
@@ -190,7 +191,7 @@ const PrintWorkPlan = () => {
               <tr>
                 <td className="border-2 border-black p-1 text-center">1</td>
                 <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>
-                <td colSpan={11} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
+                <td colSpan={12} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
                   TIDAK ADA RENCANA KERJA/ KEGIATAN
                 </td>
                 {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
@@ -256,6 +257,7 @@ const PrintWorkPlan = () => {
                           </td>
                           <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].basis}</td>
                           <td className="border-2 border-black p-1 text-center align-middle" rowSpan={maxRows}>{displayItems[0].fuel_need_liters ? Number(displayItems[0].fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
+                          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].fuel_usage_estimate || "-"}</td>
                           {hasRemarks && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={maxRows}>{displayItems[0].remarks || "-"}</td>}
                         </>
                       )}
@@ -371,6 +373,9 @@ const PrintWorkPlan = () => {
                     )}
                     {toolIdx === 0 && (
                       <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_need_liters ? Number(item.fuel_need_liters).toLocaleString('id-ID') : "-"}</td>
+                    )}
+                    {toolIdx === 0 && (
+                      <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.fuel_usage_estimate || "-"}</td>
                     )}
                     {hasRemarks && toolIdx === 0 && (
                       <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>

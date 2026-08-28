@@ -53,7 +53,7 @@ type LogoMode = "with-logo" | "without-logo";
 
 const workPlanColumnLabels = {
   category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", target_area: "Target Luas (M²)", tools: "Alat Operasional",
-  unit: "Unit", personnel: "Personel", coordinator: "Koordinator", foreman: "Mandor", fuel_need_liters: "Kebutuhan BBM/Liter",
+  unit: "Unit", personnel: "Personel", coordinator: "Koordinator", foreman: "Mandor", fuel_need_liters: "Kebutuhan BBM/Liter", fuel_usage_estimate: "Estimasi Penggunaan BBM (Liter)",
   basis: "Dasar Pengerjaan", remarks: "Keterangan",
 };
 
@@ -78,7 +78,7 @@ const WorkPlanDailyRecap = () => {
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [visibleColumns, setVisibleColumns] = useState({
     category: true, description: true, location: true, target_area: true, tools: true, unit: true,
-    personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: true, remarks: true,
+    personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true,
   });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
 
@@ -169,6 +169,7 @@ const WorkPlanDailyRecap = () => {
     visibleColumns.foreman,
     visibleColumns.basis,
     visibleColumns.fuel_need_liters,
+    visibleColumns.fuel_usage_estimate,
   ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
   const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
@@ -299,7 +300,7 @@ const WorkPlanDailyRecap = () => {
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
     const getFuelRemarkSource = (itemIdx: number, span: number) => displayItems
       .slice(itemIdx, itemIdx + span)
-      .reduce((source, current) => (current.fuel_need_liters || current.remarks?.trim() ? current : source), displayItems[itemIdx]);
+      .reduce((source, current) => (current.fuel_need_liters || current.fuel_usage_estimate?.trim() || current.remarks?.trim() ? current : source), displayItems[itemIdx]);
 
     return displayItems.flatMap((item, itemIdx) => {
       let toolGroupStart = itemIdx;
@@ -384,6 +385,9 @@ const WorkPlanDailyRecap = () => {
           {visibleColumns.fuel_need_liters && toolSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(fuelRemarkSource.fuel_need_liters)}</td>
           )}
+          {visibleColumns.fuel_usage_estimate && toolSpan > 0 && toolIdx === 0 && (
+            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.fuel_usage_estimate || "-"}</td>
+          )}
           {showRemarksColumn && toolSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.remarks || "-"}</td>
           )}
@@ -393,8 +397,8 @@ const WorkPlanDailyRecap = () => {
   };
 
   const columnWidths = hasRemarks
-    ? ['3%', '6.5%', '12.5%', '13%', '7%', '11.5%', '4%', '7.5%', '8.5%', '7.5%', '6.5%', '6%', '6%']
-    : ['3.5%', '7.5%', '13.5%', '14.5%', '8%', '12.5%', '4%', '8.5%', '9.5%', '8%', '5.5%', '5%'];
+    ? ['3%', '6%', '11.5%', '12%', '6%', '10%', '4%', '6.5%', '7.5%', '7%', '6%', '5%', '10%', '5.5%']
+    : ['3.5%', '7%', '12.5%', '13.5%', '7%', '11%', '4%', '7.5%', '8.5%', '7.5%', '5%', '5%', '7.5%'];
   const displayColumnWidths = showRegionColumn && hasRemarks
     ? [columnWidths[0], "6%", ...columnWidths.slice(1, -1), "15%"]
     : showRegionColumn
@@ -404,7 +408,7 @@ const WorkPlanDailyRecap = () => {
   const colGroup = (
     <colgroup>
       {displayColumnWidths.map((width, index) => {
-        const column = (['no', ...(showRegionColumn ? ['region'] : []), 'category', 'description', 'location', 'target_area', 'tools', 'unit', 'personnel', 'coordinator', 'foreman', 'basis', 'fuel_need_liters', ...(hasRemarks ? ['remarks'] : [])] as const)[index];
+        const column = (['no', ...(showRegionColumn ? ['region'] : []), 'category', 'description', 'location', 'target_area', 'tools', 'unit', 'personnel', 'coordinator', 'foreman', 'basis', 'fuel_need_liters', 'fuel_usage_estimate', ...(hasRemarks ? ['remarks'] : [])] as const)[index];
         if (column in visibleColumns && !visibleColumns[column as keyof typeof visibleColumns]) return null;
         return <col key={index} style={{ width }} />;
       })}
@@ -648,8 +652,9 @@ const WorkPlanDailyRecap = () => {
                     {visibleColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
                     {visibleColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
                     {visibleColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
-                    {visibleColumns.basis && <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>}
-                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {visibleColumns.basis && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Dasar<br />Pengerjaan</th>}
+                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {visibleColumns.fuel_usage_estimate && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Estimasi<br />Penggunaan<br />BBM (Liter)</th>}
                     {showRemarksColumn && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
@@ -691,7 +696,7 @@ const WorkPlanDailyRecap = () => {
           ) : (
             <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed">
               <tbody>
-                <tr><td colSpan={hasRemarks ? 13 : 12} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
+                <tr><td colSpan={hasRemarks ? 14 : 13} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}

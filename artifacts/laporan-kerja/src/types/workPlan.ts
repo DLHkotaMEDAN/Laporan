@@ -14,6 +14,7 @@ export interface WorkPlanItem {
   location: Location;
   target_area?: number;
   fuel_need_liters?: number | string;
+  fuel_usage_estimate?: string;
   tools: WorkPlanTool[];
   coordinator: string;
   foreman?: string;

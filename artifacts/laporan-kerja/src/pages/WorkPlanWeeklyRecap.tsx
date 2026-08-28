@@ -53,7 +53,7 @@ type LogoMode = "with-logo" | "without-logo";
 const workPlanColumnLabels = {
   date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", target_area: "Target Luas (M²)",
   tools: "Alat Operasional", unit: "Unit", personnel: "Personel",
-  coordinator: "Koordinator", foreman: "Mandor", basis: "Dasar Pengerjaan", fuel_need_liters: "Kebutuhan BBM/Liter", remarks: "Keterangan",
+  coordinator: "Koordinator", foreman: "Mandor", basis: "Dasar Pengerjaan", fuel_need_liters: "Kebutuhan BBM/Liter", fuel_usage_estimate: "Estimasi Penggunaan BBM (Liter)", remarks: "Keterangan",
 };
 
 const formatFuelLiters = (value?: number) => value ? `${Number(value).toLocaleString('id-ID')} L` : "-";
@@ -74,6 +74,7 @@ type WeeklyTableRow =
       toolIndex: number;
       date: string;
       fuelNeedLiters: number;
+      fuelUsageEstimate: string;
       remarks: string;
       showTools: boolean;
       toolRows: number;
@@ -103,7 +104,7 @@ const WorkPlanWeeklyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
-  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: true, remarks: true });
+  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const dataRequestId = useRef(0);
@@ -181,6 +182,7 @@ const WorkPlanWeeklyRecap = () => {
     visibleColumns.foreman,
     visibleColumns.basis,
     visibleColumns.fuel_need_liters,
+    visibleColumns.fuel_usage_estimate,
   ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
   const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
@@ -278,6 +280,9 @@ const WorkPlanWeeklyRecap = () => {
               fuelNeedLiters: displayItems
                 .slice(itemIndex, itemIndex + Math.max(toolSpan, 1))
                 .reduce((value, current) => current.fuel_need_liters ? Number(current.fuel_need_liters) : value, Number(item.fuel_need_liters || 0)),
+              fuelUsageEstimate: displayItems
+                .slice(itemIndex, itemIndex + Math.max(toolSpan, 1))
+                .reduce((value, current) => current.fuel_usage_estimate?.trim() ? current.fuel_usage_estimate : value, item.fuel_usage_estimate || ""),
               remarks: displayItems
                 .slice(itemIndex, itemIndex + Math.max(toolSpan, 1))
                 .reduce((value, current) => current.remarks?.trim() ? current.remarks : value, item.remarks || ""),
@@ -331,8 +336,9 @@ const WorkPlanWeeklyRecap = () => {
       {visibleColumns.personnel && <col style={{ width: '40px' }} />}
       {visibleColumns.coordinator && <col style={{ width: '80px' }} />}
       {visibleColumns.foreman && <col style={{ width: '80px' }} />}
-      {visibleColumns.basis && <col style={{ width: '70px' }} />}
-      {visibleColumns.fuel_need_liters && <col style={{ width: '65px' }} />}
+      {visibleColumns.basis && <col style={{ width: '86px' }} />}
+      {visibleColumns.fuel_need_liters && <col style={{ width: '86px' }} />}
+      {visibleColumns.fuel_usage_estimate && <col style={{ width: '124px' }} />}
       {showRemarksColumn && <col style={{ width: '130px' }} />}
     </colgroup>
   );
@@ -501,8 +507,9 @@ const WorkPlanWeeklyRecap = () => {
                     {visibleColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
                     {visibleColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
                     {visibleColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
-                    {visibleColumns.basis && <th className="border-2 border-black p-1 whitespace-normal break-words leading-tight">Dasar<br />Pengerjaan</th>}
-                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 leading-tight">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {visibleColumns.basis && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Dasar<br />Pengerjaan</th>}
+                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {visibleColumns.fuel_usage_estimate && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Estimasi<br />Penggunaan<br />BBM (Liter)</th>}
                     {showRemarksColumn && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
@@ -594,6 +601,9 @@ const WorkPlanWeeklyRecap = () => {
                           )}
                           {visibleColumns.fuel_need_liters && row.showTools && (
                             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={row.toolRows}>{formatFuelLiters(row.fuelNeedLiters)}</td>
+                          )}
+                          {visibleColumns.fuel_usage_estimate && row.showTools && (
+                            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={row.toolRows}>{row.fuelUsageEstimate || "-"}</td>
                           )}
                           {showRemarksColumn && row.showTools && <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={row.toolRows}>{row.remarks || "-"}</td>}
                         </tr>

@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -100,6 +101,7 @@ const itemSchema = z.object({
   }),
   target_area: z.coerce.number().min(0).optional().default(0),
   fuel_need_liters: z.coerce.number().min(0).optional().default(0),
+  fuel_usage_estimate: z.string().optional().default(""),
   tools: z.array(toolSchema).default([]),
   coordinator: z.string().optional().default(""),
   foreman: z.string().optional().default(""),
@@ -169,6 +171,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         ...item,
         target_area: item.target_area ?? 0,
         fuel_need_liters: item.fuel_need_liters ?? 0,
+        fuel_usage_estimate: item.fuel_usage_estimate ?? "",
         foreman: item.foreman ?? "",
         tools: item.tools.map((tool, toolIndex) => ({
           ...tool,
@@ -185,7 +188,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       category: profile?.role === 'user' ? (profile?.category || "") : "",
       has_no_activity: false,
       no_activity_remarks: "",
-      items: [{ description: "", location: { street: "", village: [""], subDistrict: "" }, target_area: 0, fuel_need_liters: 0, tools: [{ name: "", unit: 1, usage: "", members: 0 }], coordinator: "", foreman: "", personnel: { members: 0 }, basis: "", remarks: "", uiMode: 'full' }],
+      items: [{ description: "", location: { street: "", village: [""], subDistrict: "" }, target_area: 0, fuel_need_liters: 0, fuel_usage_estimate: "", tools: [{ name: "", unit: 1, usage: "", members: 0 }], coordinator: "", foreman: "", personnel: { members: 0 }, basis: "", remarks: "", uiMode: 'full' }],
       globalTools: [{ name: "", unit: 1, usage: "", members: 0 }],
       globalCoordinator: "",
       globalForeman: "",
@@ -274,6 +277,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     const defaultDesc = defaultActivityMapping[selectedCategory] || "";
     const isSameToolLocation = mode === 'activity_location' || mode === 'location_only';
     const movedFuelNeedLiters = isSameToolLocation ? Number(lastItem?.fuel_need_liters || 0) : 0;
+    const movedFuelUsageEstimate = isSameToolLocation ? lastItem?.fuel_usage_estimate || "" : "";
     const movedRemarks = isSameToolLocation ? lastItem?.remarks || "" : "";
 
     if (mode === 'full') {
@@ -282,6 +286,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, 
         target_area: 0,
         fuel_need_liters: 0,
+        fuel_usage_estimate: "",
         tools: isGlobalStyle ? [] : [{ name: "", unit: 1, usage: "", members: 0 }], 
         coordinator: defaultCoord, 
         foreman: defaultForeman,
@@ -293,14 +298,14 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     } else if (mode === 'activity_location') {
       replaceItems([
         ...items.slice(0, -1),
-        { ...lastItem, fuel_need_liters: 0, remarks: "" },
-        { description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'activity_location' }
+        { ...lastItem, fuel_need_liters: 0, fuel_usage_estimate: "", remarks: "" },
+        { description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, fuel_usage_estimate: movedFuelUsageEstimate, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'activity_location' }
       ]);
     } else if (mode === 'location_only') {
       replaceItems([
         ...items.slice(0, -1),
-        { ...lastItem, fuel_need_liters: 0, remarks: "" },
-        { description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'location_only' }
+        { ...lastItem, fuel_need_liters: 0, fuel_usage_estimate: "", remarks: "" },
+        { description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, fuel_usage_estimate: movedFuelUsageEstimate, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'location_only' }
       ]);
     }
     setShowWizard(false);
@@ -337,6 +342,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           location: { street: "-", village: ["-"], subDistrict: "-" },
           target_area: 0,
           fuel_need_liters: 0,
+          fuel_usage_estimate: "",
           tools: [],
           coordinator: "-",
           foreman: "-",
@@ -631,6 +637,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                         <FormField control={form.control} name={`items.${index}.location.village.0`} render={({ field }) => (<FormItem><FormLabel>Kelurahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{form.watch(`items.${index}.location.subDistrict`) && form.watch(`items.${index}.location.subDistrict`) !== " " && medanDistricts[form.watch(`items.${index}.location.subDistrict`)].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.target_area`} render={({ field }) => (<FormItem><FormLabel>Target Luas Kerja (M²)</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />
                         {!hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_need_liters`} render={({ field }) => (<FormItem><FormLabel>Kebutuhan BBM/Liter</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />}
+                        {!hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_usage_estimate`} render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel>Estimasi Penggunaan BBM (Liter)</FormLabel><FormControl><Textarea rows={3} {...field} placeholder="Tuliskan estimasi penggunaan BBM..." /></FormControl></FormItem>)} />}
                       </div>
                       {uiMode === 'full' && !isGlobalStyle && (
                         <>
