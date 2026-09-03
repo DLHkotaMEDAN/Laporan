@@ -65,16 +65,17 @@ const FuelDailyRecap = () => {
   });
 
   const isAdmin = profile?.role === 'admin';
+  const fuelRegionId = profile?.role === 'admin_bbm' ? profile.region_id || "__unassigned__" : null;
 
   useEffect(() => {
     loadData();
-  }, [selectedDate]);
+  }, [selectedDate, fuelRegionId]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
-      const filtered = await fuelService.getReportsByDateRange(selectedDate, selectedDate);
+      const filtered = await fuelService.getReportsByDateRange(selectedDate, selectedDate, fuelRegionId);
       filtered.sort((a, b) => a.region.localeCompare(b.region) || a.team.localeCompare(b.team));
       if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {

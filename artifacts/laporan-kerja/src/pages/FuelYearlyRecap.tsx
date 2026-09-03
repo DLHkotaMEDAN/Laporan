@@ -61,10 +61,11 @@ const FuelYearlyRecap = () => {
     location: true,
     remarks: true
   });
+  const fuelRegionId = profile?.role === 'admin_bbm' ? profile.region_id || "__unassigned__" : null;
 
   useEffect(() => {
     loadData();
-  }, [selectedYear]);
+  }, [selectedYear, fuelRegionId]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
@@ -72,7 +73,7 @@ const FuelYearlyRecap = () => {
       setLoading(true);
       const startDate = `${selectedYear}-01-01`;
       const endDate = `${selectedYear}-12-31`;
-      const filtered = await fuelService.getReportsByDateRange(startDate, endDate);
+      const filtered = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
       filtered.sort((a, b) => a.date.localeCompare(b.date) || a.region.localeCompare(b.region) || a.team.localeCompare(b.team));
       if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {

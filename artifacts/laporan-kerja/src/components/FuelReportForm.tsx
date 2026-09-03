@@ -79,6 +79,9 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   });
 
   const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
+  const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isAdminBbm = profile?.role === 'admin_bbm';
+  const isRegionalFuelAdmin = isAdminBbm && !isSuperAdmin;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -121,7 +124,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const reports = await fuelService.getAllReports();
+        const reports = await fuelService.getAllReports(false, isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null);
         const vehicles = new Set<string>();
         const streets = new Set<string>();
         const officers = new Set<string>();
@@ -139,7 +142,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
     };
     fetchHistory();
     if (!isEditing) fetchPrices();
-  }, [isEditing]);
+  }, [isEditing, isRegionalFuelAdmin, profile?.region_id]);
 
   const fetchPrices = async () => {
     try {
@@ -162,10 +165,18 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
 
   const selectedRegion = form.watch("region");
   const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
+  const profileRegion = regions.find(region => region.id === profile?.region_id);
   const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
   const teams = allTeams.filter(team => team.region_id === selectedRegionId);
   const availableTeamNames = teams.length > 0 ? teams.map(team => team.name) : selectedRegion === 'Pusat' ? pusatTeams : [];
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
+
+  useEffect(() => {
+    if (!isEditing && isRegionalFuelAdmin && profileRegion && form.getValues("region") !== profileRegion.name) {
+      form.setValue("region", profileRegion.name);
+      form.setValue("team", "");
+    }
+  }, [form, isEditing, isRegionalFuelAdmin, profileRegion]);
 
   const handleAddClick = () => {
     setShowTypePrompt(true);
@@ -207,6 +218,15 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
 
     setIsSubmitting(true);
     try {
+      if (isRegionalFuelAdmin && !profileRegion) {
+        showError("Admin BBM belum memiliki wilayah. Atur wilayah akun di Manajemen Pengguna.");
+        return;
+      }
+      if (isRegionalFuelAdmin && profileRegion && values.region !== profileRegion.name) {
+        showError("Admin BBM hanya dapat menginput sesuai wilayah akun.");
+        return;
+      }
+
       const finalData = {
         date: values.date,
         region: values.region,
@@ -272,9 +292,9 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
               <FormField control={form.control} name="region" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Wilayah</FormLabel>
-                  <Select onValueChange={(val) => { field.onChange(val); form.setValue("team", ""); }} value={field.value}>
+                  <Select onValueChange={(val) => { field.onChange(val); form.setValue("team", ""); }} value={field.value} disabled={isRegionalFuelAdmin && !isSuperAdmin}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger></FormControl>
-                    <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{regions.filter(region => !isRegionalFuelAdmin || region.id === profile?.region_id).map(region => <SelectItem key={region.id} value={region.name}>{region.name}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>

@@ -20,12 +20,16 @@ const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
 };
 
 export const fuelService = {
-  async getAllReports(includeDeleted = false) {
+  async getAllReports(includeDeleted = false, regionId?: string | null) {
     return fetchAllPages<FuelReport>(() => {
       let query = supabase
         .from('fuel_reports')
         .select('*')
         .order('date', { ascending: false });
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
       
       if (!includeDeleted) {
         query = query.is('deleted_at', null);
@@ -37,27 +41,39 @@ export const fuelService = {
     });
   },
 
-  async getReportsBySpecificDate(date: string) {
-    return fetchAllPages<FuelReport>(() =>
-      supabase
+  async getReportsBySpecificDate(date: string, regionId?: string | null) {
+    return fetchAllPages<FuelReport>(() => {
+      let query = supabase
         .from('fuel_reports')
         .select('*')
         .is('deleted_at', null)
         .eq('date', date)
-        .order('created_at', { ascending: true })
-    );
+        .order('created_at', { ascending: true });
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+
+      return query;
+    });
   },
 
-  async getReportsByDateRange(startDate: string, endDate: string) {
-    return fetchAllPages<FuelReport>(() =>
-      supabase
+  async getReportsByDateRange(startDate: string, endDate: string, regionId?: string | null) {
+    return fetchAllPages<FuelReport>(() => {
+      let query = supabase
         .from('fuel_reports')
         .select('*')
         .is('deleted_at', null)
         .gte('date', startDate)
         .lte('date', endDate)
-        .order('date', { ascending: true })
-    );
+        .order('date', { ascending: true });
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+
+      return query;
+    });
   },
 
   async getReportById(id: string) {

@@ -151,8 +151,8 @@ const UserManagement = () => {
           email: data.email || newUser.email.trim().toLowerCase(),
           role: newUser.role,
           category: null,
-          region_id: newUser.regionId || null,
-          team_id: newUser.teamId || null,
+          region_id: roleRequiresRegion(newUser.role) ? newUser.regionId || null : null,
+          team_id: roleRequiresTeam(newUser.role) ? newUser.teamId || null : null,
           updated_at: new Date().toISOString(),
         },
         ...currentProfiles.filter(profile => profile.id !== data.id),
@@ -346,6 +346,9 @@ const UserManagement = () => {
     (p.role?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
+  const getRegionName = (regionId?: string | null) =>
+    regions.find(region => region.id === regionId)?.name || 'Belum pilih wilayah';
+
   if (loading && profiles.length === 0) return (
     <div className="flex flex-col items-center justify-center py-20 gap-3">
       <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -364,7 +367,12 @@ const UserManagement = () => {
           <Input required placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
           <Input required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
           <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
-          <Select value={newUser.role} onValueChange={role => setNewUser({ ...newUser, role: role as UserRole, teamId: '' })}>
+          <Select value={newUser.role} onValueChange={role => setNewUser({
+            ...newUser,
+            role: role as UserRole,
+            regionId: roleRequiresRegion(role) ? newUser.regionId : '',
+            teamId: '',
+          })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
@@ -414,7 +422,7 @@ const UserManagement = () => {
               <TableRow>
                 <TableHead className="w-[260px]">Username / Email</TableHead>
                 <TableHead className="w-[220px]">Hak Akses</TableHead>
-                <TableHead className="w-[220px]">Kategori (Khusus User)</TableHead>
+                <TableHead className="w-[240px]">Wilayah / Kategori</TableHead>
                 <TableHead className="w-[180px]">Update Terakhir</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -437,7 +445,14 @@ const UserManagement = () => {
                     <TableCell>
                       <Select 
                         value={profile.role} 
-                        onValueChange={(val) => handleUpdateProfile(profile.id, { role: val as UserRole })}
+                        onValueChange={(val) => {
+                          const role = val as UserRole;
+                          void handleUpdateProfile(profile.id, {
+                            role,
+                            region_id: roleRequiresRegion(role) ? profile.region_id : null,
+                            team_id: roleRequiresTeam(role) ? profile.team_id : null,
+                          });
+                        }}
                         disabled={updatingId === profile.id}
                       >
                         <SelectTrigger className={cn(
@@ -455,28 +470,49 @@ const UserManagement = () => {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Select 
-                        value={profile.team_id || "none"}
-                        onValueChange={(teamId) => {
-                          const team = teams.find(item => item.id === teamId);
-                          if (team) void handleUpdateProfile(profile.id, { team_id: team.id, region_id: team.region_id });
-                        }}
-                        disabled={updatingId === profile.id || !roleRequiresTeam(profile.role)}
-                      >
-                        <SelectTrigger className={cn(
-                          "h-9 text-xs",
-                          !profile.category && "text-slate-400 italic"
-                        )}>
-                          <div className="flex items-center gap-2">
-                            <Tag size={12} />
-                            <SelectValue placeholder="Pilih Kategori" />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Tanpa Kategori</SelectItem>
-                          {teams.filter(team => !profile.region_id || team.region_id === profile.region_id).map(team => <SelectItem key={team.id} value={team.id} className="text-xs">{team.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      {roleRequiresTeam(profile.role) ? (
+                        <Select
+                          value={profile.team_id || "none"}
+                          onValueChange={(teamId) => {
+                            const team = teams.find(item => item.id === teamId);
+                            if (team) void handleUpdateProfile(profile.id, { team_id: team.id, region_id: team.region_id });
+                          }}
+                          disabled={updatingId === profile.id}
+                        >
+                          <SelectTrigger className={cn(
+                            "h-9 text-xs",
+                            !profile.category && "text-slate-400 italic"
+                          )}>
+                            <div className="flex items-center gap-2">
+                              <Tag size={12} />
+                              <SelectValue placeholder="Pilih Kategori" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Tanpa Kategori</SelectItem>
+                            {teams.filter(team => !profile.region_id || team.region_id === profile.region_id).map(team => <SelectItem key={team.id} value={team.id} className="text-xs">{team.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : roleRequiresRegion(profile.role) ? (
+                        <Select
+                          value={profile.region_id || "none"}
+                          onValueChange={(regionId) => void handleUpdateProfile(profile.id, { region_id: regionId, team_id: null })}
+                          disabled={updatingId === profile.id}
+                        >
+                          <SelectTrigger className={cn("h-9 text-xs", !profile.region_id && "text-slate-400 italic")}>
+                            <div className="flex items-center gap-2">
+                              <Tag size={12} />
+                              <SelectValue placeholder="Pilih Wilayah" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" disabled>Pilih Wilayah</SelectItem>
+                            {regions.map(region => <SelectItem key={region.id} value={region.id} className="text-xs">{region.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-xs italic text-slate-400">{getRegionName(profile.region_id)}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-[10px] text-slate-500">
@@ -545,7 +581,12 @@ const UserManagement = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Hak akses</label>
-              <Select value={editUser.role} onValueChange={role => setEditUser({ ...editUser, role: role as UserRole })}>
+              <Select value={editUser.role} onValueChange={role => setEditUser({
+                ...editUser,
+                role: role as UserRole,
+                regionId: roleRequiresRegion(role) ? editUser.regionId : '',
+                teamId: roleRequiresTeam(role) ? editUser.teamId : '',
+              })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>

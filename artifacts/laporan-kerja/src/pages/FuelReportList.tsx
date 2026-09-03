@@ -98,6 +98,7 @@ const FuelReportList = () => {
 
   const isAdminBbm = profile?.role === 'admin_bbm';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const fuelRegionId = isAdminBbm && !isSuperAdmin ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const canInputFuelReport = isSuperAdmin || isAdminBbm;
@@ -121,7 +122,7 @@ const FuelReportList = () => {
   useEffect(() => {
     if (!isAllowed) return;
     loadReports(appliedDate, appliedMonth, appliedYear);
-  }, [isAllowed, appliedDate, appliedMonth, appliedYear]);
+  }, [isAllowed, appliedDate, appliedMonth, appliedYear, fuelRegionId]);
 
   const loadReports = async (date: string, month: string, year: string) => {
     const id = ++reqIdRef.current;
@@ -130,27 +131,27 @@ const FuelReportList = () => {
       let data: FuelReport[];
 
       if (date) {
-        data = await fuelService.getReportsBySpecificDate(date);
+        data = await fuelService.getReportsBySpecificDate(date, fuelRegionId);
       } else if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
       } else if (year !== "semua") {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
       } else if (month !== "semua") {
         const y = new Date().getFullYear();
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
       } else {
-        data = await fuelService.getAllReports();
+        data = await fuelService.getAllReports(false, fuelRegionId);
       }
 
       if (id !== reqIdRef.current) return;

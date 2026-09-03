@@ -62,10 +62,11 @@ const FuelMonthlyRecap = () => {
     location: true,
     remarks: true
   });
+  const fuelRegionId = profile?.role === 'admin_bbm' ? profile.region_id || "__unassigned__" : null;
 
   useEffect(() => {
     loadData();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, fuelRegionId]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
@@ -76,7 +77,7 @@ const FuelMonthlyRecap = () => {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      const filtered = await fuelService.getReportsByDateRange(startDate, endDate);
+      const filtered = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
       filtered.sort((a, b) => a.date.localeCompare(b.date) || a.region.localeCompare(b.region));
       if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {

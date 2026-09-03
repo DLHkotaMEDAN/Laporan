@@ -63,10 +63,11 @@ const FuelWeeklyRecap = () => {
 
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
+  const fuelRegionId = profile?.role === 'admin_bbm' ? profile.region_id || "__unassigned__" : null;
 
   useEffect(() => {
     loadData();
-  }, [selectedDate]);
+  }, [selectedDate, fuelRegionId]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
@@ -74,7 +75,7 @@ const FuelWeeklyRecap = () => {
       setLoading(true);
       const startDateStr = format(weekStart, 'yyyy-MM-dd');
       const endDateStr = format(weekEnd, 'yyyy-MM-dd');
-      const filtered = await fuelService.getReportsByDateRange(startDateStr, endDateStr);
+      const filtered = await fuelService.getReportsByDateRange(startDateStr, endDateStr, fuelRegionId);
       filtered.sort((a, b) => a.date.localeCompare(b.date) || a.region.localeCompare(b.region) || a.team.localeCompare(b.team));
       if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
