@@ -7,6 +7,8 @@ import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image, Share2, Edit } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
@@ -58,6 +60,18 @@ const workPlanColumnLabels = {
 
 const formatFuelLiters = (value?: number) => value ? `${Number(value).toLocaleString('id-ID')} L` : "-";
 
+const getInitialSelectedCategories = (searchParams: URLSearchParams) => {
+  const categories = searchParams.get('categories');
+  if (categories) return categories.split(',').map((category) => category.trim()).filter(Boolean);
+  return [searchParams.get('category') || 'semua'];
+};
+
+const getSelectedCategoryLabel = (selectedCategories: string[]) => {
+  if (selectedCategories.includes('semua')) return 'Semua Kategori';
+  if (selectedCategories.length > 1) return `${selectedCategories.length} Kategori Terpilih`;
+  return selectedCategories[0] || 'Pilih Kategori';
+};
+
 type WeeklyTableRow =
   | {
       type: "noActivity";
@@ -101,7 +115,7 @@ const WorkPlanWeeklyRecap = () => {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialSelectedCategories(searchParams));
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true });
@@ -128,12 +142,12 @@ const WorkPlanWeeklyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, selectedCategory, regionId, regionOrderKey]);
+  }, [selectedDate, selectedCategories, regionId, regionOrderKey]);
 
   useEffect(() => {
     setSelectedRegion(searchParams.get('region') || 'semua');
     setSelectedDate(searchParams.get('date') || new Date().toISOString().split('T')[0]);
-    setSelectedCategory(searchParams.get('category') || 'semua');
+    setSelectedCategories(getInitialSelectedCategories(searchParams));
   }, [searchParams]);
 
   const loadData = async () => {
@@ -146,7 +160,7 @@ const WorkPlanWeeklyRecap = () => {
       const filtered = data.filter(p => {
         const pDate = parseISO(p.date);
         return isWithinInterval(pDate, { start: weekStart, end: weekEnd }) &&
-          (selectedCategory === 'semua' || p.category === selectedCategory) &&
+          (selectedCategories.includes('semua') || selectedCategories.includes(p.category)) &&
           p.is_visible !== false;
       });
 
@@ -170,6 +184,20 @@ const WorkPlanWeeklyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
+  const toggleCategory = (category: string) => {
+    if (category === 'semua') {
+      setSelectedCategories(['semua']);
+      return;
+    }
+
+    setSelectedCategories((current) => {
+      const withoutAll = current.filter((selected) => selected !== 'semua');
+      const next = withoutAll.includes(category)
+        ? withoutAll.filter((selected) => selected !== category)
+        : [...withoutAll, category];
+      return next.length ? next : ['semua'];
+    });
+  };
   const showRemarksColumn = hasRemarks && visibleColumns.remarks;
   const noActivityColSpan = [
     visibleColumns.description,
@@ -185,7 +213,7 @@ const WorkPlanWeeklyRecap = () => {
     visibleColumns.fuel_usage_estimate,
   ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
-  const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
+  const showCategoryInTitle = !selectedCategories.includes('semua') || displayedCategoryCount === 2;
   const recapTitle = `REKAP RENCANA KERJA MINGGUAN${showCategoryInTitle ? ` ${getRecapCategoryLabel(plans.map((plan) => plan.category))}` : ''}`;
 
   const handleExportExcel = async () => {
@@ -360,13 +388,28 @@ const WorkPlanWeeklyRecap = () => {
                 </SelectContent>
               </Select>
             )}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 h-10 text-xs md:text-sm"><SelectValue placeholder="Pilih Kategori" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="semua">Semua Kategori</SelectItem>
-                {availableCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[150px] justify-between bg-slate-50 border-slate-200 h-10 px-3 text-xs font-normal md:text-sm">
+                  <span className="truncate">{getSelectedCategoryLabel(selectedCategories)}</span>
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[220px] p-0" align="start">
+                <div className="max-h-[320px] space-y-1 overflow-y-auto p-2">
+                  <div className="flex cursor-pointer items-center space-x-2 rounded-md p-2 hover:bg-slate-100" onClick={() => toggleCategory('semua')}>
+                    <Checkbox checked={selectedCategories.includes('semua')} />
+                    <label className="cursor-pointer text-sm font-medium leading-none">Semua Kategori</label>
+                  </div>
+                  {availableCategories.map((category) => (
+                    <div key={category} className="flex cursor-pointer items-center space-x-2 rounded-md p-2 hover:bg-slate-100" onClick={() => toggleCategory(category)}>
+                      <Checkbox checked={selectedCategories.includes(category)} />
+                      <label className="cursor-pointer text-sm font-medium leading-none">{category}</label>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
             <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} onToggle={toggleColumn} />
             <div className="relative">
               <CalendarIcon className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 h-3 w-3 md:h-4 md:w-4 text-slate-400" />

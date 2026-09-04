@@ -7,6 +7,8 @@ import { workPlanService } from '@/services/workPlanService';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Printer, Calendar as CalendarIcon, PenTool, Plus, ChevronDown, Table, FileText, Image, Edit, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, parseISO } from 'date-fns';
@@ -59,6 +61,19 @@ const workPlanColumnLabels = {
 };
 
 const formatFuelLiters = (value?: number | string) => Number(value || 0) ? `${Number(value).toLocaleString('id-ID')} L` : "-";
+const fuelRemarkMergedCategories = ["Tim Siram", "Becak Sampah", "Becak Siram"];
+
+const getInitialSelectedCategories = (searchParams: URLSearchParams) => {
+  const categories = searchParams.get('categories');
+  if (categories) return categories.split(',').map((category) => category.trim()).filter(Boolean);
+  return [searchParams.get('category') || 'semua'];
+};
+
+const getSelectedCategoryLabel = (selectedCategories: string[]) => {
+  if (selectedCategories.includes('semua')) return 'Semua Kategori';
+  if (selectedCategories.length > 1) return `${selectedCategories.length} Kategori Terpilih`;
+  return selectedCategories[0] || 'Pilih Kategori';
+};
 
 const WorkPlanDailyRecap = () => {
   const navigate = useNavigate();
@@ -74,7 +89,7 @@ const WorkPlanDailyRecap = () => {
   const [loading, setLoading] = useState(true);
 
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialSelectedCategories(searchParams));
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [tableMode, setTableMode] = useState<TableMode>("complete");
@@ -105,12 +120,12 @@ const WorkPlanDailyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate, selectedCategory, regionId, regionOrderKey]);
+  }, [selectedDate, selectedCategories, regionId, regionOrderKey]);
 
   useEffect(() => {
     setSelectedRegion(searchParams.get('region') || 'semua');
     setSelectedDate(searchParams.get('date') || '');
-    setSelectedCategory(searchParams.get('category') || 'semua');
+    setSelectedCategories(getInitialSelectedCategories(searchParams));
   }, [searchParams]);
 
   const loadData = async () => {
@@ -135,7 +150,7 @@ const WorkPlanDailyRecap = () => {
 
       const filtered = data.filter(p =>
         (targetDate === "semua" || p.date === targetDate) &&
-        (selectedCategory === "semua" || p.category === selectedCategory) &&
+        (selectedCategories.includes("semua") || selectedCategories.includes(p.category)) &&
         p.is_visible !== false
       );
 
@@ -168,6 +183,20 @@ const WorkPlanDailyRecap = () => {
     foreman: visibleColumns.foreman && hasForemanValues,
   };
   const showRemarksColumn = hasRemarks && printColumns.remarks;
+  const toggleCategory = (category: string) => {
+    if (category === 'semua') {
+      setSelectedCategories(['semua']);
+      return;
+    }
+
+    setSelectedCategories((current) => {
+      const withoutAll = current.filter((selected) => selected !== 'semua');
+      const next = withoutAll.includes(category)
+        ? withoutAll.filter((selected) => selected !== category)
+        : [...withoutAll, category];
+      return next.length ? next : ['semua'];
+    });
+  };
   const noActivityColSpan = [
     printColumns.description,
     printColumns.location,
@@ -182,7 +211,7 @@ const WorkPlanDailyRecap = () => {
     printColumns.fuel_usage_estimate,
   ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
-  const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
+  const showCategoryInTitle = !selectedCategories.includes('semua') || displayedCategoryCount === 2;
   const recapTitle = `REKAP RENCANA KERJA HARIAN${showCategoryInTitle ? ` ${getRecapCategoryLabel(plans.map((plan) => plan.category))}` : ''}`;
 
   const handleExportExcel = async () => {
@@ -325,7 +354,7 @@ const WorkPlanDailyRecap = () => {
     // (wilayah dan kategori merupakan konteks plan yang sama).
     const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
     const isTreeLayout = plan.category === "Tim Pohon";
-    const isWateringTeam = plan.category === "Tim Siram";
+    const isFuelRemarkMergedCategory = fuelRemarkMergedCategories.includes(plan.category.trim());
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
     const getFuelRemarkSource = (itemIdx: number, span: number) => displayItems
@@ -355,11 +384,11 @@ const WorkPlanDailyRecap = () => {
       const basisSpan = basisSpans[itemIdx];
       const remarksSpan = remarksSpans[itemIdx];
       const fuelRemarkSource = toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
-      const fuelRemarkRows = isWateringTeam ? totalPlanRows : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
+      const fuelRemarkRows = isFuelRemarkMergedCategory ? totalPlanRows : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => {
-        const showFuelRemarkCell = isWateringTeam ? itemIdx === 0 && toolIdx === 0 : toolSpan > 0 && toolIdx === 0;
+        const showFuelRemarkCell = isFuelRemarkMergedCategory ? itemIdx === 0 && toolIdx === 0 : toolSpan > 0 && toolIdx === 0;
 
         return (
           <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
@@ -426,13 +455,13 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
           {printColumns.fuel_need_liters && showFuelRemarkCell && (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(isWateringTeam ? wateringFuelNeedLiters : fuelRemarkSource.fuel_need_liters)}</td>
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(isFuelRemarkMergedCategory ? wateringFuelNeedLiters : fuelRemarkSource.fuel_need_liters)}</td>
           )}
           {printColumns.fuel_usage_estimate && showFuelRemarkCell && (
-            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelRemarkRows}>{isWateringTeam ? wateringFuelUsageEstimate || "-" : fuelRemarkSource.fuel_usage_estimate || "-"}</td>
+            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelRemarkRows}>{isFuelRemarkMergedCategory ? wateringFuelUsageEstimate || "-" : fuelRemarkSource.fuel_usage_estimate || "-"}</td>
           )}
             {showRemarksColumn && showFuelRemarkCell && (
-              <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{isWateringTeam ? wateringRemarks || "-" : fuelRemarkSource.remarks || "-"}</td>
+              <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{isFuelRemarkMergedCategory ? wateringRemarks || "-" : fuelRemarkSource.remarks || "-"}</td>
             )}
           </tr>
         );
@@ -594,15 +623,28 @@ const WorkPlanDailyRecap = () => {
                   </SelectContent>
                 </Select>
               )}
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 h-10 text-xs md:text-sm">
-                  <SelectValue placeholder="Pilih Kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="semua">Semua Kategori</SelectItem>
-                  {availableCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[150px] justify-between bg-slate-50 border-slate-200 h-10 px-3 text-xs font-normal md:text-sm">
+                    <span className="truncate">{getSelectedCategoryLabel(selectedCategories)}</span>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[220px] p-0" align="start">
+                  <div className="max-h-[320px] space-y-1 overflow-y-auto p-2">
+                    <div className="flex cursor-pointer items-center space-x-2 rounded-md p-2 hover:bg-slate-100" onClick={() => toggleCategory('semua')}>
+                      <Checkbox checked={selectedCategories.includes('semua')} />
+                      <label className="cursor-pointer text-sm font-medium leading-none">Semua Kategori</label>
+                    </div>
+                    {availableCategories.map((category) => (
+                      <div key={category} className="flex cursor-pointer items-center space-x-2 rounded-md p-2 hover:bg-slate-100" onClick={() => toggleCategory(category)}>
+                        <Checkbox checked={selectedCategories.includes(category)} />
+                        <label className="cursor-pointer text-sm font-medium leading-none">{category}</label>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} onToggle={toggleColumn} />
               <Select value={selectedDate === "semua" ? "semua" : selectedDate === "" ? "" : "custom"} onValueChange={(v) => {
                 if (v === "semua") setSelectedDate("semua");
