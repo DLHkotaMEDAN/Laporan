@@ -50,6 +50,7 @@ const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
 type SignatureMode = "with-signature" | "without-signature";
 type LogoMode = "with-logo" | "without-logo";
+type TableMode = "complete" | "compact";
 
 const workPlanColumnLabels = {
   category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", target_area: "Target Luas (M²)", tools: "Alat Operasional",
@@ -76,6 +77,7 @@ const WorkPlanDailyRecap = () => {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || "semua");
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const [tableMode, setTableMode] = useState<TableMode>("complete");
   const [visibleColumns, setVisibleColumns] = useState({
     category: true, description: true, location: true, target_area: true, tools: true, unit: true,
     personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true,
@@ -157,19 +159,27 @@ const WorkPlanDailyRecap = () => {
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
   const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
-  const showRemarksColumn = hasRemarks && visibleColumns.remarks;
+  const hasForemanValues = plans.some((plan) => plan.items.some((item) => {
+    const value = item.foreman?.trim();
+    return value && value !== "-";
+  }));
+  const printColumns = {
+    ...visibleColumns,
+    foreman: visibleColumns.foreman && hasForemanValues,
+  };
+  const showRemarksColumn = hasRemarks && printColumns.remarks;
   const noActivityColSpan = [
-    visibleColumns.description,
-    visibleColumns.location,
-    visibleColumns.target_area,
-    visibleColumns.tools,
-    visibleColumns.unit,
-    visibleColumns.personnel,
-    visibleColumns.coordinator,
-    visibleColumns.foreman,
-    visibleColumns.basis,
-    visibleColumns.fuel_need_liters,
-    visibleColumns.fuel_usage_estimate,
+    printColumns.description,
+    printColumns.location,
+    printColumns.target_area,
+    printColumns.tools,
+    printColumns.unit,
+    printColumns.personnel,
+    printColumns.coordinator,
+    printColumns.foreman,
+    printColumns.basis,
+    printColumns.fuel_need_liters,
+    printColumns.fuel_usage_estimate,
   ].filter(Boolean).length;
   const displayedCategoryCount = new Set(plans.map((plan) => plan.category)).size;
   const showCategoryInTitle = selectedCategory !== 'semua' || displayedCategoryCount === 2;
@@ -254,7 +264,7 @@ const WorkPlanDailyRecap = () => {
         <tr key={plan.id}>
           {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : 1}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
           {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
-          {visibleColumns.category && <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>}
+          {printColumns.category && <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>}
           {noActivityColSpan > 0 && <td colSpan={noActivityColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
           </td>}
@@ -265,7 +275,23 @@ const WorkPlanDailyRecap = () => {
 
     const displayItems = getUniqueWorkPlanItems(plan.items);
     const descriptionSpans = getSequentialSpans(displayItems, (item) => item.description.trim());
-    const toolSpans = getSequentialSpans(displayItems, (item) => JSON.stringify(item.tools));
+    const getItemLocationKey = (item: WorkPlan["items"][number]) => JSON.stringify({
+      street: item.location?.street?.trim() || "",
+      village: Array.isArray(item.location?.village)
+        ? item.location.village.map((value) => value.trim()).filter(Boolean)
+        : item.location?.village?.trim() || "",
+      subDistrict: item.location?.subDistrict?.trim() || "",
+    });
+    const toolSpans = getSequentialSpans(displayItems, (item) => {
+      const toolKey = JSON.stringify(item.tools);
+      if (plan.category !== "Tim Siram") return toolKey;
+
+      return JSON.stringify({
+        tools: toolKey,
+        detail: item.description?.trim() || "",
+        location: getItemLocationKey(item),
+      });
+    });
     const teamSpans = getSequentialSpans(displayItems, (item) => {
       const teamKey = plan.category === "Tim Pohon"
         ? `${item.coordinator}|${item.foreman || ""}`
@@ -286,9 +312,12 @@ const WorkPlanDailyRecap = () => {
       ? getSequentialSpans(displayItems, (item) => item.coordinator.trim())
       : teamSpans;
     const foremanSpans = getSequentialSpans(displayItems, (item) => item.foreman?.trim() || "");
-    // Jumlah personil pada Taman Amplas dan Taman Area mengikuti tiap
-    // detail kegiatan/lokasi, sehingga tidak digabung antar-item.
-    const personnelSpans = ["Taman Amplas", "Taman Area"].includes(plan.category)
+    const personnelShouldStaySeparate = ["Taman Amplas", "Taman Kota", "Taman Area"].includes(plan.category.trim())
+      && new Set(displayItems.map((item) => JSON.stringify({
+        detail: item.description?.trim() || "",
+        location: getItemLocationKey(item),
+      }))).size > 1;
+    const personnelSpans = personnelShouldStaySeparate
       ? displayItems.map(() => 1)
       : teamSpans;
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
@@ -296,11 +325,14 @@ const WorkPlanDailyRecap = () => {
     // (wilayah dan kategori merupakan konteks plan yang sama).
     const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
     const isTreeLayout = plan.category === "Tim Pohon";
+    const isWateringTeam = plan.category === "Tim Siram";
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
     const getSpanRows = (itemIdx: number, span: number) => isTreeLayout ? span : getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + span));
     const getFuelRemarkSource = (itemIdx: number, span: number) => displayItems
       .slice(itemIdx, itemIdx + span)
       .reduce((source, current) => (current.fuel_need_liters || current.fuel_usage_estimate?.trim() || current.remarks?.trim() ? current : source), displayItems[itemIdx]);
+    const wateringFuelRemarkSource = displayItems
+      .reduce((source, current) => (current.fuel_need_liters || current.fuel_usage_estimate?.trim() || current.remarks?.trim() ? current : source), displayItems[0]);
 
     return displayItems.flatMap((item, itemIdx) => {
       let toolGroupStart = itemIdx;
@@ -314,8 +346,9 @@ const WorkPlanDailyRecap = () => {
       const toolSpan = toolSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
       const remarksSpan = remarksSpans[itemIdx];
-      const fuelRemarkSource = toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
-      const fuelRemarkRows = toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
+      const fuelRemarkSource = isWateringTeam ? wateringFuelRemarkSource : toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
+      const fuelRemarkRows = isWateringTeam ? totalPlanRows : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
+      const showFuelRemarkCell = isWateringTeam ? itemIdx === 0 && toolIdx === 0 : toolSpan > 0 && toolIdx === 0;
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => (
@@ -324,41 +357,41 @@ const WorkPlanDailyRecap = () => {
             <>
               {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : totalPlanRows}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
               {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
-              {visibleColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>}
+              {printColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>}
             </>
           )}
 
-          {visibleColumns.description && descriptionSpan > 0 && toolIdx === 0 && (
+          {printColumns.description && descriptionSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>{item.description}</td>
           )}
 
-          {visibleColumns.location && toolIdx === 0 && (
+          {printColumns.location && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>
               {item.location.street}, {Array.isArray(item.location.village) ? item.location.village.join(", ") : item.location.village}, {item.location.subDistrict}
             </td>
           )}
-          {visibleColumns.target_area && toolIdx === 0 && (
+          {printColumns.target_area && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={isTreeLayout ? 1 : Math.max(item.tools.length, 1)}>{item.target_area ? Number(item.target_area).toLocaleString('id-ID') : "-"}</td>
           )}
 
-          {(visibleColumns.tools || visibleColumns.unit) && (isTreeLayout ? (alignTreeTools ? (
+          {(printColumns.tools || printColumns.unit) && (isTreeLayout ? (alignTreeTools ? (
             <>
-              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>}
-              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>}
+              {printColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `• ${tool.name}` : "-"}</td>}
+              {printColumns.unit && <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>}
             </>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <>
-              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>}
-              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>}
+              {printColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>)}</td>}
+              {printColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>)}</td>}
             </>
           ) : null) : toolSpan > 0 && toolIdx === 0 && (
             <>
-              {visibleColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              {printColumns.tools && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
                   <div key={idx} className={`${toolItemClass} flex items-center justify-center text-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.name ? `• ${t.name}` : "-"}</div>
                 )) : "-"}
               </td>}
-              {visibleColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
+              {printColumns.unit && <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + toolSpan))}>
                 {item.tools.length > 0 ? item.tools.map((t, idx) => (
                   <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.unit || "-"}</div>
                 )) : "-"}
@@ -366,29 +399,29 @@ const WorkPlanDailyRecap = () => {
             </>
           ))}
 
-          {visibleColumns.personnel && (isTreeLayout ? (alignTreeTools ? (
+          {printColumns.personnel && (isTreeLayout ? (alignTreeTools ? (
             <td className="border-2 border-black p-1 text-center align-middle">{tool.members ?? 0}</td>
           ) : toolSpan > 0 && toolIdx === 0 ? (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={toolSpan}>{item.tools.map((t, idx) => <div key={idx} className={`${toolItemClass} flex items-center justify-center ${idx > 0 ? "-mx-1 border-t border-black px-1" : ""}`}>{t.members ?? 0}</div>)}</td>
           ) : null) : personnelSpans[itemIdx] > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getRowsInWorkPlanItems(displayItems.slice(itemIdx, itemIdx + personnelSpans[itemIdx]))}>{item.personnel.members}</td>
           ))}
-          {visibleColumns.coordinator && coordinatorSpans[itemIdx] > 0 && toolIdx === 0 && (
+          {printColumns.coordinator && coordinatorSpans[itemIdx] > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, coordinatorSpans[itemIdx])}>{item.coordinator}</td>
           )}
-          {visibleColumns.foreman && foremanSpans[itemIdx] > 0 && toolIdx === 0 && (
+          {printColumns.foreman && foremanSpans[itemIdx] > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={getSpanRows(itemIdx, foremanSpans[itemIdx])}>{item.foreman || "-"}</td>
           )}
-          {visibleColumns.basis && basisSpan > 0 && toolIdx === 0 && (
+          {printColumns.basis && basisSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
-          {visibleColumns.fuel_need_liters && toolSpan > 0 && toolIdx === 0 && (
+          {printColumns.fuel_need_liters && showFuelRemarkCell && (
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(fuelRemarkSource.fuel_need_liters)}</td>
           )}
-          {visibleColumns.fuel_usage_estimate && toolSpan > 0 && toolIdx === 0 && (
+          {printColumns.fuel_usage_estimate && showFuelRemarkCell && (
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.fuel_usage_estimate || "-"}</td>
           )}
-          {showRemarksColumn && toolSpan > 0 && toolIdx === 0 && (
+          {showRemarksColumn && showFuelRemarkCell && (
             <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.remarks || "-"}</td>
           )}
         </tr>
@@ -409,11 +442,124 @@ const WorkPlanDailyRecap = () => {
     <colgroup>
       {displayColumnWidths.map((width, index) => {
         const column = (['no', ...(showRegionColumn ? ['region'] : []), 'category', 'description', 'location', 'target_area', 'tools', 'unit', 'personnel', 'coordinator', 'foreman', 'basis', 'fuel_need_liters', 'fuel_usage_estimate', ...(hasRemarks ? ['remarks'] : [])] as const)[index];
-        if (column in visibleColumns && !visibleColumns[column as keyof typeof visibleColumns]) return null;
+        if (column in printColumns && !printColumns[column as keyof typeof printColumns]) return null;
         return <col key={index} style={{ width }} />;
       })}
     </colgroup>
   );
+
+  const compactColGroup = (
+    <colgroup>
+      <col style={{ width: '4%' }} />
+      {showRegionColumn && <col style={{ width: '8%' }} />}
+      <col style={{ width: '9%' }} />
+      <col style={{ width: '18%' }} />
+      <col style={{ width: '20%' }} />
+      <col style={{ width: '18%' }} />
+      <col style={{ width: '4%' }} />
+      <col style={{ width: '16%' }} />
+      <col style={{ width: '5%' }} />
+      <col style={{ width: '13%' }} />
+      <col style={{ width: '14%' }} />
+    </colgroup>
+  );
+
+  const formatCompactLocation = (item: WorkPlan["items"][number]) => [
+    item.location?.street,
+    Array.isArray(item.location?.village) ? item.location.village.filter(Boolean).join(", ") : item.location?.village,
+    item.location?.subDistrict,
+  ].filter(Boolean).join(", ") || "-";
+
+  const renderCompactPlanRows = (plan: WorkPlan, pIdx: number) => {
+    const regionCell = regionCells.get(plan.id);
+    const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
+    const compactBodyColSpan = showRegionColumn ? 9 : 8;
+
+    if (isNoActivity) {
+      return (
+        <tr key={`compact-${plan.id}`}>
+          {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : 1}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
+          {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
+          <td className="border-2 border-black p-1 text-center font-bold">{plan.category}</td>
+          <td colSpan={compactBodyColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
+            TIDAK ADA RENCANA KERJA/ KEGIATAN
+          </td>
+        </tr>
+      );
+    }
+
+    const displayItems = getUniqueWorkPlanItems(plan.items);
+    const compactRows = displayItems.flatMap((item, itemIndex) => {
+      const tools = item.tools.length > 0 ? item.tools : [{ name: "", unit: 0, usage: "", members: 0 }];
+      return tools.map((tool, toolIndex) => ({
+        item,
+        itemIndex,
+        tool,
+        toolIndex,
+        detail: item.description || "-",
+        location: formatCompactLocation(item),
+        toolName: tool.name || "-",
+        unit: tool.unit || "-",
+        usage: tool.usage || "-",
+        personnel: plan.category === "Tim Pohon" ? Number(tool.members || 0) || "-" : item.personnel?.members || "-",
+        coordinator: item.coordinator || "-",
+        basis: item.basis || "-",
+      }));
+    });
+    const totalPlanRows = compactRows.length;
+    const personnelShouldStaySeparate = ["Taman Amplas", "Taman Kota", "Taman Area"].includes(plan.category.trim())
+      && new Set(compactRows.map((row) => JSON.stringify({ detail: row.detail, location: row.location }))).size > 1;
+    const sameInPlan = (value: unknown) => JSON.stringify({ category: plan.category, value });
+    const sameInTool = (toolName: string, value: unknown) => JSON.stringify({ category: plan.category, toolName, value });
+    const detailSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.detail));
+    const locationSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.location));
+    const toolSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.toolName));
+    const basisSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.basis));
+    const unitSpans = getSequentialSpans(compactRows, (row) => sameInTool(row.toolName, row.unit));
+    const usageSpans = getSequentialSpans(compactRows, (row) => sameInTool(row.toolName, row.usage));
+    const personnelSpans = getSequentialSpans(compactRows, (row) => (
+      personnelShouldStaySeparate
+        ? JSON.stringify({ category: plan.category, itemIndex: row.itemIndex })
+        : sameInTool(row.toolName, row.personnel)
+    ));
+    const coordinatorSpans = getSequentialSpans(compactRows, (row) => sameInTool(row.toolName, row.coordinator));
+
+    return compactRows.map((row, rowIdx) => (
+      <tr key={`compact-${plan.id}-${row.itemIndex}-${row.toolIndex}`}>
+        {rowIdx === 0 && (
+          <>
+            {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : totalPlanRows}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
+            {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
+            <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>
+          </>
+        )}
+        {detailSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={detailSpans[rowIdx]}>{row.detail}</td>
+        )}
+        {locationSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={locationSpans[rowIdx]}>{row.location}</td>
+        )}
+        {toolSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={toolSpans[rowIdx]}>{row.toolName !== "-" ? `- ${row.toolName}` : "-"}</td>
+        )}
+        {unitSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={unitSpans[rowIdx]}>{row.unit}</td>
+        )}
+        {usageSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={usageSpans[rowIdx]}>{row.usage}</td>
+        )}
+        {personnelSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle" rowSpan={personnelSpans[rowIdx]}>{row.personnel}</td>
+        )}
+        {coordinatorSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={coordinatorSpans[rowIdx]}>{row.coordinator}</td>
+        )}
+        {basisSpans[rowIdx] > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={basisSpans[rowIdx]}>{row.basis}</td>
+        )}
+      </tr>
+    ));
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
@@ -567,6 +713,9 @@ const WorkPlanDailyRecap = () => {
               <DropdownMenuItem onClick={() => setSignatureMode(signatureMode === 'with-signature' ? 'without-signature' : 'with-signature')} className="cursor-pointer py-2">
                 <PenTool className="mr-2 h-4 w-4 shrink-0 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTableMode(tableMode === 'complete' ? 'compact' : 'complete')} className="cursor-pointer py-2">
+                <Table className="mr-2 h-4 w-4 shrink-0 text-emerald-600" /> Mode Tabel: {tableMode === 'complete' ? 'Lengkap' : 'Ringkas'}
+              </DropdownMenuItem>
               {isLoggedIn && plans.length > 0 && plans.map((plan) => (
                 <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer py-2 whitespace-normal">
                   <Edit className="mr-2 h-4 w-4 shrink-0 text-blue-600" /> Edit: {plan.category} - {plan.items[0]?.description || "Rencana Kerja"}
@@ -585,6 +734,13 @@ const WorkPlanDailyRecap = () => {
                 <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-52">
                   <DropdownMenuItem onClick={() => setSignatureMode('with-signature')} className="cursor-pointer">Ada Tanda Tangan</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSignatureMode('without-signature')} className="cursor-pointer">Tanpa Tanda Tangan</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><Table className="mr-2 h-4 w-4 text-emerald-600" /> Mode Tabel: {tableMode === 'complete' ? 'Lengkap' : 'Ringkas'}</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-[calc(100vw-2rem)] max-w-52">
+                  <DropdownMenuItem onClick={() => setTableMode('complete')} className="cursor-pointer">Tabel Lengkap</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTableMode('compact')} className="cursor-pointer">Tabel Ringkas</DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               {isLoggedIn && plans.length > 0 && (
@@ -637,24 +793,47 @@ const WorkPlanDailyRecap = () => {
         <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
+              {tableMode === "compact" ? (
+              <table className="work-plan-table w-full min-w-[1200px] border-collapse border-2 border-black text-[8px] leading-[1.25] table-fixed print:w-full print:min-w-0">
+                {compactColGroup}
+                <thead>
+                  <tr className="bg-slate-100">
+                    <th className="border-2 border-black p-1">No</th>
+                    {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
+                    <th className="border-2 border-black p-1">Tim/ Kec</th>
+                    <th className="border-2 border-black p-1">Detail Kegiatan</th>
+                    <th className="border-2 border-black p-1">Lokasi</th>
+                    <th className="border-2 border-black p-1">Alat Operasional</th>
+                    <th className="border-2 border-black p-1">Unit</th>
+                    <th className="border-2 border-black p-1">Kegunaan</th>
+                    <th className="border-2 border-black p-1">Pers</th>
+                    <th className="border-2 border-black p-1">Koordinator</th>
+                    <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plans.map((plan, pIdx) => renderCompactPlanRows(plan, pIdx))}
+                </tbody>
+              </table>
+              ) : (
               <table className="work-plan-table w-full min-w-[1200px] border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed print:w-full print:min-w-0">
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
                     <th className="border-2 border-black p-1">No</th>
                     {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
-                    {visibleColumns.category && <th className="border-2 border-black p-1">Tim/ Kec</th>}
-                    {visibleColumns.description && <th className="border-2 border-black p-1">Detail Kegiatan</th>}
-                    {visibleColumns.location && <th className="border-2 border-black p-1">Lokasi</th>}
-                    {visibleColumns.target_area && <th className="border-2 border-black p-1">Target Luas (M²)</th>}
-                    {visibleColumns.tools && <th className="border-2 border-black p-1">Alat Operasional</th>}
-                    {visibleColumns.unit && <th className="border-2 border-black p-1">Unit</th>}
-                    {visibleColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
-                    {visibleColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
-                    {visibleColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
-                    {visibleColumns.basis && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Dasar<br />Pengerjaan</th>}
-                    {visibleColumns.fuel_need_liters && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Kebutuhan<br />BBM<br />(Liter)</th>}
-                    {visibleColumns.fuel_usage_estimate && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Estimasi<br />Penggunaan<br />BBM (Liter)</th>}
+                    {printColumns.category && <th className="border-2 border-black p-1">Tim/ Kec</th>}
+                    {printColumns.description && <th className="border-2 border-black p-1">Detail Kegiatan</th>}
+                    {printColumns.location && <th className="border-2 border-black p-1">Lokasi</th>}
+                    {printColumns.target_area && <th className="border-2 border-black p-1">Target Luas (M²)</th>}
+                    {printColumns.tools && <th className="border-2 border-black p-1">Alat Operasional</th>}
+                    {printColumns.unit && <th className="border-2 border-black p-1">Unit</th>}
+                    {printColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
+                    {printColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
+                    {printColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
+                    {printColumns.basis && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Dasar<br />Pengerjaan</th>}
+                    {printColumns.fuel_need_liters && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Kebutuhan<br />BBM<br />(Liter)</th>}
+                    {printColumns.fuel_usage_estimate && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Estimasi<br />Penggunaan<br />BBM (Liter)</th>}
                     {showRemarksColumn && <th className="border-2 border-black p-1">Keterangan</th>}
                   </tr>
                 </thead>
@@ -662,6 +841,7 @@ const WorkPlanDailyRecap = () => {
                   {plans.map((plan, pIdx) => renderPlanRows(plan, pIdx))}
                 </tbody>
               </table>
+              )}
 
               <div className="keep-together">
                 {signatureMode === "with-signature" && (
