@@ -58,7 +58,7 @@ const workPlanColumnLabels = {
   basis: "Dasar Pengerjaan", remarks: "Keterangan",
 };
 
-const formatFuelLiters = (value?: number) => value ? `${Number(value).toLocaleString('id-ID')} L` : "-";
+const formatFuelLiters = (value?: number | string) => Number(value || 0) ? `${Number(value).toLocaleString('id-ID')} L` : "-";
 
 const WorkPlanDailyRecap = () => {
   const navigate = useNavigate();
@@ -279,7 +279,7 @@ const WorkPlanDailyRecap = () => {
       street: item.location?.street?.trim() || "",
       village: Array.isArray(item.location?.village)
         ? item.location.village.map((value) => value.trim()).filter(Boolean)
-        : item.location?.village?.trim() || "",
+        : String(item.location?.village || "").trim(),
       subDistrict: item.location?.subDistrict?.trim() || "",
     });
     const toolSpans = getSequentialSpans(displayItems, (item) => {
@@ -331,8 +331,16 @@ const WorkPlanDailyRecap = () => {
     const getFuelRemarkSource = (itemIdx: number, span: number) => displayItems
       .slice(itemIdx, itemIdx + span)
       .reduce((source, current) => (current.fuel_need_liters || current.fuel_usage_estimate?.trim() || current.remarks?.trim() ? current : source), displayItems[itemIdx]);
-    const wateringFuelRemarkSource = displayItems
-      .reduce((source, current) => (current.fuel_need_liters || current.fuel_usage_estimate?.trim() || current.remarks?.trim() ? current : source), displayItems[0]);
+    const getLastValue = <T,>(items: WorkPlan["items"], getValue: (item: WorkPlan["items"][number]) => T, hasValue: (value: T) => boolean) => {
+      for (let index = items.length - 1; index >= 0; index -= 1) {
+        const value = getValue(items[index]);
+        if (hasValue(value)) return value;
+      }
+      return getValue(items[0]);
+    };
+    const wateringFuelNeedLiters = getLastValue(displayItems, (current) => current.fuel_need_liters || 0, (value) => Number(value || 0) > 0);
+    const wateringFuelUsageEstimate = getLastValue(displayItems, (current) => current.fuel_usage_estimate || "", (value) => value.trim() !== "");
+    const wateringRemarks = getLastValue(displayItems, (current) => current.remarks || "", (value) => value.trim() !== "");
 
     return displayItems.flatMap((item, itemIdx) => {
       let toolGroupStart = itemIdx;
@@ -346,20 +354,22 @@ const WorkPlanDailyRecap = () => {
       const toolSpan = toolSpans[itemIdx];
       const basisSpan = basisSpans[itemIdx];
       const remarksSpan = remarksSpans[itemIdx];
-      const fuelRemarkSource = isWateringTeam ? wateringFuelRemarkSource : toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
+      const fuelRemarkSource = toolSpan > 0 ? getFuelRemarkSource(itemIdx, toolSpan) : item;
       const fuelRemarkRows = isWateringTeam ? totalPlanRows : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
-      const showFuelRemarkCell = isWateringTeam ? itemIdx === 0 && toolIdx === 0 : toolSpan > 0 && toolIdx === 0;
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
-      return toolsToRender.map((tool, toolIdx) => (
-        <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
-          {itemIdx === 0 && toolIdx === 0 && (
-            <>
-              {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : totalPlanRows}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
-              {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
-              {printColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>}
-            </>
-          )}
+      return toolsToRender.map((tool, toolIdx) => {
+        const showFuelRemarkCell = isWateringTeam ? itemIdx === 0 && toolIdx === 0 : toolSpan > 0 && toolIdx === 0;
+
+        return (
+          <tr key={`${plan.id}-${itemIdx}-${toolIdx}`}>
+            {itemIdx === 0 && toolIdx === 0 && (
+              <>
+                {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : totalPlanRows}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
+                {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal break-words" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
+                {printColumns.category && <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={totalPlanRows}>{plan.category}</td>}
+              </>
+            )}
 
           {printColumns.description && descriptionSpan > 0 && toolIdx === 0 && (
             <td className="border-2 border-black p-1 text-left align-middle break-words" rowSpan={getSpanRows(itemIdx, descriptionSpan)}>{item.description}</td>
@@ -416,16 +426,17 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getSpanRows(itemIdx, basisSpan)}>{item.basis}</td>
           )}
           {printColumns.fuel_need_liters && showFuelRemarkCell && (
-            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(fuelRemarkSource.fuel_need_liters)}</td>
+            <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(isWateringTeam ? wateringFuelNeedLiters : fuelRemarkSource.fuel_need_liters)}</td>
           )}
           {printColumns.fuel_usage_estimate && showFuelRemarkCell && (
-            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.fuel_usage_estimate || "-"}</td>
+            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelRemarkRows}>{isWateringTeam ? wateringFuelUsageEstimate || "-" : fuelRemarkSource.fuel_usage_estimate || "-"}</td>
           )}
-          {showRemarksColumn && showFuelRemarkCell && (
-            <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{fuelRemarkSource.remarks || "-"}</td>
-          )}
-        </tr>
-      ));
+            {showRemarksColumn && showFuelRemarkCell && (
+              <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={fuelRemarkRows}>{isWateringTeam ? wateringRemarks || "-" : fuelRemarkSource.remarks || "-"}</td>
+            )}
+          </tr>
+        );
+      });
     });
   };
 

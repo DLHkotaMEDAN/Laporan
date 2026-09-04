@@ -62,6 +62,8 @@ export const getUniqueWorkPlanItems = (items: WorkPlanItem[]) => {
       coordinator: normalizeText(item.coordinator),
       members: Number(item.personnel?.members || 0),
       basis: normalizeText(item.basis),
+      fuelNeedLiters: Number(item.fuel_need_liters || 0),
+      fuelUsageEstimate: normalizeText(item.fuel_usage_estimate),
       remarks: normalizeText(item.remarks),
     });
 
