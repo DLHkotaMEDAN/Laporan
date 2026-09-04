@@ -229,6 +229,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const { clearDraft, lastSavedAt, restoredAt } = useFormDraft(form, draftKey);
   const hasNoActivity = form.watch("has_no_activity");
   const isGlobalStyle = selectedCategory === "Tim Babat";
+  const isFuelPlanningCategory = selectedCategory === "Tim Siram";
   const useWizard = selectedCategory === "Tim Siram" || selectedCategory === "Tim Pohon";
   const lastFocusState = useRef<{ selector?: string; selectionStart?: number | null; selectionEnd?: number | null; scrollX: number; scrollY: number } | null>(null);
 
@@ -352,6 +353,17 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     }
   }, [selectedCategory, isGlobalStyle, isEditing, isDuplicateMode, form]);
 
+  useEffect(() => {
+    if (isFuelPlanningCategory) return;
+    const currentItems = form.getValues("items");
+    const clearedItems = currentItems.map(item => ({
+      ...item,
+      fuel_need_liters: 0,
+      fuel_usage_estimate: "",
+    }));
+    form.setValue("items", clearedItems);
+  }, [form, isFuelPlanningCategory, selectedCategory]);
+
   const performAppend = (mode: 'full' | 'activity_location' | 'location_only') => {
     const items = form.getValues("items");
     const lastItem = items[items.length - 1];
@@ -359,8 +371,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     const defaultForeman = isGlobalStyle ? form.getValues("globalForeman") : (lastItem?.foreman || "");
     const defaultDesc = defaultActivityMapping[selectedCategory] || "";
     const isSameToolLocation = mode === 'activity_location' || mode === 'location_only';
-    const movedFuelNeedLiters = isSameToolLocation ? Number(lastItem?.fuel_need_liters || 0) : 0;
-    const movedFuelUsageEstimate = isSameToolLocation ? lastItem?.fuel_usage_estimate || "" : "";
+    const movedFuelNeedLiters = isFuelPlanningCategory && isSameToolLocation ? Number(lastItem?.fuel_need_liters || 0) : 0;
+    const movedFuelUsageEstimate = isFuelPlanningCategory && isSameToolLocation ? lastItem?.fuel_usage_estimate || "" : "";
     const movedRemarks = isSameToolLocation ? lastItem?.remarks || "" : "";
 
     if (mode === 'full') {
@@ -437,14 +449,23 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         const cleanGlobalTools = values.globalTools?.filter(t => t.name && t.name.trim() !== "") || [];
         processedItems = values.items.map(item => {
           const { uiMode, ...rest } = item;
+          const fuelFields = values.category === "Tim Siram"
+            ? {
+                fuel_need_liters: rest.fuel_need_liters ?? 0,
+                fuel_usage_estimate: rest.fuel_usage_estimate ?? "",
+              }
+            : {
+                fuel_need_liters: 0,
+                fuel_usage_estimate: "",
+              };
           if (isGlobalStyle) {
-            return { ...rest, tools: cleanGlobalTools, coordinator: values.globalCoordinator || "", foreman: values.globalForeman || "", personnel: { members: values.globalMembers || 0 } };
+            return { ...rest, ...fuelFields, tools: cleanGlobalTools, coordinator: values.globalCoordinator || "", foreman: values.globalForeman || "", personnel: { members: values.globalMembers || 0 } };
           }
           const tools = item.tools.filter(t => t.name && t.name.trim() !== "");
           const personnel = values.category === "Tim Pohon"
             ? { members: tools.reduce((total, tool) => total + Number(tool.members || 0), 0) }
             : item.personnel;
-          return { ...rest, tools, personnel };
+          return { ...rest, ...fuelFields, tools, personnel };
         });
       }
 
@@ -720,8 +741,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                         <FormField control={form.control} name={`items.${index}.location.subDistrict`} render={({ field }) => (<FormItem><FormLabel>Kecamatan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{Object.keys(medanDistricts).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.location.village.0`} render={({ field }) => (<FormItem><FormLabel>Kelurahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{form.watch(`items.${index}.location.subDistrict`) && form.watch(`items.${index}.location.subDistrict`) !== " " && medanDistricts[form.watch(`items.${index}.location.subDistrict`)].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.target_area`} render={({ field }) => (<FormItem><FormLabel>Target Luas Kerja (M²)</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />
-                        {!hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_need_liters`} render={({ field }) => (<FormItem><FormLabel>Kebutuhan BBM/Liter</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />}
-                        {!hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_usage_estimate`} render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel>Estimasi Penggunaan BBM (Liter)</FormLabel><FormControl><Textarea rows={3} {...field} placeholder="Tuliskan estimasi penggunaan BBM..." /></FormControl></FormItem>)} />}
+                        {isFuelPlanningCategory && !hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_need_liters`} render={({ field }) => (<FormItem><FormLabel>Kebutuhan BBM/Liter</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />}
+                        {isFuelPlanningCategory && !hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_usage_estimate`} render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel>Estimasi Penggunaan BBM (Liter)</FormLabel><FormControl><Textarea rows={3} {...field} placeholder="Tuliskan estimasi penggunaan BBM..." /></FormControl></FormItem>)} />}
                       </div>
                       {uiMode === 'full' && !isGlobalStyle && (
                         <>
