@@ -19,7 +19,6 @@ import {
   getSequentialSpans,
   getUniqueWorkPlanItems,
   getWorkPlanBasisKey,
-  getWorkPlanRemarkKey,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
@@ -311,16 +310,11 @@ const WorkPlanDailyRecap = () => {
         : String(item.location?.village || "").trim(),
       subDistrict: item.location?.subDistrict?.trim() || "",
     });
-    const toolSpans = getSequentialSpans(displayItems, (item) => {
-      const toolKey = JSON.stringify(item.tools);
-      if (plan.category !== "Tim Siram") return toolKey;
-
-      return JSON.stringify({
-        tools: toolKey,
-        detail: item.description?.trim() || "",
-        location: getItemLocationKey(item),
-      });
-    });
+    const getItemToolsKey = (item: WorkPlan["items"][number]) => JSON.stringify((item.tools || []).map((tool) => ({
+      name: tool.name?.trim() || "",
+      unit: Number(tool.unit || 0),
+    })));
+    const toolSpans = getSequentialSpans(displayItems, getItemToolsKey);
     const teamSpans = getSequentialSpans(displayItems, (item) => {
       const teamKey = plan.category === "Tim Pohon"
         ? `${item.coordinator}|${item.foreman || ""}`
@@ -350,9 +344,7 @@ const WorkPlanDailyRecap = () => {
       ? displayItems.map(() => 1)
       : teamSpans;
     const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
-    // Satukan keterangan hanya untuk detail kegiatan yang sama dalam plan
-    // (wilayah dan kategori merupakan konteks plan yang sama).
-    const remarksSpans = getSequentialSpans(displayItems, getWorkPlanRemarkKey);
+    const remarksSpans = getSequentialSpans(displayItems, getItemToolsKey);
     const isTreeLayout = plan.category === "Tim Pohon";
     const isFuelRemarkMergedCategory = fuelRemarkMergedCategories.includes(plan.category.trim());
     const totalPlanRows = isTreeLayout ? displayItems.length : getRowsInWorkPlanItems(displayItems);
@@ -368,20 +360,13 @@ const WorkPlanDailyRecap = () => {
       return getValue(items[0]);
     };
     const wateringFuelNeedLiters = getLastValue(displayItems, (current) => current.fuel_need_liters || 0, (value) => Number(value || 0) > 0);
-    const getItemToolsKey = (item: WorkPlan["items"][number]) => JSON.stringify((item.tools || []).map((tool) => ({
-      name: tool.name?.trim() || "",
-      unit: Number(tool.unit || 0),
-    })));
     const fuelEstimateRows = displayItems.map((item) => ({ item }));
     const fuelEstimateSpans = isFuelRemarkMergedCategory
       ? getSequentialSpans(fuelEstimateRows, (row) => getItemToolsKey(row.item))
       : [];
-    const remarkRows = displayItems.map((item, itemIndex) => ({ item, itemIndex }));
+    const remarkRows = displayItems.map((item) => ({ item }));
     const mergedRemarkSpans = isFuelRemarkMergedCategory
-      ? getSequentialSpans(remarkRows, (row) => {
-        const remark = row.item.remarks?.trim() || "";
-        return remark ? `filled:${row.itemIndex}` : "empty";
-      })
+      ? getSequentialSpans(remarkRows, (row) => getItemToolsKey(row.item))
       : [];
 
     return displayItems.flatMap((item, itemIdx) => {
@@ -405,6 +390,9 @@ const WorkPlanDailyRecap = () => {
         : fuelRemarkSource.fuel_usage_estimate || "";
       const remarkSpan = isFuelRemarkMergedCategory ? mergedRemarkSpans[itemIdx] : remarksSpan;
       const remarkRowsCount = isFuelRemarkMergedCategory && remarkSpan > 0 ? getSpanRows(itemIdx, remarkSpan) : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
+      const remarkValue = remarkSpan > 0
+        ? getLastValue(displayItems.slice(itemIdx, itemIdx + remarkSpan), (current) => current.remarks || "", (value) => value.trim() !== "")
+        : fuelRemarkSource.remarks || "";
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => {
@@ -483,7 +471,7 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelEstimateRowsCount}>{fuelEstimateValue || "-"}</td>
           )}
             {showRemarksColumn && showRemarkCell && (
-              <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={remarkRowsCount}>{isFuelRemarkMergedCategory ? item.remarks || "-" : fuelRemarkSource.remarks || "-"}</td>
+              <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={remarkRowsCount}>{remarkValue || "-"}</td>
             )}
           </tr>
         );
