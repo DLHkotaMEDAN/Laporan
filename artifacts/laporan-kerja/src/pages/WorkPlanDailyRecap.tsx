@@ -368,12 +368,13 @@ const WorkPlanDailyRecap = () => {
       return getValue(items[0]);
     };
     const wateringFuelNeedLiters = getLastValue(displayItems, (current) => current.fuel_need_liters || 0, (value) => Number(value || 0) > 0);
-    const fuelEstimateRows = displayItems.map((item, itemIndex) => ({ item, itemIndex }));
+    const getItemToolsKey = (item: WorkPlan["items"][number]) => JSON.stringify((item.tools || []).map((tool) => ({
+      name: tool.name?.trim() || "",
+      unit: Number(tool.unit || 0),
+    })));
+    const fuelEstimateRows = displayItems.map((item) => ({ item }));
     const fuelEstimateSpans = isFuelRemarkMergedCategory
-      ? getSequentialSpans(fuelEstimateRows, (row) => {
-        const estimate = row.item.fuel_usage_estimate?.trim() || "";
-        return estimate ? `filled:${row.itemIndex}` : "empty";
-      })
+      ? getSequentialSpans(fuelEstimateRows, (row) => getItemToolsKey(row.item))
       : [];
     const remarkRows = displayItems.map((item, itemIndex) => ({ item, itemIndex }));
     const mergedRemarkSpans = isFuelRemarkMergedCategory
@@ -399,6 +400,9 @@ const WorkPlanDailyRecap = () => {
       const fuelRemarkRows = isFuelRemarkMergedCategory ? totalPlanRows : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
       const fuelEstimateSpan = isFuelRemarkMergedCategory ? fuelEstimateSpans[itemIdx] : 0;
       const fuelEstimateRowsCount = isFuelRemarkMergedCategory && fuelEstimateSpan > 0 ? getSpanRows(itemIdx, fuelEstimateSpan) : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
+      const fuelEstimateValue = isFuelRemarkMergedCategory && fuelEstimateSpan > 0
+        ? getLastValue(displayItems.slice(itemIdx, itemIdx + fuelEstimateSpan), (current) => current.fuel_usage_estimate || "", (value) => value.trim() !== "")
+        : fuelRemarkSource.fuel_usage_estimate || "";
       const remarkSpan = isFuelRemarkMergedCategory ? mergedRemarkSpans[itemIdx] : remarksSpan;
       const remarkRowsCount = isFuelRemarkMergedCategory && remarkSpan > 0 ? getSpanRows(itemIdx, remarkSpan) : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
@@ -476,7 +480,7 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle" rowSpan={fuelRemarkRows}>{formatFuelLiters(isFuelRemarkMergedCategory ? wateringFuelNeedLiters : fuelRemarkSource.fuel_need_liters)}</td>
           )}
           {printColumns.fuel_usage_estimate && showFuelEstimateCell && (
-            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelEstimateRowsCount}>{isFuelRemarkMergedCategory ? item.fuel_usage_estimate || "-" : fuelRemarkSource.fuel_usage_estimate || "-"}</td>
+            <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={fuelEstimateRowsCount}>{fuelEstimateValue || "-"}</td>
           )}
             {showRemarksColumn && showRemarkCell && (
               <td className="border-2 border-black p-1 italic text-center align-middle break-words" rowSpan={remarkRowsCount}>{isFuelRemarkMergedCategory ? item.remarks || "-" : fuelRemarkSource.remarks || "-"}</td>
