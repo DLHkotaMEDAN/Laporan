@@ -93,10 +93,14 @@ const WorkPlanDailyRecap = () => {
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [tableMode, setTableMode] = useState<TableMode>("complete");
   const [userVisibleColumns, setVisibleColumns] = useState({
-    category: true, description: true, location: true, target_area: true, tools: true, unit: true,
+    category: true, description: true, location: true, target_area: !isAdmin, tools: true, unit: true,
     personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true,
   });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
+
+  useEffect(() => {
+    if (isAdmin) setVisibleColumns((current) => ({ ...current, target_area: false }));
+  }, [isAdmin]);
 
   const printRef = useRef<HTMLDivElement>(null);
   const dataRequestId = useRef(0);
