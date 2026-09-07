@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
 import FuelReportTab from '@/components/FuelReportTab';
 import FuelSpjTab from '@/components/FuelSpjTab';
+import OvertimeRecap from '@/pages/OvertimeRecap';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
@@ -79,7 +80,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-const validMainTabs = ['reports', 'workplans', 'fuel_reports', 'fuel_spj'] as const;
+const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj'] as const;
 type MainTab = typeof validMainTabs[number];
 type IndexViewState = {
   activeTab?: MainTab;
@@ -182,6 +183,7 @@ const Index = () => {
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
   const isFuelSpecialist = (isAdminBbm || isAdminSpj) && !isCombinedWorkspace;
   const canViewReportsTab = !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
+  const canViewOvertime = isAdmin || isAdminWilayah || isAdminRencanaKerja;
   const isLaporanOnly = profile?.role === 'laporan';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
@@ -734,6 +736,12 @@ const Index = () => {
               >
                 <ClipboardList size={16} /> Rencana Kerja
               </TabsTrigger>}
+              {canViewOvertime && !isAdminHarian && <TabsTrigger
+                value="overtime"
+                className="data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
+              >
+                <FileText size={16} /> Rekap Lembur
+              </TabsTrigger>}
               {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && !isAdminHarian && (
                 <>
                   {(isAdmin || isAdminBbm) && (
@@ -901,6 +909,8 @@ const Index = () => {
               </div>
             </div>
           )}
+
+          {canViewOvertime && <TabsContent value="overtime" className="mt-0"><OvertimeRecap /></TabsContent>}
 
           {canViewReportsTab && <TabsContent value="reports" className="mt-0">
             {loading ? (

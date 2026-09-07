@@ -32,6 +32,10 @@ import FuelDailyRecap from "./pages/FuelDailyRecap";
 import FuelWeeklyRecap from "./pages/FuelWeeklyRecap";
 import FuelMonthlyRecap from "./pages/FuelMonthlyRecap";
 import FuelYearlyRecap from "./pages/FuelYearlyRecap";
+import OvertimeRecap from "./pages/OvertimeRecap";
+import OvertimePrint from "./pages/OvertimePrint";
+import CreateOvertime from "./pages/CreateOvertime";
+import EditOvertime from "./pages/EditOvertime";
 
 import FuelSpjReportList from "./pages/FuelSpjReportList";
 import CreateFuelSpjReport from "./pages/CreateFuelSpjReport";
@@ -184,6 +188,10 @@ const App = () => (
             <Route path="/work-plans/daily-rekap" element={<WorkPlanAccessRoute><WorkPlanDailyRecap /></WorkPlanAccessRoute>} />
             <Route path="/work-plans/weekly-rekap" element={<WorkPlanAccessRoute><WorkPlanWeeklyRecap /></WorkPlanAccessRoute>} />
             <Route path="/work-plans/monthly-rekap" element={<WorkPlanAccessRoute><WorkPlanMonthlyRecap /></WorkPlanAccessRoute>} />
+            <Route path="/overtime" element={<WorkPlanAccessRoute><OvertimeRecap /></WorkPlanAccessRoute>} />
+            <Route path="/overtime/print" element={<WorkPlanAccessRoute><OvertimePrint /></WorkPlanAccessRoute>} />
+            <Route path="/overtime/create" element={<WorkPlanAccessRoute><CreateOvertime /></WorkPlanAccessRoute>} />
+            <Route path="/overtime/edit/:id" element={<WorkPlanAccessRoute><EditOvertime /></WorkPlanAccessRoute>} />
             <Route path="/work-plans/create" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />
             <Route path="/work-plans/edit/:id" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="update"><EditWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />
             
