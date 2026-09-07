@@ -89,6 +89,23 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
   ],
 
+  // Admin Wilayah + BBM – all three modules within the assigned region.
+  [USER_ROLES.ADMIN_WILAYAH_BBM]: [
+    { resource: 'reports', action: 'create' },
+    { resource: 'reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'create' },
+    { resource: 'work_plans', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'create' },
+    { resource: 'fuel_reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'profiles', action: 'read' },
+  ],
+
   // Petugas Laporan – hanya mengelola laporan harian dalam wilayah yang ditetapkan.
   [USER_ROLES.LAPORAN]: [
     { resource: 'reports', action: 'create' },
@@ -139,6 +156,19 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'work_plans', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'profiles', action: 'read' },
+  ],
+
+  // Admin Rencana Kerja + BBM – work plans and fuel reports within the assigned region.
+  [USER_ROLES.ADMIN_RENCANA_KERJA_BBM]: [
+    { resource: 'work_plans', action: 'create' },
+    { resource: 'work_plans', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'create' },
+    { resource: 'fuel_reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'profiles', action: 'read' },
   ],
 
