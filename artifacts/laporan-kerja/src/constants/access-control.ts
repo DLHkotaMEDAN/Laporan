@@ -1,6 +1,7 @@
 export const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
+  ADMIN_WILAYAH_BBM: 'admin_wilayah_bbm',
   LAPORAN: 'laporan',
   ADMIN_HARIAN: 'admin_harian',
   ADMIN_LAPORAN_MINGGUAN: 'admin_laporan_mingguan',
@@ -12,6 +13,7 @@ export const USER_ROLES = {
   ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA: 'admin_laporan_mingguan_rencana_kerja',
   ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
+  ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   PIMPINAN: 'pimpinan',
@@ -25,6 +27,7 @@ export const USER_ROLE_VALUES = Object.values(USER_ROLES) as readonly UserRole[]
 export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN, label: 'Super Admin / Administrator' },
   { value: USER_ROLES.ADMIN_WILAYAH, label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
+  { value: USER_ROLES.ADMIN_WILAYAH_BBM, label: 'Admin Wilayah (Laporan & Rencana Kerja) + Admin BBM' },
   { value: USER_ROLES.LAPORAN, label: 'Laporan' },
   { value: USER_ROLES.ADMIN_HARIAN, label: 'Admin Laporan Harian' },
   { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN, label: 'Admin Laporan Mingguan' },
@@ -36,6 +39,7 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA, label: 'Admin Laporan Mingguan dan Rencana Kerja' },
   { value: USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA, label: 'Admin Laporan Bulanan dan Rencana Kerja' },
   { value: USER_ROLES.ADMIN_RENCANA_KERJA, label: 'Admin Rencana Kerja' },
+  { value: USER_ROLES.ADMIN_RENCANA_KERJA_BBM, label: 'Admin Rencana Kerja + Admin BBM' },
   { value: USER_ROLES.ADMIN_BBM, label: 'Admin BBM' },
   { value: USER_ROLES.ADMIN_SPJ_BBM, label: 'Admin SPJ BBM' },
   { value: USER_ROLES.PIMPINAN, label: 'Pimpinan (Lihat Rekap)' },
@@ -52,12 +56,14 @@ export type RecapPeriod = 'daily' | 'weekly' | 'monthly';
 
 const REGION_REQUIRED_ROLES = [
   USER_ROLES.ADMIN_WILAYAH,
+  USER_ROLES.ADMIN_WILAYAH_BBM,
   USER_ROLES.LAPORAN,
   USER_ROLES.ADMIN_HARIAN,
   USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA,
+  USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_BBM,
   USER_ROLES.USER,
 ] as const satisfies readonly UserRole[];
@@ -112,9 +118,22 @@ export const isPimpinanAccess = (role: string | null | undefined, email?: string
 export const isAdminHarianAccess = (role: string | null | undefined, email?: string | null) =>
   role === USER_ROLES.ADMIN_HARIAN || Boolean(email && (SYSTEM_EMAILS.adminHarian as readonly string[]).includes(email));
 
+export const isAdminRencanaKerjaAccess = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_RENCANA_KERJA
+  || role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM
+  || role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
+export const isAdminBbmAccess = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_BBM
+  || role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM
+  || role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
+export const isAdminWilayahAccess = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_WILAYAH || role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
 export const canManageReportEntries = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email)
-  || role === USER_ROLES.ADMIN_WILAYAH
+  || isAdminWilayahAccess(role)
   || role === USER_ROLES.LAPORAN
   || isAdminHarianAccess(role, email)
   || role === USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA
@@ -123,7 +142,7 @@ export const canManageReportEntries = (role: string | null | undefined, email?: 
 export const canManageWorkPlans = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email)
   || role === USER_ROLES.ADMIN_WILAYAH
-  || role === USER_ROLES.ADMIN_RENCANA_KERJA
+  || isAdminRencanaKerjaAccess(role)
   || role === USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA
   || role === USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA
   || role === USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA
@@ -132,7 +151,7 @@ export const canManageWorkPlans = (role: string | null | undefined, email?: stri
 export const canAccessFuelArea = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email)
   || isPimpinanAccess(role, email)
-  || role === USER_ROLES.ADMIN_BBM
+  || isAdminBbmAccess(role)
   || role === USER_ROLES.ADMIN_SPJ_BBM;
 
 export const canPrintAdminRecap = (role: string | null | undefined, email?: string | null) =>

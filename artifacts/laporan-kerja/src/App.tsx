@@ -47,6 +47,8 @@ import {
   canPrintAdminRecap,
   getRoleLandingPath,
   isAdminHarianAccess,
+  isAdminBbmAccess,
+  isAdminRencanaKerjaAccess,
 } from "@/constants/access-control";
 import { AuthorizeRoute } from "@/components/AuthorizeRoute";
 
@@ -59,9 +61,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" />;
   
   if (
-    profile?.role === USER_ROLES.ADMIN_BBM
+    isAdminBbmAccess(profile?.role)
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
-    || profile?.role === USER_ROLES.ADMIN_RENCANA_KERJA
+    || isAdminRencanaKerjaAccess(profile?.role)
   ) {
     return <Navigate to={getRoleLandingPath(profile.role)} />;
   }
@@ -78,7 +80,7 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
   if (isAdminHarianAccess(profile?.role, session.user.email)) return <Navigate to="/" replace />;
 
   if (
-    profile?.role === USER_ROLES.ADMIN_BBM
+    isAdminBbmAccess(profile?.role)
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
   ) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
@@ -119,7 +121,7 @@ const FuelSpjRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  if (!canAccessFuelArea(profile?.role, session.user.email) || profile?.role === USER_ROLES.ADMIN_BBM) {
+  if (!canAccessFuelArea(profile?.role, session.user.email) || isAdminBbmAccess(profile?.role)) {
     return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
   }
 
@@ -130,7 +132,7 @@ const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => 
   const { profile, loading } = useAuth();
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
-  if (profile?.role === USER_ROLES.ADMIN_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_BBM) {
+  if (isAdminBbmAccess(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
 
@@ -143,6 +145,8 @@ const WorkPlanAccessRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
   if (profile?.role === USER_ROLES.LAPORAN) return <Navigate to="/" replace />;
+
+  if (isAdminRencanaKerjaAccess(profile?.role)) return <>{children}</>;
 
   return <NonFuelSpecialistRoute>{children}</NonFuelSpecialistRoute>;
 };

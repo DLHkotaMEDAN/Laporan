@@ -96,7 +96,7 @@ const FuelReportList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 100;
 
-  const isAdminBbm = profile?.role === 'admin_bbm';
+  const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const fuelRegionId = isAdminBbm && !isSuperAdmin ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;

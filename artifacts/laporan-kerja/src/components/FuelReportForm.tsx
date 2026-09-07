@@ -80,7 +80,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
 
   const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
-  const isAdminBbm = profile?.role === 'admin_bbm';
+  const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isRegionalFuelAdmin = isAdminBbm && !isSuperAdmin;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -210,7 +210,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const isAllowed = profile?.role === 'admin' || profile?.role === 'admin_bbm' || session?.user?.email === 'admin@gmail.com';
+    const isAllowed = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' || session?.user?.email === 'admin@gmail.com';
     if (!isAllowed) {
       showError("Anda tidak memiliki izin untuk menyimpan laporan ini");
       return;

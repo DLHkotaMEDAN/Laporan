@@ -62,7 +62,7 @@ const FuelMonthlyRecap = () => {
     location: true,
     remarks: true
   });
-  const fuelRegionId = profile?.role === 'admin_bbm' ? profile.region_id || "__unassigned__" : null;
+  const fuelRegionId = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' ? profile.region_id || "__unassigned__" : null;
 
   useEffect(() => {
     loadData();

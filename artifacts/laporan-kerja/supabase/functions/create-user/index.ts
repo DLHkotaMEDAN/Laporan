@@ -32,6 +32,7 @@ type ListUserEmailsInput = {
 const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
+  ADMIN_WILAYAH_BBM: 'admin_wilayah_bbm',
   LAPORAN: 'laporan',
   ADMIN_HARIAN: 'admin_harian',
   ADMIN_LAPORAN_MINGGUAN: 'admin_laporan_mingguan',
@@ -43,6 +44,7 @@ const USER_ROLES = {
   ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA: 'admin_laporan_mingguan_rencana_kerja',
   ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
+  ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   PIMPINAN: 'pimpinan',
@@ -52,12 +54,14 @@ const USER_ROLES = {
 const validRoles = new Set(Object.values(USER_ROLES));
 const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_WILAYAH,
+  USER_ROLES.ADMIN_WILAYAH_BBM,
   USER_ROLES.LAPORAN,
   USER_ROLES.ADMIN_HARIAN,
   USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA,
+  USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_BBM,
   USER_ROLES.USER,
 ]);

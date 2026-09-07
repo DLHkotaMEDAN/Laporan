@@ -172,13 +172,13 @@ const Index = () => {
 
   const isLoggedIn = !!session;
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
-  const isAdminBbm = profile?.role === 'admin_bbm';
+  const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isFuelSpecialist = isAdminBbm || isAdminSpj;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
-  const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja';
-  const isAdminWilayah = profile?.role === 'admin_wilayah';
+  const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
+  const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
   const isLaporanOnly = profile?.role === 'laporan';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
