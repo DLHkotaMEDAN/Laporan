@@ -92,7 +92,7 @@ const WorkPlanDailyRecap = () => {
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
   const [tableMode, setTableMode] = useState<TableMode>("complete");
-  const [visibleColumns, setVisibleColumns] = useState({
+  const [userVisibleColumns, setVisibleColumns] = useState({
     category: true, description: true, location: true, target_area: true, tools: true, unit: true,
     personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true,
   });
@@ -172,7 +172,9 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
-  const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
+  const isTimSiramSelected = selectedCategories.includes("Tim Siram");
+  const visibleColumns = { ...userVisibleColumns, target_area: userVisibleColumns.target_area && !isTimSiramSelected };
+  const toggleColumn = (column: keyof typeof userVisibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
   const hasForemanValues = plans.some((plan) => plan.items.some((item) => {
     const value = item.foreman?.trim();
     return value && value !== "-";
@@ -655,7 +657,7 @@ const WorkPlanDailyRecap = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} onToggle={toggleColumn} />
+              <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} disabledColumns={{ target_area: isTimSiramSelected }} onToggle={toggleColumn} />
               <Select value={selectedDate === "semua" ? "semua" : selectedDate === "" ? "" : "custom"} onValueChange={(v) => {
                 if (v === "semua") setSelectedDate("semua");
                 else if (v === "custom") setSelectedDate(new Date().toISOString().split('T')[0]);

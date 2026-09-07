@@ -8,9 +8,10 @@ type Props<T extends string> = {
   columns: Record<T, boolean>;
   labels: Record<T, string>;
   onToggle: (column: T) => void;
+  disabledColumns?: Partial<Record<T, boolean>>;
 };
 
-export const WorkPlanColumnPicker = <T extends string>({ columns, labels, onToggle }: Props<T>) => (
+export const WorkPlanColumnPicker = <T extends string>({ columns, labels, onToggle, disabledColumns = {} }: Props<T>) => (
   <Popover>
     <PopoverTrigger asChild>
       <Button variant="outline" className="h-10 border-blue-200 bg-white text-blue-600 hover:bg-blue-50"><Settings2 className="mr-2 h-4 w-4" /> Pilih Kolom</Button>
@@ -20,8 +21,8 @@ export const WorkPlanColumnPicker = <T extends string>({ columns, labels, onTogg
         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Tampilkan kolom:</p>
         <div className="space-y-2">
           {(Object.keys(labels) as T[]).map((column) => <div key={column} className="flex items-center space-x-2">
-            <Checkbox id={`work-plan-col-${column}`} checked={columns[column]} onCheckedChange={() => onToggle(column)} />
-            <Label htmlFor={`work-plan-col-${column}`} className="cursor-pointer text-sm">{labels[column]}</Label>
+            <Checkbox id={`work-plan-col-${column}`} checked={columns[column]} disabled={disabledColumns[column]} onCheckedChange={() => onToggle(column)} />
+            <Label htmlFor={`work-plan-col-${column}`} className={`cursor-pointer text-sm ${disabledColumns[column] ? "text-slate-400" : ""}`}>{labels[column]}</Label>
           </div>)}
         </div>
       </div>

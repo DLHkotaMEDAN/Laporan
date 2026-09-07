@@ -95,7 +95,7 @@ const WorkPlanMonthlyRecap = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialSelectedCategories(searchParams));
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
-  const [visibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true });
+  const [userVisibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: true, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const dataRequestId = useRef(0);
@@ -158,7 +158,9 @@ const WorkPlanMonthlyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
-  const toggleColumn = (column: keyof typeof visibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
+  const isTimSiramSelected = selectedCategories.includes("Tim Siram");
+  const visibleColumns = { ...userVisibleColumns, target_area: userVisibleColumns.target_area && !isTimSiramSelected };
+  const toggleColumn = (column: keyof typeof userVisibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
   const toggleCategory = (category: string) => {
     if (category === 'semua') {
       setSelectedCategories(['semua']);
@@ -424,7 +426,7 @@ const WorkPlanMonthlyRecap = () => {
                 </div>
               </PopoverContent>
             </Popover>
-            <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} onToggle={toggleColumn} />
+            <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} disabledColumns={{ target_area: isTimSiramSelected }} onToggle={toggleColumn} />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[110px] md:w-[150px] h-10 text-xs md:text-sm"><SelectValue placeholder="Bulan" /></SelectTrigger>
               <SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent>
