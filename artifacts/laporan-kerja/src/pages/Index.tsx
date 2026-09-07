@@ -174,11 +174,13 @@ const Index = () => {
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
-  const isFuelSpecialist = isAdminBbm || isAdminSpj;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
+  const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
+  const isFuelSpecialist = (isAdminBbm || isAdminSpj) && !isCombinedWorkspace;
+  const canViewReportsTab = !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
   const isLaporanOnly = profile?.role === 'laporan';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
@@ -217,16 +219,16 @@ const Index = () => {
 
     if (isMainTab(requestedTab)) {
       setActiveTab(requestedTab);
-    } else if (isAdminBbm) {
+    } else if (isAdminBbm && !isCombinedWorkspace) {
       setActiveTab("fuel_reports");
     } else if (isAdminSpj) {
       setActiveTab("fuel_spj");
     } else if (savedTab) {
-      setActiveTab(isAdminRencanaKerja && savedTab === "reports" ? "workplans" : savedTab);
+      setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && savedTab === "reports" ? "workplans" : savedTab);
     } else {
-      setActiveTab(isAdminRencanaKerja ? "workplans" : "reports");
+      setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, searchParams]);
+  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, isCombinedWorkspace, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
@@ -705,13 +707,14 @@ const Index = () => {
           isLoggedIn={isLoggedIn}
           canManageReports={canManageReports}
           canManageWorkPlans={canManageWorkPlans}
-          canManageFuel={isAdmin}
+          canManageFuel={isAdmin || isAdminBbm}
+          canManageFuelSpj={isAdmin || isAdminSpj}
         />
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
             <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
-              {!isAdminRencanaKerja && !isFuelSpecialist && <TabsTrigger
+              {canViewReportsTab && <TabsTrigger
                 value="reports" 
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
@@ -891,7 +894,7 @@ const Index = () => {
             </div>
           )}
 
-          {!isAdminRencanaKerja && !isFuelSpecialist && <TabsContent value="reports" className="mt-0">
+          {canViewReportsTab && <TabsContent value="reports" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-600" />

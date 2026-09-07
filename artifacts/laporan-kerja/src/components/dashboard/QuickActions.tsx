@@ -12,12 +12,13 @@ interface QuickActionsProps {
   canManageReports?: boolean;
   canManageWorkPlans?: boolean;
   canManageFuel?: boolean;
+  canManageFuelSpj?: boolean;
 }
 
-const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canManageWorkPlans = true, canManageFuel = false }: QuickActionsProps) => {
+const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canManageWorkPlans = true, canManageFuel = false, canManageFuelSpj = false }: QuickActionsProps) => {
   const navigate = useNavigate();
 
-  if (!isLoggedIn || isPimpinan || (!canManageReports && !canManageWorkPlans && !canManageFuel)) return null;
+  if (!isLoggedIn || isPimpinan || (!canManageReports && !canManageWorkPlans && !canManageFuel && !canManageFuelSpj)) return null;
 
   return (
     <div className={cn("grid gap-4 mb-8", canManageReports && canManageWorkPlans ? "md:grid-cols-2" : "md:grid-cols-1")}>
@@ -80,7 +81,7 @@ const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canMana
           <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />
         </Button>
       )}
-      {canManageFuel && (
+      {canManageFuelSpj && (
         <Button
           onClick={() => navigate('/fuel-reports/spj/create')}
           className={cn(
