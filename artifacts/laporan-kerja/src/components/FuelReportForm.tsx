@@ -34,6 +34,13 @@ import {
 
 const pusatTeams = ['Tim Babat', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
 
+const formatRupiahInput = (value: number | string | null | undefined) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits ? Number(digits).toLocaleString('id-ID') : '';
+};
+
+const parseRupiahInput = (value: string) => Number(value.replace(/\D/g, '') || 0);
+
 const usageItemSchema = z.object({
   vehicle_operator: z.string().min(1, "Wajib diisi"),
   fuel_type: z.string().min(1, "Jenis wajib dipilih"),
@@ -328,11 +335,14 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                       HARGA PERTAMAX (RP/LITER) {canEditPrice ? <Unlock size={10} /> : <Lock size={10} />}
                     </FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        className={cn("font-bold", !canEditPrice && "bg-slate-100 cursor-not-allowed")} 
-                        {...field} 
-                        readOnly={!canEditPrice} 
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        className={cn("font-bold", !canEditPrice && "bg-slate-100 cursor-not-allowed")}
+                        {...field}
+                        value={formatRupiahInput(field.value)}
+                        onChange={(event) => field.onChange(parseRupiahInput(event.target.value))}
+                        readOnly={!canEditPrice}
                       />
                     </FormControl>
                     <FormMessage />
@@ -344,11 +354,14 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                       HARGA DEXLITE (RP/LITER) {canEditPrice ? <Unlock size={10} /> : <Lock size={10} />}
                     </FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        className={cn("font-bold", !canEditPrice && "bg-slate-100 cursor-not-allowed")} 
-                        {...field} 
-                        readOnly={!canEditPrice} 
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        className={cn("font-bold", !canEditPrice && "bg-slate-100 cursor-not-allowed")}
+                        {...field}
+                        value={formatRupiahInput(field.value)}
+                        onChange={(event) => field.onChange(parseRupiahInput(event.target.value))}
+                        readOnly={!canEditPrice}
                       />
                     </FormControl>
                     <FormMessage />
@@ -400,7 +413,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                       </div>
                       <div className="md:col-span-2">
                         <FormField control={form.control} name={`items.${index}.amount_rp`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs font-bold">Rupiah (Rp)</FormLabel><FormControl><Input type="number" className="h-10" {...field} onChange={(e) => { field.onChange(e); calculateLiter(index, Number(e.target.value), fuelType); }} disabled={fuelType === 'Oli'} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs font-bold">Rupiah (Rp)</FormLabel><FormControl><Input type="text" inputMode="numeric" className="h-10" {...field} value={formatRupiahInput(field.value)} onChange={(e) => { const amount = parseRupiahInput(e.target.value); field.onChange(amount); calculateLiter(index, amount, fuelType); }} disabled={fuelType === 'Oli'} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
                       <div className="md:col-span-2">
