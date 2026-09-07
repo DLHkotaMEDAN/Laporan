@@ -27,7 +27,7 @@ import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, roleRequiresRegion } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -178,6 +178,7 @@ const Index = () => {
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
+  const accountRegionId = !isAdmin && roleRequiresRegion(profile?.role) ? profile?.region_id || "__unassigned__" : null;
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
   const isFuelSpecialist = (isAdminBbm || isAdminSpj) && !isCombinedWorkspace;
   const canViewReportsTab = !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
@@ -208,10 +209,13 @@ const Index = () => {
   useEffect(() => {
     if (authLoading || !isLoggedIn) return;
     loadData();
+    if (accountRegionId && selectedRegion !== accountRegionId) {
+      setSelectedRegion(accountRegionId);
+    }
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
     }
-  }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, authLoading, navigate]);
+  }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, authLoading, navigate, accountRegionId]);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -286,12 +290,14 @@ const Index = () => {
     try {
       setLoading(true);
       const [reportsData, workPlansData] = await Promise.all([
-        reportService.getAllReports(),
-        workPlanService.getAllWorkPlans()
+        reportService.getAllReports(undefined, false, accountRegionId),
+        workPlanService.getAllWorkPlans(undefined, false, accountRegionId)
       ]);
       setReports(reportsData);
       setWorkPlans(workPlansData);
-      if (!isAdmin) {
+      if (accountRegionId) {
+        setSelectedRegion(accountRegionId);
+      } else if (!isAdmin) {
         setSelectedRegion('semua');
       }
     } catch (error) {
@@ -382,12 +388,13 @@ const Index = () => {
       const matchYear = selectedYear === "semua" || y === selectedYear;
       const matchCategory = selectedCategory === "semua" || report.category === selectedCategory;
       const restrictionMatch = !isUserRestricted || report.category === profile?.category;
-      const regionMatch = !isAdmin || selectedRegion === "semua" || report.region_id === selectedRegion;
+      const regionMatch = !accountRegionId && (!isAdmin || selectedRegion === "semua" || report.region_id === selectedRegion)
+        || (!!accountRegionId && report.region_id === accountRegionId);
       
       if (selectedDate) return matchSearch && matchSpecificDate && matchCategory && restrictionMatch && regionMatch;
       return matchSearch && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
     });
-  }, [reports, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion]);
+  }, [reports, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion, accountRegionId]);
 
   const filteredWorkPlans = useMemo(() => {
     return workPlans.filter(plan => {
@@ -400,11 +407,12 @@ const Index = () => {
       const matchYear = selectedYear === "semua" || new Date(plan.date).getFullYear().toString() === selectedYear;
       const matchCategory = selectedCategory === "semua" || plan.category === selectedCategory;
       const restrictionMatch = !isUserRestricted || plan.category === profile?.category;
-      const regionMatch = !isAdmin || selectedRegion === "semua" || plan.region_id === selectedRegion;
+      const regionMatch = !accountRegionId && (!isAdmin || selectedRegion === "semua" || plan.region_id === selectedRegion)
+        || (!!accountRegionId && plan.region_id === accountRegionId);
       
       return matchSearch && matchSpecificDate && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
     });
-  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion]);
+  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion, accountRegionId]);
 
   const formatReportLocation = (report: Report) => {
     return formatLocation(report.location);
@@ -1115,7 +1123,7 @@ const Index = () => {
             <>
               {(isAdmin || isAdminBbm) && (
                 <TabsContent value="fuel_reports" className="mt-0">
-                  <FuelReportTab />
+                  <FuelReportTab regionId={accountRegionId} />
                 </TabsContent>
               )}
               {(isAdmin || isPimpinan || isAdminSpj) && (

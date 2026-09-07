@@ -64,6 +64,49 @@ as $$
   end
 $$;
 
+create or replace function public.has_fuel_record_access(
+  target_region uuid,
+  resource text,
+  action text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when auth.uid() is null then false
+    when public.current_access_role() = 'admin' then true
+    when public.current_access_role() = 'pimpinan' then action in ('select', 'update')
+    when public.current_access_role() in ('admin_bbm', 'admin_rencana_kerja_bbm', 'admin_wilayah_bbm') then
+      resource = 'fuel_reports' and target_region = public.current_access_region()
+    else false
+  end
+$$;
+
+drop policy if exists "fuel_reports_select_authenticated" on public.fuel_reports;
+drop policy if exists "fuel_reports_insert_authenticated" on public.fuel_reports;
+drop policy if exists "fuel_reports_update_authenticated" on public.fuel_reports;
+drop policy if exists "fuel_reports_delete_authenticated" on public.fuel_reports;
+
+create policy "fuel_reports_select_authenticated"
+on public.fuel_reports for select to authenticated
+using (public.has_fuel_record_access(region_id, 'fuel_reports', 'select'));
+
+create policy "fuel_reports_insert_authenticated"
+on public.fuel_reports for insert to authenticated
+with check (public.has_fuel_record_access(region_id, 'fuel_reports', 'insert'));
+
+create policy "fuel_reports_update_authenticated"
+on public.fuel_reports for update to authenticated
+using (public.has_fuel_record_access(region_id, 'fuel_reports', 'update'))
+with check (public.has_fuel_record_access(region_id, 'fuel_reports', 'update'));
+
+create policy "fuel_reports_delete_authenticated"
+on public.fuel_reports for delete to authenticated
+using (public.has_fuel_record_access(region_id, 'fuel_reports', 'delete'));
+
 create or replace function public.has_fuel_price_write_access()
 returns boolean
 language sql

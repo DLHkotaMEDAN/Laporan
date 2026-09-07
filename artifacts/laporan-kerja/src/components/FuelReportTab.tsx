@@ -67,7 +67,7 @@ const getFuelReportDuplicateKey = (report: FuelReport) => {
   });
 };
 
-const FuelReportTab = () => {
+const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
   const navigate = useNavigate();
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +85,7 @@ const FuelReportTab = () => {
 
   useEffect(() => {
     loadReports(appliedDate, appliedMonth, appliedYear);
-  }, [appliedDate, appliedMonth, appliedYear]);
+  }, [appliedDate, appliedMonth, appliedYear, regionId]);
 
   const loadReports = async (date: string, month: string, year: string) => {
     const id = ++reqIdRef.current;
@@ -94,27 +94,27 @@ const FuelReportTab = () => {
       let data: FuelReport[];
 
       if (date) {
-        data = await fuelService.getReportsBySpecificDate(date);
+        data = await fuelService.getReportsBySpecificDate(date, regionId);
       } else if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId);
       } else if (year !== "semua") {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId);
       } else if (month !== "semua") {
         const y = new Date().getFullYear();
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId);
       } else {
-        data = await fuelService.getAllReports();
+        data = await fuelService.getAllReports(false, regionId);
       }
 
       if (id !== reqIdRef.current) return;
