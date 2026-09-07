@@ -155,6 +155,18 @@ const WorkPlanAccessRoute = ({ children }: { children: React.ReactNode }) => {
   return <NonFuelSpecialistRoute>{children}</NonFuelSpecialistRoute>;
 };
 
+const OvertimeAccessRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  const isAllowed = profile?.role === USER_ROLES.ADMIN
+    || profile?.role === USER_ROLES.ADMIN_REKAP_LEMBUR
+    || session.user.email === 'admin@gmail.com';
+  return isAllowed ? <>{children}</> : <Navigate to="/" replace />;
+};
+
 const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, profile, loading } = useAuth();
 
@@ -188,10 +200,10 @@ const App = () => (
             <Route path="/work-plans/daily-rekap" element={<WorkPlanAccessRoute><WorkPlanDailyRecap /></WorkPlanAccessRoute>} />
             <Route path="/work-plans/weekly-rekap" element={<WorkPlanAccessRoute><WorkPlanWeeklyRecap /></WorkPlanAccessRoute>} />
             <Route path="/work-plans/monthly-rekap" element={<WorkPlanAccessRoute><WorkPlanMonthlyRecap /></WorkPlanAccessRoute>} />
-            <Route path="/overtime" element={<WorkPlanAccessRoute><OvertimeRecap /></WorkPlanAccessRoute>} />
-            <Route path="/overtime/print" element={<WorkPlanAccessRoute><OvertimePrint /></WorkPlanAccessRoute>} />
-            <Route path="/overtime/create" element={<WorkPlanAccessRoute><CreateOvertime /></WorkPlanAccessRoute>} />
-            <Route path="/overtime/edit/:id" element={<WorkPlanAccessRoute><EditOvertime /></WorkPlanAccessRoute>} />
+            <Route path="/overtime" element={<OvertimeAccessRoute><OvertimeRecap /></OvertimeAccessRoute>} />
+            <Route path="/overtime/print" element={<OvertimeAccessRoute><OvertimePrint /></OvertimeAccessRoute>} />
+            <Route path="/overtime/create" element={<OvertimeAccessRoute><CreateOvertime /></OvertimeAccessRoute>} />
+            <Route path="/overtime/edit/:id" element={<OvertimeAccessRoute><EditOvertime /></OvertimeAccessRoute>} />
             <Route path="/work-plans/create" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />
             <Route path="/work-plans/edit/:id" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="update"><EditWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />
             

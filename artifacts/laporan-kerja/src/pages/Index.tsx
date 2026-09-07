@@ -183,7 +183,8 @@ const Index = () => {
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
   const isFuelSpecialist = (isAdminBbm || isAdminSpj) && !isCombinedWorkspace;
   const canViewReportsTab = !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
-  const canViewOvertime = isAdmin || isAdminWilayah || isAdminRencanaKerja;
+  const isOvertimeOnly = profile?.role === 'admin_rekap_lembur';
+  const canViewOvertime = isAdmin || isOvertimeOnly;
   const isLaporanOnly = profile?.role === 'laporan';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
@@ -223,7 +224,9 @@ const Index = () => {
     const requestedTab = searchParams.get('tab');
     const savedTab = savedViewStateRef.current.activeTab;
 
-    if (isMainTab(requestedTab)) {
+    if (isOvertimeOnly) {
+      setActiveTab("overtime");
+    } else if (isMainTab(requestedTab)) {
       setActiveTab(requestedTab);
     } else if (isAdminBbm && !isCombinedWorkspace) {
       setActiveTab("fuel_reports");
@@ -234,7 +237,7 @@ const Index = () => {
     } else {
       setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, isCombinedWorkspace, searchParams]);
+  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
@@ -724,13 +727,13 @@ const Index = () => {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
             <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
-              {canViewReportsTab && <TabsTrigger
+              {canViewReportsTab && !isOvertimeOnly && <TabsTrigger
                 value="reports" 
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
                 <FileText size={16} /> Laporan Harian
               </TabsTrigger>}
-              {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && <TabsTrigger
+              {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
                 value="workplans" 
                 className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
               >
@@ -835,7 +838,7 @@ const Index = () => {
           </div>
 
           {/* Filter Section */}
-          {(activeTab === "reports" || activeTab === "workplans") && (
+          {(activeTab === "reports" || activeTab === "workplans") && !isOvertimeOnly && (
             <div className="bg-white p-5 rounded-2xl shadow-sm border ring-1 ring-slate-100 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                 <div className="md:col-span-4 space-y-1.5">
@@ -912,7 +915,7 @@ const Index = () => {
 
           {canViewOvertime && <TabsContent value="overtime" className="mt-0"><OvertimeRecap /></TabsContent>}
 
-          {canViewReportsTab && <TabsContent value="reports" className="mt-0">
+          {canViewReportsTab && !isOvertimeOnly && <TabsContent value="reports" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
@@ -1022,7 +1025,7 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && <TabsContent value="workplans" className="mt-0">
+          {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsContent value="workplans" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />

@@ -265,6 +265,7 @@ const WorkPlanDailyRecap = () => {
   const showTiurmaida = categoriesInPlans.some(c => ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram"].includes(c));
   const showArdiansyah = categoriesInPlans.some(c => ["Tim Pohon"].includes(c));
   const showRegionColumn = isAdmin && selectedRegion === 'semua';
+  const showCompactForeman = tableMode === "compact" && plans.length > 0 && plans.every((plan) => plan.category === "Tim Pohon");
   const getPlanRegionName = (plan: WorkPlan) => regions.find((region) => region.id === plan.region_id)?.name || '-';
   const getPlanRowCount = (plan: WorkPlan) => {
     if (plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN") return 1;
@@ -515,8 +516,9 @@ const WorkPlanDailyRecap = () => {
       <col style={{ width: '4%' }} />
       <col style={{ width: '16%' }} />
       <col style={{ width: '5%' }} />
-      <col style={{ width: '13%' }} />
-      <col style={{ width: '14%' }} />
+       <col style={{ width: '13%' }} />
+       {showCompactForeman && <col style={{ width: '13%' }} />}
+       <col style={{ width: '14%' }} />
     </colgroup>
   );
 
@@ -529,7 +531,7 @@ const WorkPlanDailyRecap = () => {
   const renderCompactPlanRows = (plan: WorkPlan, pIdx: number) => {
     const regionCell = regionCells.get(plan.id);
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
-    const compactBodyColSpan = showRegionColumn ? 9 : 8;
+    const compactBodyColSpan = (showRegionColumn ? 9 : 8) + (showCompactForeman ? 1 : 0);
 
     if (isNoActivity) {
       return (
@@ -562,6 +564,50 @@ const WorkPlanDailyRecap = () => {
         basis: item.basis || "-",
       }));
     });
+
+    if (plan.category === "Tim Pohon") {
+      const getItemToolsKey = (item: WorkPlan["items"][number]) => JSON.stringify((item.tools || []).map((tool) => ({
+        name: tool.name?.trim() || "",
+        unit: Number(tool.unit || 0),
+        usage: tool.usage?.trim() || "",
+        members: Number(tool.members || 0),
+      })));
+      const toolSpans = getSequentialSpans(displayItems, getItemToolsKey);
+      const teamSpans = getSequentialSpans(displayItems, (item) => `${item.coordinator}|${item.foreman || ""}`);
+      const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
+
+      return displayItems.map((item, itemIdx) => {
+        let toolGroupStart = itemIdx;
+        while (toolGroupStart > 0 && toolSpans[toolGroupStart] === 0) toolGroupStart--;
+        const sharedTools = displayItems[toolGroupStart]?.tools || [];
+        const alignTreeTools = toolSpans[toolGroupStart] === sharedTools.length && toolSpans[toolGroupStart] > 1;
+        const tool = alignTreeTools
+          ? sharedTools[itemIdx - toolGroupStart]
+          : item.tools[0] || { name: "", unit: 0, usage: "", members: 0 };
+
+        return (
+          <tr key={`compact-${plan.id}-${itemIdx}`}>
+            {itemIdx === 0 && (
+              <>
+                {(!showRegionColumn || regionCell?.isFirst) && <td className="border-2 border-black p-1 text-center align-middle font-bold" rowSpan={showRegionColumn ? regionCell?.rowSpan : displayItems.length}>{showRegionColumn ? regionCell?.number : pIdx + 1}</td>}
+                {showRegionColumn && regionCell?.isFirst && <td className="border-2 border-black p-1 text-center font-bold align-middle whitespace-normal" rowSpan={regionCell.rowSpan}>{getPlanRegionName(plan)}</td>}
+                <td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={displayItems.length}>{plan.category}</td>
+              </>
+            )}
+            <td className="border-2 border-black p-1 text-left align-middle break-words">{item.description || "-"}</td>
+            <td className="border-2 border-black p-1 text-left align-middle break-words">{formatCompactLocation(item)}</td>
+            <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.name ? `- ${tool.name}` : "-"}</td>
+            <td className="border-2 border-black p-1 text-center align-middle">{tool.unit || "-"}</td>
+            <td className="border-2 border-black p-1 text-center align-middle break-words">{tool.usage || "-"}</td>
+            <td className="border-2 border-black p-1 text-center align-middle">{Number(tool.members || 0) || "-"}</td>
+            {teamSpans[itemIdx] > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={teamSpans[itemIdx]}>{item.coordinator || "-"}</td>}
+            {showCompactForeman && teamSpans[itemIdx] > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={teamSpans[itemIdx]}>{item.foreman || "-"}</td>}
+            {basisSpans[itemIdx] > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={basisSpans[itemIdx]}>{item.basis || "-"}</td>}
+          </tr>
+        );
+      });
+    }
+
     const totalPlanRows = compactRows.length;
     const personnelShouldStaySeparate = ["Taman Amplas", "Taman Kota", "Taman Area"].includes(plan.category.trim())
       && new Set(compactRows.map((row) => JSON.stringify({ detail: row.detail, location: row.location }))).size > 1;
@@ -877,6 +923,7 @@ const WorkPlanDailyRecap = () => {
                     <th className="border-2 border-black p-1">Kegunaan</th>
                     <th className="border-2 border-black p-1">Pers</th>
                     <th className="border-2 border-black p-1">Koordinator</th>
+                    {showCompactForeman && <th className="border-2 border-black p-1">Mandor</th>}
                     <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
                   </tr>
                 </thead>

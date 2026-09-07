@@ -14,6 +14,7 @@ export const USER_ROLES = {
   ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
   ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
+  ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   PIMPINAN: 'pimpinan',
@@ -40,6 +41,7 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA, label: 'Admin Laporan Bulanan dan Rencana Kerja' },
   { value: USER_ROLES.ADMIN_RENCANA_KERJA, label: 'Admin Rencana Kerja' },
   { value: USER_ROLES.ADMIN_RENCANA_KERJA_BBM, label: 'Admin Rencana Kerja + Admin BBM' },
+  { value: USER_ROLES.ADMIN_REKAP_LEMBUR, label: 'Rekap Lembur' },
   { value: USER_ROLES.ADMIN_BBM, label: 'Admin BBM' },
   { value: USER_ROLES.ADMIN_SPJ_BBM, label: 'Admin SPJ BBM' },
   { value: USER_ROLES.PIMPINAN, label: 'Pimpinan (Lihat Rekap)' },
@@ -64,6 +66,7 @@ const REGION_REQUIRED_ROLES = [
   USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
+  USER_ROLES.ADMIN_REKAP_LEMBUR,
   USER_ROLES.ADMIN_BBM,
   USER_ROLES.USER,
 ] as const satisfies readonly UserRole[];

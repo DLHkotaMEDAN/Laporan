@@ -23,6 +23,8 @@ as $$
   select case
     when auth.uid() is null then false
     when public.current_access_role() in ('admin', 'pimpinan') then action in ('select', 'update') or public.current_access_role() = 'admin'
+    when public.current_access_role() = 'admin_rekap_lembur' then
+      target_region = public.current_access_region()
     when public.current_access_role() in ('admin_wilayah', 'admin_wilayah_bbm', 'admin_rencana_kerja', 'admin_rencana_kerja_bbm') then
       target_region = public.current_access_region()
     else false

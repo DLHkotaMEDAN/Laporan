@@ -45,6 +45,7 @@ const USER_ROLES = {
   ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
   ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
+  ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   PIMPINAN: 'pimpinan',
@@ -62,6 +63,7 @@ const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
+  USER_ROLES.ADMIN_REKAP_LEMBUR,
   USER_ROLES.ADMIN_BBM,
   USER_ROLES.USER,
 ]);
