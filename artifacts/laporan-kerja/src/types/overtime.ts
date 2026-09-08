@@ -10,6 +10,8 @@ export interface OvertimeRecord {
   end_time: string;
   attendance_count: number;
   region_id: string | null;
+  team_id: string | null;
+  team?: { name: string } | null;
   created_at?: string;
   updated_at?: string;
 }

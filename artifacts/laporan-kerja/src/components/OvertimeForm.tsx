@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import ImageUpload from '@/components/ImageUpload';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { storageService } from '@/services/storageService';
 import { overtimeService } from '@/services/overtimeService';
 import { OvertimeRecord } from '@/types/overtime';
@@ -26,21 +27,39 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
     work_location: initialData?.work_location || '', photo_url: initialData?.photo_url || '',
     start_time: initialData?.start_time || '00.00', end_time: initialData?.end_time || '05.00',
     attendance_count: String(initialData?.attendance_count ?? 1), region_id: initialData?.region_id || profile?.region_id || '',
+    team_id: initialData?.team_id || '',
   });
+  const { teams, loading: teamsLoading } = useAvailableTeams(form.region_id);
+  const [personLookup, setPersonLookup] = useState(false);
 
   useEffect(() => {
     if (!isSuperAdmin && profile?.region_id) setForm(current => ({ ...current, region_id: profile.region_id || '' }));
   }, [isSuperAdmin, profile?.region_id]);
 
   const setField = (key: string, value: string) => setForm(current => ({ ...current, [key]: value }));
+  const handleNipBlur = async () => {
+    const nip = form.nip.trim();
+    if (!nip) return;
+    setPersonLookup(true);
+    try {
+      const person = await overtimeService.findPersonByNip(nip, form.region_id);
+      if (person) {
+        setForm(current => ({ ...current, name: person.name, position: person.position }));
+        showSuccess('Nama dan jabatan ditemukan dari data tersimpan.');
+      }
+    } catch {
+      showError('Data NIP belum dapat dicari.');
+    } finally { setPersonLookup(false); }
+  };
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.region_id) return showError('Wilayah wajib dipilih.');
+    if (!form.team_id) return showError('Kategori / Tim wajib dipilih.');
     setSaving(true);
     try {
       let photoUrl = form.photo_url;
       if (photoUrl.startsWith('data:image')) photoUrl = await storageService.uploadPhoto(photoUrl, `lembur_${form.name.replace(/\s+/g, '_')}`);
-      const payload = { ...form, photo_url: photoUrl, attendance_count: Number(form.attendance_count) || 0, region_id: form.region_id };
+      const payload = { ...form, photo_url: photoUrl, attendance_count: Number(form.attendance_count) || 0, region_id: form.region_id, team_id: form.team_id };
       if (initialData) await overtimeService.update(initialData.id, payload);
       else await overtimeService.create(payload);
       showSuccess(initialData ? 'Data lembur berhasil diperbarui.' : 'Data lembur berhasil disimpan.');
@@ -55,9 +74,10 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
     <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-5 shadow-sm">
       <div className="grid gap-4 md:grid-cols-2">
         <div><Label htmlFor="overtime-date">Tanggal</Label><Input id="overtime-date" type="date" value={form.date} onChange={e => setField('date', e.target.value)} required /></div>
-        <div><Label htmlFor="overtime-region">Wilayah</Label><select id="overtime-region" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.region_id} onChange={e => setField('region_id', e.target.value)} disabled={!isSuperAdmin} required><option value="">Pilih wilayah</option>{regions.map(region => <option key={region.id} value={region.id}>{region.name}</option>)}</select></div>
+        <div><Label htmlFor="overtime-region">Wilayah</Label><select id="overtime-region" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.region_id} onChange={e => setForm(current => ({ ...current, region_id: e.target.value, team_id: '' }))} disabled={!isSuperAdmin} required><option value="">Pilih wilayah</option>{regions.map(region => <option key={region.id} value={region.id}>{region.name}</option>)}</select></div>
+        <div><Label htmlFor="overtime-team">Kategori / Tim</Label><select id="overtime-team" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.team_id} onChange={e => setField('team_id', e.target.value)} disabled={!form.region_id || teamsLoading} required><option value="">{teamsLoading ? 'Memuat tim...' : 'Pilih kategori / tim'}</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</select></div>
+        <div><Label htmlFor="overtime-nip">NIP</Label><Input id="overtime-nip" value={form.nip} onChange={e => setField('nip', e.target.value)} onBlur={() => void handleNipBlur()} placeholder="Ketik NIP lalu keluar dari kolom" required />{personLookup && <p className="mt-1 text-xs text-slate-500">Mencari data NIP...</p>}</div>
         <div><Label htmlFor="overtime-name">Nama</Label><Input id="overtime-name" value={form.name} onChange={e => setField('name', e.target.value)} required /></div>
-        <div><Label htmlFor="overtime-nip">NIP</Label><Input id="overtime-nip" value={form.nip} onChange={e => setField('nip', e.target.value)} required /></div>
         <div><Label htmlFor="overtime-position">Jabatan</Label><Input id="overtime-position" value={form.position} onChange={e => setField('position', e.target.value)} required /></div>
         <div><Label htmlFor="overtime-attendance">Jumlah Kehadiran</Label><Input id="overtime-attendance" type="number" min="0" value={form.attendance_count} onChange={e => setField('attendance_count', e.target.value)} required /></div>
         <div className="md:col-span-2"><Label htmlFor="overtime-location">Lokasi Pekerjaan</Label><Input id="overtime-location" value={form.work_location} onChange={e => setField('work_location', e.target.value)} required /></div>

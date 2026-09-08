@@ -3,16 +3,28 @@ import { OvertimeRecord } from '@/types/overtime';
 
 export const overtimeService = {
   async getAll(regionId?: string | null) {
-    let query = supabase.from('overtime_records').select('*').order('date', { ascending: false }).order('name');
+    let query = supabase.from('overtime_records').select('*, team:teams(name)').order('date', { ascending: false }).order('name');
     if (regionId) query = query.eq('region_id', regionId);
     const { data, error } = await query;
     if (error) throw error;
     return (data || []) as OvertimeRecord[];
   },
   async getById(id: string) {
-    const { data, error } = await supabase.from('overtime_records').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('overtime_records').select('*, team:teams(name)').eq('id', id).single();
     if (error) throw error;
     return data as OvertimeRecord;
+  },
+  async findPersonByNip(nip: string, regionId?: string | null) {
+    let query = supabase
+      .from('overtime_records')
+      .select('name, nip, position, region_id, updated_at')
+      .eq('nip', nip.trim())
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (regionId) query = query.eq('region_id', regionId);
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    return data as Pick<OvertimeRecord, 'name' | 'nip' | 'position' | 'region_id'> | null;
   },
   async create(record: Omit<OvertimeRecord, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase.from('overtime_records').insert(record).select().single();
