@@ -48,6 +48,8 @@ const FuelDailyRecap = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedRegion, setSelectedRegion] = useState("semua");
+  const [selectedTeam, setSelectedTeam] = useState("semua");
+  const [loginRegionName, setLoginRegionName] = useState<string | null>(null);
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("with-signature");
   const dataRequestId = useRef(0);
 
@@ -65,7 +67,21 @@ const FuelDailyRecap = () => {
   });
 
   const isAdmin = profile?.role === 'admin';
+  const isRegularUser = profile?.role !== 'admin';
+  const showRegion = visibleColumns.region && !isRegularUser;
   const fuelRegionId = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' ? profile.region_id || "__unassigned__" : null;
+
+  useEffect(() => {
+    if (isRegularUser) setVisibleColumns(prev => ({ ...prev, region: false }));
+  }, [isRegularUser]);
+
+  useEffect(() => {
+    if (!isRegularUser || !profile?.region_id) { setLoginRegionName(null); return; }
+    let active = true;
+    void supabase.from('regions').select('name').eq('id', profile.region_id).maybeSingle()
+      .then(({ data }) => { if (active) setLoginRegionName(data?.name ?? null); });
+    return () => { active = false; };
+  }, [isRegularUser, profile?.region_id]);
 
   useEffect(() => {
     loadData();
@@ -93,8 +109,10 @@ const FuelDailyRecap = () => {
       remarks: r.remarks 
     })));
     
-    if (selectedRegion === "semua") return flat;
-    return flat.filter(item => item.region === selectedRegion);
+    return flat.filter(item =>
+      (isRegularUser || selectedRegion === "semua" || item.region === selectedRegion)
+      && (selectedTeam === "semua" || item.team === selectedTeam)
+    );
   };
 
   const flatItems = getFilteredItems();
@@ -114,7 +132,7 @@ const FuelDailyRecap = () => {
       const worksheet = workbook.addWorksheet('Rekap Harian BBM');
       
       const columns: any[] = [{ header: 'No', key: 'no', width: 5 }];
-      if (visibleColumns.region) columns.push({ header: 'Wilayah', key: 'region', width: 15 });
+      if (showRegion) columns.push({ header: 'Wilayah', key: 'region', width: 15 });
       if (visibleColumns.team) columns.push({ header: 'Tim / Operator', key: 'team', width: 18 });
       if (visibleColumns.vehicle) columns.push({ header: 'Kendaraan', key: 'vehicle', width: 24 });
       if (visibleColumns.pertamax_rp) columns.push({ header: 'Pertamax (Rp)', key: 'p_rp', width: 15 });
@@ -149,7 +167,7 @@ const FuelDailyRecap = () => {
 
       flatItems.forEach((item, idx) => {
         const rowData: any = { no: idx + 1 };
-        if (visibleColumns.region) rowData.region = item.region;
+        if (showRegion) rowData.region = item.region;
         if (visibleColumns.team) rowData.team = item.team;
         if (visibleColumns.vehicle) rowData.vehicle = item.vehicle_operator;
         
@@ -197,7 +215,9 @@ const FuelDailyRecap = () => {
   const totalDexliteLtrAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Dexlite' ? (item.amount_liter || 0) : 0), 0);
   const totalOliAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : 0), 0);
 
+  const teamOptions = Array.from(new Set(reports.map(report => report.team))).sort();
   const bbmColCount = (visibleColumns.pertamax_rp ? 1 : 0) + (visibleColumns.pertamax_ltr ? 1 : 0) + (visibleColumns.dexlite_rp ? 1 : 0) + (visibleColumns.dexlite_ltr ? 1 : 0) + (visibleColumns.oli ? 1 : 0);
+  const tableColumnCount = 1 + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0) + bbmColCount + (visibleColumns.location ? 1 : 0) + (visibleColumns.remarks ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
@@ -206,13 +226,16 @@ const FuelDailyRecap = () => {
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button variant="ghost" onClick={() => navigate('/?tab=fuel_reports')} aria-label="Kembali" title="Kembali" className="h-10 w-10 shrink-0 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
             <div className="relative flex-1 min-w-[168px] sm:flex-none"><CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-10 w-full pl-10 sm:w-[200px]" /></div>
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            {isRegularUser ? <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <SelectTrigger className="h-10 flex-1 min-w-[155px] bg-slate-50 border-slate-200 sm:w-[180px] sm:flex-none"><Filter className="mr-2 h-4 w-4 shrink-0 text-slate-400" /><SelectValue placeholder="Pilih Tim" /></SelectTrigger>
+              <SelectContent><SelectItem value="semua">Semua Tim / Kategori</SelectItem>{teamOptions.map(team => <SelectItem key={team} value={team}>{team}</SelectItem>)}</SelectContent>
+            </Select> : <Select value={selectedRegion} onValueChange={setSelectedRegion}>
               <SelectTrigger className="h-10 flex-1 min-w-[155px] bg-slate-50 border-slate-200 sm:w-[180px] sm:flex-none"><Filter className="mr-2 h-4 w-4 shrink-0 text-slate-400" /><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="semua">Semua Wilayah</SelectItem>
                 {regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
-            </Select>
+            </Select>}
           </div>
           
           <div className="flex w-full items-center justify-end gap-2 xl:w-auto">
@@ -240,7 +263,7 @@ const FuelDailyRecap = () => {
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tampilkan Kolom:</p>
                   <div className="space-y-2">
                     {Object.entries({
-                      region: "Wilayah",
+                      ...(isRegularUser ? {} : { region: "Wilayah" }),
                       team: "Tim / Operator",
                       vehicle: "Kendaraan",
                       pertamax_rp: "Pertamax (Rp)",
@@ -305,14 +328,14 @@ const FuelDailyRecap = () => {
           <div className="text-center"><h1 className="text-sm md:text-xl font-bold uppercase">Pemerintah Kota Medan</h1><h2 className="text-base md:text-2xl font-black uppercase">Dinas Lingkungan Hidup</h2><p className="text-[8px] md:text-xs italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p></div>
           <img src={LOGO_DLH_URL} className="h-12 w-12 md:h-20 md:w-20 object-contain" alt="Logo DLH" />
         </div>
-        <div className="text-center mb-8"><h3 className="text-base md:text-xl font-bold underline uppercase text-orange-700">REKAP HARIAN PEMAKAIAN BBM & OLI</h3><p className="text-sm md:text-lg font-bold">Tanggal: {format(new Date(selectedDate), 'dd MMMM yyyy', { locale: localeId })}</p>{selectedRegion !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">{selectedRegion}</p>}</div>
+        <div className="text-center mb-8"><h3 className="text-base md:text-xl font-bold underline uppercase text-orange-700">REKAP HARIAN PEMAKAIAN BBM & OLI</h3><p className="text-sm md:text-lg font-bold">Tanggal: {format(new Date(selectedDate), 'dd MMMM yyyy', { locale: localeId })}</p>{isRegularUser && loginRegionName && <p className="text-sm font-bold uppercase text-slate-500">{loginRegionName}</p>}{!isRegularUser && selectedRegion !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">{selectedRegion}</p>}{isRegularUser && selectedTeam !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">Tim: {selectedTeam}</p>}</div>
         
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] border-collapse border-2 border-black text-[9px] table-fixed">
             <thead>
               <tr className="bg-slate-100">
                 <th className="border-2 border-black p-1 w-[30px]" rowSpan={bbmColCount > 0 ? 2 : 1}>No</th>
-                {visibleColumns.region && <th className="border-2 border-black p-1 w-[80px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Wilayah</th>}
+                {showRegion && <th className="border-2 border-black p-1 w-[80px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Wilayah</th>}
                 {visibleColumns.team && <th className="border-2 border-black p-1 w-[80px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Tim / Operator</th>}
                 {visibleColumns.vehicle && <th className="border-2 border-black p-1 w-[100px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Kendaraan / Alat Operasional</th>}
                 {bbmColCount > 0 && <th className="border-2 border-black p-1" colSpan={bbmColCount}>Jenis BBM / Oli</th>}
@@ -344,7 +367,7 @@ const FuelDailyRecap = () => {
                         {items.map((item, idx) => (
                           <tr key={`${regionName}-${idx}`}>
                             <td className="border-2 border-black p-1 text-center">{idx + 1}</td>
-                            {visibleColumns.region && idx === 0 && (<td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={items.length}>{item.region}</td>)}
+                            {showRegion && idx === 0 && (<td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={items.length}>{item.region}</td>)}
                             {visibleColumns.team && <td className="border-2 border-black p-1 text-center align-middle whitespace-normal break-words leading-tight">{item.team}</td>}
                             {visibleColumns.vehicle && <td className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{item.vehicle_operator}</td>}
                             
@@ -358,9 +381,9 @@ const FuelDailyRecap = () => {
                             {visibleColumns.remarks && <td className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.item_remarks || item.remarks || "-"}</td>}
                           </tr>
                         ))}
-                        {selectedRegion === "semua" && (
+                        {!isRegularUser && selectedRegion === "semua" && (
                           <tr className="bg-slate-50 font-bold italic">
-                            <td className="border-2 border-black p-1 text-right" colSpan={1 + (visibleColumns.region ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0)}>SUB-TOTAL {regionName.toUpperCase()}:</td>
+                            <td className="border-2 border-black p-1 text-right" colSpan={1 + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0)}>SUB-TOTAL {regionName.toUpperCase()}:</td>
                             {visibleColumns.pertamax_rp && <td className="border-2 border-black p-1 text-right">{subPertamaxRp.toLocaleString('id-ID')}</td>}
                             {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-1 text-center">{subPertamaxLtr.toFixed(2)}</td>}
                             {visibleColumns.dexlite_rp && <td className="border-2 border-black p-1 text-right">{subDexliteRp.toLocaleString('id-ID')}</td>}
@@ -373,7 +396,7 @@ const FuelDailyRecap = () => {
                     );
                   })}
                   <tr className="bg-slate-100 font-black text-sm">
-                    <td className="border-2 border-black p-2 text-right" colSpan={1 + (visibleColumns.region ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0)}>TOTAL KESELURUHAN:</td>
+                    <td className="border-2 border-black p-2 text-right" colSpan={1 + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0)}>TOTAL KESELURUHAN:</td>
                     {visibleColumns.pertamax_rp && <td className="border-2 border-black p-2 text-right">{totalPertamaxRpAll.toLocaleString('id-ID')}</td>}
                     {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-2 text-center">{totalPertamaxLtrAll.toFixed(2)}</td>}
                     {visibleColumns.dexlite_rp && <td className="border-2 border-black p-2 text-right">{totalDexliteRpAll.toLocaleString('id-ID')}</td>}
@@ -383,7 +406,7 @@ const FuelDailyRecap = () => {
                   </tr>
                 </>
               ) : (
-                <tr><td colSpan={12} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada data untuk kriteria ini'}</td></tr>
+                <tr><td colSpan={tableColumnCount} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada data untuk kriteria ini'}</td></tr>
               )}
             </tbody>
           </table>
@@ -391,11 +414,10 @@ const FuelDailyRecap = () => {
 
         {signatureMode === "with-signature" && (
           <div className="mt-12">
-            <div className="flex justify-end mb-4 text-[10px]"><p className="w-1/3 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
-            <div className="grid grid-cols-3 gap-4 text-[10px] leading-normal">
+            <div className="flex justify-end mb-2 text-[10px]"><p className="w-1/2 text-center">Medan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+            <div className="grid grid-cols-2 gap-4 text-[10px] leading-normal">
               <div className="text-center flex flex-col justify-between min-h-[180px] pb-4"><div><p>Mengetahui :</p><p className="font-bold">Kabid Tata Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Heni Rustati, ST, M.Si</p><p>NIP. 19720223 200604 2 002</p></div></div>
               <div className="text-center flex flex-col justify-between min-h-[180px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Ketua Tim Pemeliharaan Lingkungan</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Anitha Florida Ginting, ST, M. Si</p><p>NIP. 19811128 201001 2 011</p></div></div>
-              <div className="text-center flex flex-col justify-between min-h-[180px] pb-4"><div><p>Diketahui :</p><p className="font-bold">Koordinator Laporan BBM</p><p>Dinas Lingkungan Hidup</p><p>Kota Medan</p></div><div><p className="font-bold underline">Ardiansyah Siregar</p><p>NIP. 19860404 201001 1 015</p></div></div>
             </div>
           </div>
         )}

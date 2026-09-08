@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -43,9 +43,16 @@ const parseRupiahInput = (value: string) => Number(value.replace(/\D/g, '') || 0
 
 const usageItemSchema = z.object({
   vehicle_operator: z.string().min(1, "Wajib diisi"),
-  fuel_type: z.string().min(1, "Jenis wajib dipilih"),
-  amount_rp: z.coerce.number().min(0, "Jumlah tidak boleh negatif"),
-  amount_liter: z.coerce.number().min(0, "Jumlah tidak boleh negatif"),
+  // The form captures all fuel types in one vehicle row. They are expanded
+  // back into the existing database item format when saving.
+  fuel_type: z.string().optional(),
+  amount_rp: z.coerce.number().min(0).optional().default(0),
+  amount_liter: z.coerce.number().min(0).optional().default(0),
+  pertamax_rp: z.coerce.number().min(0).optional().default(0),
+  pertamax_liter: z.coerce.number().min(0).optional().default(0),
+  dexlite_rp: z.coerce.number().min(0).optional().default(0),
+  dexlite_liter: z.coerce.number().min(0).optional().default(0),
+  oli_liter: z.coerce.number().min(0).optional().default(0),
   item_remarks: z.string().optional().default(""),
   is_location_same: z.boolean().optional().default(false),
   requires_fuel: z.boolean().optional().default(true),
@@ -55,6 +62,45 @@ const usageItemSchema = z.object({
     village: z.string().optional().default(""),
   }),
 });
+
+const toFormItems = (items: FuelReport['items']) => {
+  const grouped = new Map<string, any>();
+
+  items.forEach(item => {
+    const locationKey = JSON.stringify(item.location || {});
+    const key = `${item.vehicle_operator}|${locationKey}`;
+    const current = grouped.get(key) || {
+      vehicle_operator: item.vehicle_operator || '',
+      fuel_type: item.fuel_type,
+      amount_rp: 0,
+      amount_liter: 0,
+      pertamax_rp: 0,
+      pertamax_liter: 0,
+      dexlite_rp: 0,
+      dexlite_liter: 0,
+      oli_liter: 0,
+      item_remarks: item.item_remarks || '',
+      is_location_same: item.is_location_same ?? false,
+      requires_fuel: false,
+      location: { street: '', subDistrict: '', village: '', ...(item.location || {}) },
+    };
+    const amountRp = item.amount_rp || (item.fuel_type !== 'Oli' ? item.amount || 0 : 0);
+    const amountLiter = item.amount_liter || (item.fuel_type === 'Oli' ? item.amount || 0 : 0);
+    if (item.fuel_type === 'Pertamax') {
+      current.pertamax_rp += amountRp;
+      current.pertamax_liter += amountLiter;
+    } else if (item.fuel_type === 'Dexlite') {
+      current.dexlite_rp += amountRp;
+      current.dexlite_liter += amountLiter;
+    } else if (item.fuel_type === 'Oli') {
+      current.oli_liter += amountLiter;
+    }
+    current.requires_fuel = current.requires_fuel || amountRp > 0 || amountLiter > 0;
+    grouped.set(key, current);
+  });
+
+  return Array.from(grouped.values());
+};
 
 const formSchema = z.object({
   date: z.string().min(1, "Tanggal wajib diisi"),
@@ -98,13 +144,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       ...initialData,
       price_pertamax: initialData.price_pertamax || 13500,
       price_dexlite: initialData.price_dexlite || 14500,
-      items: initialData.items.map(item => ({ 
-        ...item, 
-        fuel_type: item.fuel_type as string,
-        requires_fuel: item.requires_fuel ?? (item.amount_rp > 0 || item.amount_liter > 0 || item.amount > 0),
-        amount_rp: item.amount_rp || (item.fuel_type !== 'Oli' ? item.amount : 0),
-        amount_liter: item.amount_liter || (item.fuel_type === 'Oli' ? item.amount : 0)
-      })),
+      items: toFormItems(initialData.items),
     } : {
       date: new Date().toISOString().split('T')[0],
       region: "",
@@ -113,9 +153,13 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       price_dexlite: 14500,
       items: [{ 
         vehicle_operator: "", 
-        fuel_type: "Pertamax", 
         amount_rp: 0,
         amount_liter: 0,
+        pertamax_rp: 0,
+        pertamax_liter: 0,
+        dexlite_rp: 0,
+        dexlite_liter: 0,
+        oli_liter: 0,
         item_remarks: "",
         is_location_same: false,
         requires_fuel: true,
@@ -124,6 +168,48 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       remarks: "",
     },
   });
+
+  // Keep unfinished input in this browser so navigating to another window or
+  // page does not force the user to enter the report again.
+  const draftKey = session?.user?.id
+    ? `fuel-report-draft:${session.user.id}:${initialData?.id ?? 'new'}`
+    : null;
+  const draftRestoredRef = useRef(false);
+
+  useEffect(() => {
+    draftRestoredRef.current = false;
+    if (!draftKey) return;
+
+    try {
+      const savedDraft = window.localStorage.getItem(draftKey);
+      if (savedDraft) {
+        const parsedDraft = JSON.parse(savedDraft) as z.infer<typeof formSchema>;
+        if (parsedDraft.items?.some(item => item.pertamax_rp === undefined && item.dexlite_rp === undefined && item.oli_liter === undefined)) {
+          parsedDraft.items = toFormItems(parsedDraft.items as unknown as FuelReport['items']);
+        }
+        form.reset(parsedDraft);
+      }
+    } catch (error) {
+      console.warn('Draft laporan BBM tidak dapat dipulihkan:', error);
+    } finally {
+      draftRestoredRef.current = true;
+    }
+  }, [draftKey, form]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+
+    const subscription = form.watch((values) => {
+      if (!draftRestoredRef.current) return;
+      try {
+        window.localStorage.setItem(draftKey, JSON.stringify(values));
+      } catch (error) {
+        console.warn('Draft laporan BBM tidak dapat disimpan:', error);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [draftKey, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -163,19 +249,23 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
     } catch (e) { console.error(e); }
   };
 
-  const calculateLiter = (index: number, rp: number, type: string) => {
-    if (type === 'Oli') return;
+  const calculateLiter = (index: number, rp: number, type: 'Pertamax' | 'Dexlite') => {
     const price = type === 'Pertamax' ? form.getValues("price_pertamax") : form.getValues("price_dexlite");
     if (price > 0) {
       const liter = parseFloat((rp / price).toFixed(2));
-      form.setValue(`items.${index}.amount_liter`, liter);
+      form.setValue(`items.${index}.${type === 'Pertamax' ? 'pertamax_liter' : 'dexlite_liter'}`, liter);
     }
   };
 
   const selectedRegion = form.watch("region");
   const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
   const profileRegion = regions.find(region => region.id === profile?.region_id);
-  const selectedRegionId = regions.find(region => region.name === selectedRegion)?.id ?? null;
+  // Keep the database foreign key independent from the displayed region name.
+  // For regional roles the profile assignment is authoritative; this also
+  // prevents a race while the region options are still loading.
+  const selectedRegionId = isRegionalFuelAdmin
+    ? profile?.region_id ?? null
+    : regions.find(region => region.name === selectedRegion)?.id ?? null;
   const teams = allTeams.filter(team => team.region_id === selectedRegionId);
   const availableTeamNames = teams.length > 0 ? teams.map(team => team.name) : selectedRegion === 'Pusat' ? pusatTeams : [];
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
@@ -205,11 +295,16 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
     const lastLocation = lastItem.location;
     const lastVehicle = lastItem.vehicle_operator;
 
-    append({ 
-      vehicle_operator: requiresFuel ? "" : lastVehicle || "-", 
-      fuel_type: "Pertamax", 
+    append({
+      vehicle_operator: requiresFuel ? "" : lastVehicle || "-",
+      fuel_type: undefined,
       amount_rp: 0,
       amount_liter: 0,
+      pertamax_rp: 0,
+      pertamax_liter: 0,
+      dexlite_rp: 0,
+      dexlite_liter: 0,
+      oli_liter: 0,
       item_remarks: "",
       is_location_same: isSameLocation,
       requires_fuel: requiresFuel,
@@ -236,6 +331,11 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         return;
       }
 
+      if (!selectedRegionId) {
+        showError("Wilayah belum siap atau belum memiliki ID wilayah. Silakan muat ulang halaman dan coba lagi.");
+        return;
+      }
+
       const finalData = {
         date: values.date,
         region: values.region,
@@ -244,14 +344,26 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         team_id: selectedTeamId,
         price_pertamax: values.price_pertamax,
         price_dexlite: values.price_dexlite,
-        items: values.items.map(item => ({
-          ...item,
-          fuel_type: item.fuel_type as FuelType,
-          vehicle_operator: item.vehicle_operator || "-",
-          amount_rp: item.requires_fuel ? item.amount_rp : 0,
-          amount_liter: item.requires_fuel ? item.amount_liter : 0,
-          amount: item.fuel_type === 'Oli' ? item.amount_liter : item.amount_rp 
-        })),
+        items: values.items.flatMap(item => {
+          const base = {
+            vehicle_operator: item.vehicle_operator || "-",
+            item_remarks: item.item_remarks || "",
+            is_location_same: item.is_location_same,
+            requires_fuel: item.requires_fuel,
+            location: item.location,
+          };
+          if (!item.requires_fuel) {
+            return [{ ...base, fuel_type: 'Pertamax' as FuelType, amount_rp: 0, amount_liter: 0, amount: 0 }];
+          }
+          const entries = [
+            { fuel_type: 'Pertamax' as FuelType, amount_rp: item.pertamax_rp || 0, amount_liter: item.pertamax_liter || 0 },
+            { fuel_type: 'Dexlite' as FuelType, amount_rp: item.dexlite_rp || 0, amount_liter: item.dexlite_liter || 0 },
+            { fuel_type: 'Oli' as FuelType, amount_rp: 0, amount_liter: item.oli_liter || 0 },
+          ];
+          return entries
+            .filter(entry => entry.amount_rp > 0 || entry.amount_liter > 0)
+            .map(entry => ({ ...base, ...entry, amount: entry.fuel_type === 'Oli' ? entry.amount_liter : entry.amount_rp }));
+        }),
         remarks: values.remarks,
       };
 
@@ -261,6 +373,11 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       } else {
         await fuelService.createReport(finalData);
         showSuccess("Laporan BBM disimpan");
+      }
+      try {
+        if (draftKey) window.localStorage.removeItem(draftKey);
+      } catch (error) {
+        console.warn('Draft laporan BBM tidak dapat dihapus:', error);
       }
       navigate('/fuel-reports');
     } catch (error: any) {
@@ -380,7 +497,6 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
           {fields.map((field, index) => {
             const isLocationSame = form.watch(`items.${index}.is_location_same`);
             const requiresFuel = form.watch(`items.${index}.requires_fuel`);
-            const fuelType = form.watch(`items.${index}.fuel_type`);
             const subDistrict = form.watch(`items.${index}.location.subDistrict`);
             
             return (
@@ -392,7 +508,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={requiresFuel ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-blue-50 text-blue-700 border-blue-200"}>
-                        Pemakaian #{index + 1} {requiresFuel ? "(BBM/Oli)" : "(Hanya Lokasi)"}
+                        {requiresFuel ? `Pemakaian BBM #${index + 1}` : `Lokasi #${index + 1}`}
                       </Badge>
                       {isLocationSame && <Badge className="bg-green-100 text-green-700 border-green-200"><Check size={10} className="mr-1" /> Lokasi Sama</Badge>}
                     </div>
@@ -408,26 +524,38 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                           <FormItem><FormLabel className="text-xs font-bold">Kendaraan / Alat</FormLabel><FormControl><Input placeholder="Plat Nomor" list="fuel-history-vehicles" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
-                      <div className="md:col-span-2">
-                        <FormField control={form.control} name={`items.${index}.fuel_type`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs font-bold">Jenis</FormLabel><Select onValueChange={(v) => { field.onChange(v); calculateLiter(index, form.getValues(`items.${index}.amount_rp`), v); }} value={field.value}><FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Pilih" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pertamax">Pertamax</SelectItem><SelectItem value="Dexlite">Dexlite</SelectItem><SelectItem value="Oli">Oli</SelectItem></SelectContent></Select></FormItem>
-                        )} />
+                      <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-2 space-y-2">
+                          <p className="text-xs font-bold text-blue-700">PERTAMAX</p>
+                          <FormField control={form.control} name={`items.${index}.pertamax_rp`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px]">Rupiah (Rp)</FormLabel><FormControl><Input type="text" inputMode="numeric" className="h-9" {...field} value={formatRupiahInput(field.value)} onChange={(e) => { const amount = parseRupiahInput(e.target.value); field.onChange(amount); calculateLiter(index, amount, 'Pertamax'); }} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name={`items.${index}.pertamax_liter`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] flex items-center gap-1">Liter <Calculator size={10} className="text-blue-500" /></FormLabel><FormControl><Input type="number" step="0.01" className="h-9 font-bold bg-blue-100" {...field} readOnly /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="rounded-lg border border-green-200 bg-green-50/50 p-2 space-y-2">
+                          <p className="text-xs font-bold text-green-700">DEXLITE</p>
+                          <FormField control={form.control} name={`items.${index}.dexlite_rp`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px]">Rupiah (Rp)</FormLabel><FormControl><Input type="text" inputMode="numeric" className="h-9" {...field} value={formatRupiahInput(field.value)} onChange={(e) => { const amount = parseRupiahInput(e.target.value); field.onChange(amount); calculateLiter(index, amount, 'Dexlite'); }} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name={`items.${index}.dexlite_liter`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] flex items-center gap-1">Liter <Calculator size={10} className="text-green-500" /></FormLabel><FormControl><Input type="number" step="0.01" className="h-9 font-bold bg-green-100" {...field} readOnly /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2 space-y-2">
+                          <p className="text-xs font-bold text-amber-700">OLI</p>
+                          <div className="h-9 text-[10px] text-slate-500 flex items-center">Input jumlah oli</div>
+                          <FormField control={form.control} name={`items.${index}.oli_liter`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px]">Liter</FormLabel><FormControl><Input type="number" step="0.01" className="h-9 font-bold" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
                       </div>
                       <div className="md:col-span-2">
-                        <FormField control={form.control} name={`items.${index}.amount_rp`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs font-bold">Rupiah (Rp)</FormLabel><FormControl><Input type="text" inputMode="numeric" className="h-10" {...field} value={formatRupiahInput(field.value)} onChange={(e) => { const amount = parseRupiahInput(e.target.value); field.onChange(amount); calculateLiter(index, amount, fuelType); }} disabled={fuelType === 'Oli'} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                      </div>
-                      <div className="md:col-span-2">
-                        <FormField control={form.control} name={`items.${index}.amount_liter`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs font-bold flex items-center gap-1">Liter <Calculator size={10} className="text-blue-500" /></FormLabel><FormControl><Input type="number" step="0.01" className={cn("h-10 font-bold", fuelType !== 'Oli' ? "bg-blue-50" : "bg-white")} {...field} readOnly={fuelType !== 'Oli'} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                      </div>
-                      <div className="md:col-span-3">
                         <FormField control={form.control} name={`items.${index}.item_remarks`} render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-bold">Keterangan</FormLabel>
-                            <FormControl><Input placeholder="Nama Petugas..." className="h-10" list="fuel-history-officers" {...field} /></FormControl>
+                            <FormLabel className="text-xs font-bold">Detail Kegiatan</FormLabel>
+                            <FormControl><Input placeholder="Detail kegiatan..." className="h-10" list="fuel-history-officers" {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
