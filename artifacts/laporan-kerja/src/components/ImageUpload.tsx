@@ -47,6 +47,7 @@ const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName
     if (disabled) return;
     const item = e.clipboardData.items[0];
     if (item?.type.startsWith('image/')) {
+      e.preventDefault();
       const file = item.getAsFile();
       if (file) handleFile(file);
     }
@@ -72,6 +73,9 @@ const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         onPaste={onPaste}
+        tabIndex={disabled ? -1 : 0}
+        role="button"
+        aria-label={`${label}: klik untuk memilih atau tempel gambar`}
         className={cn(
           "relative group rounded-xl border-2 border-dashed transition-all flex items-center justify-center overflow-hidden",
           aspectClassName,
@@ -106,7 +110,15 @@ const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName
             )}
           </>
         ) : (
-          <div className="text-center p-4">
+          <>
+          <textarea
+            aria-label={`Tempel ${label}`}
+            className="absolute inset-0 z-10 h-full w-full resize-none cursor-pointer rounded-xl bg-transparent text-transparent outline-none"
+            onClick={(event) => { event.stopPropagation(); handleAreaClick(); }}
+            onPaste={(event) => { event.stopPropagation(); onPaste(event); }}
+            spellCheck={false}
+          />
+          <div className="pointer-events-none relative z-0 text-center p-4">
             <div className={cn(
               "mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors",
               disabled ? "bg-slate-200 text-slate-400" : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"
@@ -116,6 +128,7 @@ const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName
             <p className="text-xs font-medium text-slate-600">{disabled ? "Mode Pantau" : "Klik atau Paste"}</p>
             <p className="text-[10px] text-slate-400 mt-1">Klik, paste, atau tarik gambar ke sini</p>
           </div>
+          </>
         )}
         <input
           ref={fileInputRef}

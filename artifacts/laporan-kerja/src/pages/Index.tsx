@@ -800,6 +800,19 @@ const Index = () => {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {activeTab === 'overtime' && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/overtime/daily-rekap')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Lembur
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/overtime/weekly-rekap')} className="py-3 cursor-pointer">
+                        <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Lembur
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/overtime/monthly-rekap')} className="py-3 cursor-pointer">
+                        <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan Lembur
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   {activeTab === 'fuel_reports' && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/fuel-reports/daily-rekap')} className="py-3 cursor-pointer">

@@ -12,6 +12,7 @@ export interface OvertimeRecord {
   region_id: string | null;
   team_id: string | null;
   team?: { name: string } | null;
+  region?: { name: string } | null;
   created_at?: string;
   updated_at?: string;
 }

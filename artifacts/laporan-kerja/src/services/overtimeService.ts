@@ -3,14 +3,14 @@ import { OvertimeRecord } from '@/types/overtime';
 
 export const overtimeService = {
   async getAll(regionId?: string | null) {
-    let query = supabase.from('overtime_records').select('*, team:teams(name)').order('date', { ascending: false }).order('name');
+    let query = supabase.from('overtime_records').select('*, team:teams(name), region:regions(name)').order('date', { ascending: false }).order('name');
     if (regionId) query = query.eq('region_id', regionId);
     const { data, error } = await query;
     if (error) throw error;
     return (data || []) as OvertimeRecord[];
   },
   async getById(id: string) {
-    const { data, error } = await supabase.from('overtime_records').select('*, team:teams(name)').eq('id', id).single();
+    const { data, error } = await supabase.from('overtime_records').select('*, team:teams(name), region:regions(name)').eq('id', id).single();
     if (error) throw error;
     return data as OvertimeRecord;
   },

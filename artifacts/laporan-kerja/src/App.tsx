@@ -202,6 +202,9 @@ const App = () => (
             <Route path="/work-plans/monthly-rekap" element={<WorkPlanAccessRoute><WorkPlanMonthlyRecap /></WorkPlanAccessRoute>} />
             <Route path="/overtime" element={<OvertimeAccessRoute><OvertimeRecap /></OvertimeAccessRoute>} />
             <Route path="/overtime/print" element={<OvertimeAccessRoute><OvertimePrint /></OvertimeAccessRoute>} />
+            <Route path="/overtime/daily-rekap" element={<OvertimeAccessRoute><OvertimePrint period="daily" /></OvertimeAccessRoute>} />
+            <Route path="/overtime/weekly-rekap" element={<OvertimeAccessRoute><OvertimePrint period="weekly" /></OvertimeAccessRoute>} />
+            <Route path="/overtime/monthly-rekap" element={<OvertimeAccessRoute><OvertimePrint period="monthly" /></OvertimeAccessRoute>} />
             <Route path="/overtime/create" element={<OvertimeAccessRoute><CreateOvertime /></OvertimeAccessRoute>} />
             <Route path="/overtime/edit/:id" element={<OvertimeAccessRoute><EditOvertime /></OvertimeAccessRoute>} />
             <Route path="/work-plans/create" element={<WorkPlanAccessRoute><AuthorizeRoute resource="work_plans" action="create"><CreateWorkPlan /></AuthorizeRoute></WorkPlanAccessRoute>} />

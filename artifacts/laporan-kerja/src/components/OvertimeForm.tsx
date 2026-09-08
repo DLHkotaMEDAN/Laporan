@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,52 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   });
   const { teams, loading: teamsLoading } = useAvailableTeams(form.region_id);
   const [personLookup, setPersonLookup] = useState(false);
+  const draftKey = initialData ? `overtime-edit-${initialData.id}` : 'overtime-create';
+  const draftReadyRef = useRef(false);
+  const skipNextSaveRef = useRef(true);
+
+  useEffect(() => {
+    draftReadyRef.current = false;
+    skipNextSaveRef.current = true;
+    try {
+      const saved = window.localStorage.getItem(draftKey);
+      if (saved) {
+        const draft = JSON.parse(saved) as { savedAt?: number; values?: Partial<typeof form> };
+        if (draft.savedAt && Date.now() - draft.savedAt <= 14 * 24 * 60 * 60 * 1000 && draft.values) {
+          setForm(current => ({ ...current, ...draft.values }));
+        } else {
+          window.localStorage.removeItem(draftKey);
+        }
+      }
+    } catch {
+      // Draft is optional; the form remains usable when browser storage is unavailable.
+    }
+    draftReadyRef.current = true;
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftReadyRef.current) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    const saveDraft = () => {
+      try {
+        window.localStorage.setItem(draftKey, JSON.stringify({ savedAt: Date.now(), values: form }));
+      } catch {
+        // Ignore storage quota and privacy-mode failures.
+      }
+    };
+    const timer = window.setTimeout(saveDraft, 300);
+    const saveWhenHidden = () => saveDraft();
+    document.addEventListener('visibilitychange', saveWhenHidden);
+    window.addEventListener('pagehide', saveWhenHidden);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', saveWhenHidden);
+      window.removeEventListener('pagehide', saveWhenHidden);
+    };
+  }, [draftKey, form]);
 
   useEffect(() => {
     if (!isSuperAdmin && profile?.region_id) setForm(current => ({ ...current, region_id: profile.region_id || '' }));
@@ -62,6 +108,7 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
       const payload = { ...form, photo_url: photoUrl, attendance_count: Number(form.attendance_count) || 0, region_id: form.region_id, team_id: form.team_id };
       if (initialData) await overtimeService.update(initialData.id, payload);
       else await overtimeService.create(payload);
+      window.localStorage.removeItem(draftKey);
       showSuccess(initialData ? 'Data lembur berhasil diperbarui.' : 'Data lembur berhasil disimpan.');
       navigate('/overtime');
     } catch (error) {

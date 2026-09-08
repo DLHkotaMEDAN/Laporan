@@ -88,7 +88,9 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
-  const isRegionalFuelAdmin = isAdminBbm && !isSuperAdmin;
+  // Admin BBM is a cross-region role. Only the combined/regional roles are
+  // restricted to the region assigned to their profile.
+  const isRegionalFuelAdmin = (profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isSuperAdmin;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
