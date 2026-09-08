@@ -184,7 +184,7 @@ const FuelWeeklyRecap = () => {
         if (visibleColumns.dexlite_ltr) rowData.d_ltr = d_ltr;
         if (visibleColumns.oli) rowData.oli = o_ltr;
         if (visibleColumns.location) rowData.location = `${item.location.street}${item.location.subDistrict ? ', ' + item.location.subDistrict : ''}`;
-        if (visibleColumns.remarks) rowData.remarks = item.remarks || "-";
+      if (visibleColumns.remarks) rowData.remarks = item.activity_detail || item.item_remarks || item.remarks || "-";
 
         const row = worksheet.addRow(rowData);
         row.eachCell(cell => {
@@ -388,7 +388,7 @@ const FuelWeeklyRecap = () => {
                             {visibleColumns.oli && <td className="border-2 border-black p-1 text-center">{item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : "-"}</td>}
                             
                             {visibleColumns.location && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.location.street}{item.location.subDistrict && item.location.subDistrict !== " " ? `, ${item.location.subDistrict}` : ""}</td>}
-                            {visibleColumns.remarks && <td className="border-2 border-black p-1 italic align-middle whitespace-normal break-words leading-tight">{item.remarks || "-"}</td>}
+                            {visibleColumns.remarks && <td className="border-2 border-black p-1 italic align-middle whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || item.remarks || "-"}</td>}
                           </tr>
                         ))}
                         {!isRegularUser && selectedRegion === "semua" && (

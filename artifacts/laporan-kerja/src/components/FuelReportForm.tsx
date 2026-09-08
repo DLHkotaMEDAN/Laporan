@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, Save, Loader2, Fuel, MapPin, Info, 
-  Plus, Trash2, MessageSquare, HelpCircle, Check, MapPinned, Calculator, Lock, Unlock
+  Plus, Trash2, MessageSquare, HelpCircle, MapPinned, Check, Calculator, Lock, Unlock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -54,6 +54,7 @@ const usageItemSchema = z.object({
   dexlite_liter: z.coerce.number().min(0).optional().default(0),
   oli_liter: z.coerce.number().min(0).optional().default(0),
   item_remarks: z.string().optional().default(""),
+  activity_detail: z.string().optional().default(""),
   is_location_same: z.boolean().optional().default(false),
   requires_fuel: z.boolean().optional().default(true),
   location: z.object({
@@ -80,8 +81,9 @@ const toFormItems = (items: FuelReport['items']) => {
       dexlite_liter: 0,
       oli_liter: 0,
       item_remarks: item.item_remarks || '',
+      activity_detail: item.activity_detail || '',
       is_location_same: item.is_location_same ?? false,
-      requires_fuel: false,
+      requires_fuel: true,
       location: { street: '', subDistrict: '', village: '', ...(item.location || {}) },
     };
     const amountRp = item.amount_rp || (item.fuel_type !== 'Oli' ? item.amount || 0 : 0);
@@ -122,7 +124,6 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   const { profile, session } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTypePrompt, setShowTypePrompt] = useState(false);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
   // Autocomplete States
   const [history, setHistory] = useState({
@@ -161,6 +162,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         dexlite_liter: 0,
         oli_liter: 0,
         item_remarks: "",
+        activity_detail: "",
         is_location_same: false,
         requires_fuel: true,
         location: { street: "", subDistrict: "", village: "" }
@@ -187,6 +189,9 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         if (parsedDraft.items?.some(item => item.pertamax_rp === undefined && item.dexlite_rp === undefined && item.oli_liter === undefined)) {
           parsedDraft.items = toFormItems(parsedDraft.items as unknown as FuelReport['items']);
         }
+        parsedDraft.items = parsedDraft.items
+          .filter(item => item.requires_fuel !== false)
+          .map(item => ({ ...item, requires_fuel: true }));
         form.reset(parsedDraft);
       }
     } catch (error) {
@@ -283,11 +288,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
 
   const handleTypeSelection = (requiresFuel: boolean) => {
     setShowTypePrompt(false);
-    if (requiresFuel) {
-      setShowLocationPrompt(true);
-    } else {
-      performAppend(false, false);
-    }
+    performAppend(false, requiresFuel);
   };
 
   const performAppend = (isSameLocation: boolean, requiresFuel: boolean) => {
@@ -306,11 +307,11 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       dexlite_liter: 0,
       oli_liter: 0,
       item_remarks: "",
+      activity_detail: "",
       is_location_same: isSameLocation,
       requires_fuel: requiresFuel,
       location: isSameLocation ? { ...lastLocation } : { street: "", subDistrict: "", village: "" }
     });
-    setShowLocationPrompt(false);
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -348,6 +349,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
           const base = {
             vehicle_operator: item.vehicle_operator || "-",
             item_remarks: item.item_remarks || "",
+            activity_detail: item.activity_detail || "",
             is_location_same: item.is_location_same,
             requires_fuel: item.requires_fuel,
             location: item.location,
@@ -386,6 +388,8 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       setIsSubmitting(false);
     }
   }
+
+  const watchedItems = form.watch('items');
 
   return (
     <Form {...form}>
@@ -495,6 +499,9 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
           <h2 className="text-xl font-bold flex items-center gap-2"><Fuel className="text-orange-600" /> Detail Pemakaian & Lokasi</h2>
 
           {fields.map((field, index) => {
+            const scopeNumber = watchedItems
+              .slice(0, index + 1)
+              .filter(item => item.requires_fuel !== false).length || 1;
             const isLocationSame = form.watch(`items.${index}.is_location_same`);
             const requiresFuel = form.watch(`items.${index}.requires_fuel`);
             const subDistrict = form.watch(`items.${index}.location.subDistrict`);
@@ -502,13 +509,13 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
             return (
               <Card key={field.id} className={cn(
                 "border-l-4 relative overflow-hidden shadow-sm",
-                requiresFuel ? "border-l-orange-500" : "border-l-blue-400 bg-blue-50/10"
+                requiresFuel ? "border-l-orange-500" : "border-l-blue-400 bg-blue-50/10 -mt-3 rounded-t-none"
               )}>
                 <CardContent className="pt-6 space-y-6">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={requiresFuel ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-blue-50 text-blue-700 border-blue-200"}>
-                        {requiresFuel ? `Pemakaian BBM #${index + 1}` : `Lokasi #${index + 1}`}
+                        {requiresFuel ? `Pemakaian BBM #${scopeNumber}` : `Lokasi Tambahan Pemakaian BBM #${scopeNumber}`}
                       </Badge>
                       {isLocationSame && <Badge className="bg-green-100 text-green-700 border-green-200"><Check size={10} className="mr-1" /> Lokasi Sama</Badge>}
                     </div>
@@ -554,8 +561,8 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                       <div className="md:col-span-2">
                         <FormField control={form.control} name={`items.${index}.item_remarks`} render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-bold">Detail Kegiatan</FormLabel>
-                            <FormControl><Input placeholder="Detail kegiatan..." className="h-10" list="fuel-history-officers" {...field} /></FormControl>
+                            <FormLabel className="text-xs font-bold">Petugas</FormLabel>
+                            <FormControl><Input placeholder="Nama Petugas..." className="h-10" list="fuel-history-officers" {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -588,6 +595,13 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                           </FormItem>
                         )} />
                       </div>
+                      <FormField control={form.control} name={`items.${index}.activity_detail`} render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] uppercase text-slate-500">Detail Kegiatan</FormLabel>
+                          <FormControl><Input className="h-9" placeholder="Jelaskan detail kegiatan..." {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
                     </div>
                   ) : (
                     <div className="pt-4 border-t border-dashed border-slate-200 flex items-center justify-between bg-slate-50/50 p-3 rounded-lg">
@@ -644,29 +658,6 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showLocationPrompt} onOpenChange={setShowLocationPrompt}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-blue-600">
-              <HelpCircle className="h-5 w-5" /> Konfirmasi Lokasi
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              Apakah lokasi pemakaian baru ini <strong>sama</strong> dengan lokasi pemakaian sebelumnya?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 flex flex-col gap-3">
-            <Button onClick={() => performAppend(true, true)} className="h-12 justify-start px-6 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200">
-              <Check size={18} className="mr-3 h-5 w-5" /> Ya, Lokasi Sama
-            </Button>
-            <Button onClick={() => performAppend(false, true)} variant="outline" className="h-12 justify-start px-6">
-              <Plus className="mr-3 h-5 w-5" /> Tidak, Lokasi Berbeda
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowLocationPrompt(false)}>Batal</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Form>
   );
 };

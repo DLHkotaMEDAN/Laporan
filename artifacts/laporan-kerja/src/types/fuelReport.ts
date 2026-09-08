@@ -9,6 +9,7 @@ export interface FuelUsageItem {
   amount_rp: number; // Kolom baru
   amount_liter: number; // Kolom baru
   item_remarks?: string;
+  activity_detail?: string;
   is_location_same?: boolean;
   requires_fuel?: boolean;
   location: {

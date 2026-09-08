@@ -172,7 +172,7 @@ const FuelYearlyRecap = () => {
         if (visibleColumns.dexlite_rp) rowData.d_rp = d_rp;
         if (visibleColumns.dexlite_ltr) rowData.d_ltr = d_ltr;
         if (visibleColumns.oli) rowData.oli = o_ltr;
-        if (visibleColumns.item_remarks) rowData.item_remarks = item.item_remarks || "-";
+        if (visibleColumns.item_remarks) rowData.item_remarks = item.activity_detail || item.item_remarks || "-";
         if (visibleColumns.location) rowData.location = `${item.location.street}${item.location.subDistrict ? ', ' + item.location.subDistrict : ''}`;
         if (visibleColumns.remarks) rowData.remarks = item.remarks || "-";
 
@@ -371,7 +371,7 @@ const FuelYearlyRecap = () => {
                             {visibleColumns.dexlite_ltr && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{item.fuel_type === 'Dexlite' ? (item.amount_liter || "-") : "-"}</td>}
                             {visibleColumns.oli && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : "-"}</td>}
                             
-                            {visibleColumns.item_remarks && <td className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
+                            {visibleColumns.item_remarks && <td className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || "-"}</td>}
                             {visibleColumns.location && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.location.street}{item.location.subDistrict && item.location.subDistrict !== " " ? `, ${item.location.subDistrict}` : ""}</td>}
                             {visibleColumns.remarks && <td className="border-2 border-black p-1 italic align-middle whitespace-normal break-words leading-tight">{item.remarks || "-"}</td>}
                           </tr>
