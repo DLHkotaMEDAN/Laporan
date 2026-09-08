@@ -129,7 +129,7 @@ const FuelYearlyRecap = () => {
       if (visibleColumns.dexlite_rp) columns.push({ header: 'Dexlite (Rp)', key: 'd_rp', width: 20 });
       if (visibleColumns.dexlite_ltr) columns.push({ header: 'Dexlite (Liter)', key: 'd_ltr', width: 12 });
       if (visibleColumns.oli) columns.push({ header: 'Oli (Liter)', key: 'oli', width: 12 });
-      if (visibleColumns.item_remarks) columns.push({ header: 'Ket. Item', key: 'item_remarks', width: 20 });
+      if (visibleColumns.item_remarks) columns.push({ header: 'Petugas', key: 'item_remarks', width: 20 });
       if (visibleColumns.location) columns.push({ header: 'Lokasi', key: 'location', width: 35 });
       if (visibleColumns.remarks) columns.push({ header: 'Ket. Umum', key: 'remarks', width: 25 });
       
@@ -172,7 +172,7 @@ const FuelYearlyRecap = () => {
         if (visibleColumns.dexlite_rp) rowData.d_rp = d_rp;
         if (visibleColumns.dexlite_ltr) rowData.d_ltr = d_ltr;
         if (visibleColumns.oli) rowData.oli = o_ltr;
-        if (visibleColumns.item_remarks) rowData.item_remarks = item.activity_detail || item.item_remarks || "-";
+        if (visibleColumns.item_remarks) rowData.item_remarks = item.item_remarks || "-";
         if (visibleColumns.location) rowData.location = `${item.location.street}${item.location.subDistrict ? ', ' + item.location.subDistrict : ''}`;
         if (visibleColumns.remarks) rowData.remarks = item.remarks || "-";
 
@@ -262,7 +262,7 @@ const FuelYearlyRecap = () => {
                     dexlite_rp: "Dexlite (Rp)",
                     dexlite_ltr: "Dexlite (Liter)",
                     oli: "Oli",
-                    item_remarks: "Ket. Item",
+                    item_remarks: "Petugas",
                     location: "Lokasi",
                     remarks: "Ket. Umum"
                   }).map(([key, label]) => (
@@ -319,7 +319,7 @@ const FuelYearlyRecap = () => {
           <div className="text-center"><h1 className="text-sm md:text-xl font-bold uppercase">Pemerintah Kota Medan</h1><h2 className="text-base md:text-2xl font-black uppercase">Dinas Lingkungan Hidup</h2><p className="text-[8px] md:text-xs italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p></div>
           <img src={LOGO_DLH_URL} className="h-12 w-12 md:h-20 md:w-20 object-contain" alt="Logo DLH" />
         </div>
-        <div className="text-center mb-8"><h3 className="text-base md:text-xl font-bold underline uppercase text-orange-700">REKAP TAHUNAN PEMAKAIAN BBM & OLI</h3><p className="text-sm md:text-lg font-bold">Tahun: {selectedYear}</p>{isRegularUser && loginRegionName && <p className="text-sm font-bold uppercase text-slate-500">{loginRegionName}</p>}{!isRegularUser && selectedRegion !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">{selectedRegion}</p>}{isRegularUser && selectedTeam !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">Tim: {selectedTeam}</p>}</div>
+        <div className="text-center mb-8"><h3 className="text-base md:text-xl font-bold underline uppercase text-orange-700">REKAP TAHUNAN PEMAKAIAN BBM & OLI</h3>{isRegularUser && loginRegionName && <p className="text-base md:text-xl font-black uppercase text-slate-600">{loginRegionName}</p>}{!isRegularUser && selectedRegion !== "semua" && <p className="text-base md:text-xl font-black uppercase text-slate-600">{selectedRegion}</p>}<p className="text-sm md:text-base font-bold">Tahun: {selectedYear}</p>{isRegularUser && selectedTeam !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">Tim: {selectedTeam}</p>}</div>
         
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] border-collapse border-2 border-black text-[9px] table-auto">
@@ -331,7 +331,7 @@ const FuelYearlyRecap = () => {
                 {visibleColumns.team && <th className="border-2 border-black p-1 w-[80px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Tim / Operator</th>}
                 {visibleColumns.vehicle && <th className="border-2 border-black p-1 w-[100px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Kendaraan</th>}
                 {bbmColCount > 0 && <th className="border-2 border-black p-1" colSpan={bbmColCount}>Jenis BBM / Oli</th>}
-                {visibleColumns.item_remarks && <th className="border-2 border-black p-1 w-[100px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Ket. Item</th>}
+                {visibleColumns.item_remarks && <th className="border-2 border-black p-1 w-[100px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Petugas</th>}
                 {visibleColumns.location && <th className="border-2 border-black p-1 w-[120px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Lokasi</th>}
                 {visibleColumns.remarks && <th className="border-2 border-black p-1 w-[120px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Ket. Umum</th>}
               </tr>
@@ -371,7 +371,7 @@ const FuelYearlyRecap = () => {
                             {visibleColumns.dexlite_ltr && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{item.fuel_type === 'Dexlite' ? (item.amount_liter || "-") : "-"}</td>}
                             {visibleColumns.oli && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : "-"}</td>}
                             
-                            {visibleColumns.item_remarks && <td className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || "-"}</td>}
+                            {visibleColumns.item_remarks && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
                             {visibleColumns.location && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.location.street}{item.location.subDistrict && item.location.subDistrict !== " " ? `, ${item.location.subDistrict}` : ""}</td>}
                             {visibleColumns.remarks && <td className="border-2 border-black p-1 italic align-middle whitespace-normal break-words leading-tight">{item.remarks || "-"}</td>}
                           </tr>

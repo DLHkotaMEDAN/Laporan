@@ -54,6 +54,7 @@ const FuelWeeklyRecap = () => {
     region: true,
     team: true,
     vehicle: true,
+    petugas: true,
     pertamax_rp: true,
     pertamax_ltr: true,
     dexlite_rp: true,
@@ -136,6 +137,7 @@ const FuelWeeklyRecap = () => {
       if (showRegion) columns.push({ header: 'Wilayah', key: 'region', width: 15 });
       if (visibleColumns.team) columns.push({ header: 'Tim / Operator', key: 'team', width: 18 });
       if (visibleColumns.vehicle) columns.push({ header: 'Kendaraan', key: 'vehicle', width: 24 });
+      if (visibleColumns.petugas) columns.push({ header: 'Petugas', key: 'petugas', width: 20 });
       if (visibleColumns.pertamax_rp) columns.push({ header: 'Pertamax (Rp)', key: 'p_rp', width: 15 });
       if (visibleColumns.pertamax_ltr) columns.push({ header: 'Pertamax (Liter)', key: 'p_ltr', width: 10 });
       if (visibleColumns.dexlite_rp) columns.push({ header: 'Dexlite (Rp)', key: 'd_rp', width: 15 });
@@ -171,6 +173,7 @@ const FuelWeeklyRecap = () => {
         if (showRegion) rowData.region = item.region;
         if (visibleColumns.team) rowData.team = item.team;
         if (visibleColumns.vehicle) rowData.vehicle = item.vehicle_operator;
+        if (visibleColumns.petugas) rowData.petugas = item.item_remarks || "-";
         
         const p_rp = item.fuel_type === 'Pertamax' ? (item.amount_rp || item.amount) : 0;
         const p_ltr = item.fuel_type === 'Pertamax' ? (item.amount_liter || 0) : 0;
@@ -218,8 +221,8 @@ const FuelWeeklyRecap = () => {
 
   const teamOptions = Array.from(new Set(reports.map(report => report.team))).sort();
   const bbmColCount = (visibleColumns.pertamax_rp ? 1 : 0) + (visibleColumns.pertamax_ltr ? 1 : 0) + (visibleColumns.dexlite_rp ? 1 : 0) + (visibleColumns.dexlite_ltr ? 1 : 0) + (visibleColumns.oli ? 1 : 0);
-  const tableColumnCount = 1 + (visibleColumns.date ? 1 : 0) + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0) + bbmColCount + (visibleColumns.location ? 1 : 0) + (visibleColumns.remarks ? 1 : 0);
-  const leadingCols = 1 + (visibleColumns.date ? 1 : 0) + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0);
+  const tableColumnCount = 1 + (visibleColumns.date ? 1 : 0) + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0) + (visibleColumns.petugas ? 1 : 0) + bbmColCount + (visibleColumns.location ? 1 : 0) + (visibleColumns.remarks ? 1 : 0);
+  const leadingCols = 1 + (visibleColumns.date ? 1 : 0) + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0) + (visibleColumns.petugas ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
@@ -288,7 +291,7 @@ const FuelWeeklyRecap = () => {
                 <PopoverContent className="w-56 p-3" align="end">
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tampilkan Kolom:</p>
-                    {Object.entries({ date: "Tanggal", ...(isRegularUser ? {} : { region: "Wilayah" }), team: "Tim", vehicle: "Kendaraan", pertamax_rp: "Pertamax (Rp)", pertamax_ltr: "Pertamax (Liter)", dexlite_rp: "Dexlite (Rp)", dexlite_ltr: "Dexlite (Liter)", oli: "Oli", location: "Lokasi", remarks: "Ket. Umum" }).map(([key, label]) => (
+                    {Object.entries({ date: "Tanggal", ...(isRegularUser ? {} : { region: "Wilayah" }), team: "Tim", vehicle: "Kendaraan", petugas: "Petugas", pertamax_rp: "Pertamax (Rp)", pertamax_ltr: "Pertamax (Liter)", dexlite_rp: "Dexlite (Rp)", dexlite_ltr: "Dexlite (Liter)", oli: "Oli", location: "Lokasi", remarks: "Ket. Umum" }).map(([key, label]) => (
                       <div key={key} className="flex items-center space-x-2"><Checkbox id={`col-${key}`} checked={visibleColumns[key as keyof typeof visibleColumns]} onCheckedChange={() => toggleColumn(key as keyof typeof visibleColumns)} /><Label htmlFor={`col-${key}`} className="text-sm cursor-pointer">{label}</Label></div>
                     ))}
                   </div>
@@ -336,7 +339,7 @@ const FuelWeeklyRecap = () => {
           <div className="text-center"><h1 className="text-sm md:text-xl font-bold uppercase">Pemerintah Kota Medan</h1><h2 className="text-base md:text-2xl font-black uppercase">Dinas Lingkungan Hidup</h2><p className="text-[8px] md:text-xs italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p></div>
           <img src={LOGO_DLH_URL} className="h-12 w-12 md:h-20 md:w-20 object-contain" alt="Logo DLH" />
         </div>
-        <div className="text-center mb-8"><h3 className="text-base md:text-xl font-bold underline uppercase text-orange-700">REKAP MINGGUAN PEMAKAIAN BBM & OLI</h3><p className="text-sm md:text-lg font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>{isRegularUser && loginRegionName && <p className="text-sm font-bold uppercase text-slate-500">{loginRegionName}</p>}{!isRegularUser && selectedRegion !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">{selectedRegion}</p>}{isRegularUser && selectedTeam !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">Tim: {selectedTeam}</p>}</div>
+        <div className="text-center mb-8"><h3 className="text-base md:text-xl font-bold underline uppercase text-orange-700">REKAP MINGGUAN PEMAKAIAN BBM & OLI</h3>{isRegularUser && loginRegionName && <p className="text-base md:text-xl font-black uppercase text-slate-600">{loginRegionName}</p>}{!isRegularUser && selectedRegion !== "semua" && <p className="text-base md:text-xl font-black uppercase text-slate-600">{selectedRegion}</p>}<p className="text-sm md:text-base font-bold">Periode: {format(weekStart, 'dd MMMM', { locale: localeId })} s/d {format(weekEnd, 'dd MMMM yyyy', { locale: localeId })}</p>{isRegularUser && selectedTeam !== "semua" && <p className="text-sm font-bold uppercase text-slate-500">Tim: {selectedTeam}</p>}</div>
         
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] border-collapse border-2 border-black text-[9px] table-fixed">
@@ -347,6 +350,7 @@ const FuelWeeklyRecap = () => {
                 {showRegion && <th className="border-2 border-black p-1 w-[80px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Wilayah</th>}
                 {visibleColumns.team && <th className="border-2 border-black p-1 w-[75px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Tim / Operator</th>}
                 {visibleColumns.vehicle && <th className="border-2 border-black p-1 w-[125px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Kendaraan / Alat Operasional</th>}
+                {visibleColumns.petugas && <th className="border-2 border-black p-1 w-[100px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Petugas</th>}
                 {bbmColCount > 0 && <th className="border-2 border-black p-1" colSpan={bbmColCount}>Jenis BBM / Oli</th>}
                 {visibleColumns.location && <th className="border-2 border-black p-1 w-[180px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Lokasi Kerja</th>}
                 {visibleColumns.remarks && <th className="border-2 border-black p-1 w-[120px]" rowSpan={bbmColCount > 0 ? 2 : 1}>Ket. Umum</th>}
@@ -380,6 +384,7 @@ const FuelWeeklyRecap = () => {
                             {showRegion && idx === 0 && (<td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={items.length}>{item.region}</td>)}
                             {visibleColumns.team && <td className="border-2 border-black p-1 text-center align-middle whitespace-normal break-words leading-tight">{item.team}</td>}
                             {visibleColumns.vehicle && <td className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{item.vehicle_operator}</td>}
+                            {visibleColumns.petugas && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
                             
                             {visibleColumns.pertamax_rp && <td className="border-2 border-black p-1 text-right">{item.fuel_type === 'Pertamax' ? (item.amount_rp || item.amount).toLocaleString('id-ID') : "-"}</td>}
                             {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-1 text-center">{item.fuel_type === 'Pertamax' ? (item.amount_liter || "-") : "-"}</td>}
