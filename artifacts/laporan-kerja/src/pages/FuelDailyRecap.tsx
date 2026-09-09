@@ -16,7 +16,7 @@ import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
-import { fuelAmount, mergeFuelRecapItems } from '@/utils/fuelRecap';
+import { fuelAmount, getMergedCellSpan, mergeFuelRecapItems } from '@/utils/fuelRecap';
 import {
   Popover,
   PopoverContent,
@@ -368,20 +368,20 @@ const FuelDailyRecap = () => {
                       <React.Fragment key={regionName}>
                         {items.map((item, idx) => (
                           <tr key={`${regionName}-${idx}`}>
-                            <td className="border-2 border-black p-1 text-center">{idx + 1}</td>
+                            {getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center align-middle">{idx + 1}</td>}
                             {showRegion && idx === 0 && (<td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={items.length}>{item.region}</td>)}
-                            {visibleColumns.team && <td className="border-2 border-black p-1 text-center align-middle whitespace-normal break-words leading-tight">{item.team}</td>}
-                            {visibleColumns.vehicle && <td className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{item.vehicle_operator}</td>}
-                            {visibleColumns.petugas && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
+                            {visibleColumns.team && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center align-middle whitespace-normal break-words leading-tight">{item.team}</td>}
+                            {visibleColumns.vehicle && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{item.vehicle_operator}</td>}
+                            {visibleColumns.petugas && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
                             
-                            {visibleColumns.pertamax_rp && <td className="border-2 border-black p-1 text-right">{fuelAmount(item, 'Pertamax', 'rp') ? fuelAmount(item, 'Pertamax', 'rp').toLocaleString('id-ID') : "-"}</td>}
-                            {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Pertamax', 'liter') || "-"}</td>}
-                            {visibleColumns.dexlite_rp && <td className="border-2 border-black p-1 text-right">{fuelAmount(item, 'Dexlite', 'rp') ? fuelAmount(item, 'Dexlite', 'rp').toLocaleString('id-ID') : "-"}</td>}
-                            {visibleColumns.dexlite_ltr && <td className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Dexlite', 'liter') || "-"}</td>}
-                            {visibleColumns.oli && <td className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Oli', 'liter') || "-"}</td>}
+                            {visibleColumns.pertamax_rp && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-right">{fuelAmount(item, 'Pertamax', 'rp') ? fuelAmount(item, 'Pertamax', 'rp').toLocaleString('id-ID') : "-"}</td>}
+                            {visibleColumns.pertamax_ltr && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Pertamax', 'liter') || "-"}</td>}
+                            {visibleColumns.dexlite_rp && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-right">{fuelAmount(item, 'Dexlite', 'rp') ? fuelAmount(item, 'Dexlite', 'rp').toLocaleString('id-ID') : "-"}</td>}
+                            {visibleColumns.dexlite_ltr && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Dexlite', 'liter') || "-"}</td>}
+                            {visibleColumns.oli && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Oli', 'liter') || "-"}</td>}
                             
                             {visibleColumns.location && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.location.street}{item.location.subDistrict && item.location.subDistrict !== " " ? `, ${item.location.subDistrict}` : ""}{item.location.village && item.location.village !== " " ? `, ${item.location.village}` : ""}</td>}
-                            {visibleColumns.remarks && <td className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || item.remarks || "-"}</td>}
+                            {visibleColumns.remarks && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || item.remarks || "-"}</td>}
                           </tr>
                         ))}
                         {!isRegularUser && selectedRegion === "semua" && (

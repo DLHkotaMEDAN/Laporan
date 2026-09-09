@@ -56,3 +56,16 @@ export const fuelAmount = (item: RecapFuelItem, type: FuelType, unit: 'rp' | 'li
   if (type === 'Dexlite') return unit === 'rp' ? item.dexlite_rp : item.dexlite_liter;
   return item.oli_liter;
 };
+
+export function getMergedCellSpan<T extends { reportId?: string }>(items: T[], index: number, getValue: (item: T) => string) {
+  const current = items[index];
+  const value = getValue(current);
+  if (index > 0 && items[index - 1].reportId === current.reportId && getValue(items[index - 1]) === value) return 0;
+  let span = 1;
+  for (let next = index + 1; next < items.length; next += 1) {
+    const nextItem = items[next];
+    if (nextItem.reportId !== current.reportId || getValue(nextItem) !== value) break;
+    span += 1;
+  }
+  return span;
+}
