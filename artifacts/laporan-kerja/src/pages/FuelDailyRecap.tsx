@@ -16,6 +16,7 @@ import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
+import { fuelAmount, mergeFuelRecapItems } from '@/utils/fuelRecap';
 import {
   Popover,
   PopoverContent,
@@ -104,12 +105,7 @@ const FuelDailyRecap = () => {
   };
 
   const getFilteredItems = () => {
-    const flat = reports.flatMap(r => r.items.map(item => ({ 
-      ...item, 
-      region: r.region, 
-      team: r.team, 
-      remarks: r.remarks 
-    })));
+    const flat = mergeFuelRecapItems(reports);
     
     return flat.filter(item =>
       (isRegularUser || selectedRegion === "semua" || item.region === selectedRegion)
@@ -175,11 +171,11 @@ const FuelDailyRecap = () => {
         if (visibleColumns.vehicle) rowData.vehicle = item.vehicle_operator;
         if (visibleColumns.petugas) rowData.petugas = item.item_remarks || "-";
         
-        const p_rp = item.fuel_type === 'Pertamax' ? (item.amount_rp || item.amount) : 0;
-        const p_ltr = item.fuel_type === 'Pertamax' ? (item.amount_liter || 0) : 0;
-        const d_rp = item.fuel_type === 'Dexlite' ? (item.amount_rp || item.amount) : 0;
-        const d_ltr = item.fuel_type === 'Dexlite' ? (item.amount_liter || 0) : 0;
-        const o_ltr = item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : 0;
+        const p_rp = fuelAmount(item, 'Pertamax', 'rp');
+        const p_ltr = fuelAmount(item, 'Pertamax', 'liter');
+        const d_rp = fuelAmount(item, 'Dexlite', 'rp');
+        const d_ltr = fuelAmount(item, 'Dexlite', 'liter');
+        const o_ltr = fuelAmount(item, 'Oli', 'liter');
 
         if (visibleColumns.pertamax_rp) rowData.p_rp = p_rp;
         if (visibleColumns.pertamax_ltr) rowData.p_ltr = p_ltr;
@@ -213,11 +209,11 @@ const FuelDailyRecap = () => {
     groupedByRegion[item.region].push(item);
   });
 
-  const totalPertamaxRpAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Pertamax' ? (item.amount_rp || item.amount) : 0), 0);
-  const totalPertamaxLtrAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Pertamax' ? (item.amount_liter || 0) : 0), 0);
-  const totalDexliteRpAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Dexlite' ? (item.amount_rp || item.amount) : 0), 0);
-  const totalDexliteLtrAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Dexlite' ? (item.amount_liter || 0) : 0), 0);
-  const totalOliAll = flatItems.reduce((acc, item) => acc + (item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : 0), 0);
+  const totalPertamaxRpAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Pertamax', 'rp'), 0);
+  const totalPertamaxLtrAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Pertamax', 'liter'), 0);
+  const totalDexliteRpAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Dexlite', 'rp'), 0);
+  const totalDexliteLtrAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Dexlite', 'liter'), 0);
+  const totalOliAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Oli', 'liter'), 0);
 
   const teamOptions = Array.from(new Set(reports.map(report => report.team))).sort();
   const bbmColCount = (visibleColumns.pertamax_rp ? 1 : 0) + (visibleColumns.pertamax_ltr ? 1 : 0) + (visibleColumns.dexlite_rp ? 1 : 0) + (visibleColumns.dexlite_ltr ? 1 : 0) + (visibleColumns.oli ? 1 : 0);
@@ -362,11 +358,11 @@ const FuelDailyRecap = () => {
               {Object.keys(groupedByRegion).length > 0 ? (
                 <>
                   {Object.entries(groupedByRegion).map(([regionName, items], rIdx) => {
-                    const subPertamaxRp = items.reduce((acc, it) => acc + (it.fuel_type === 'Pertamax' ? (it.amount_rp || it.amount) : 0), 0);
-                    const subPertamaxLtr = items.reduce((acc, it) => acc + (it.fuel_type === 'Pertamax' ? (it.amount_liter || 0) : 0), 0);
-                    const subDexliteRp = items.reduce((acc, it) => acc + (it.fuel_type === 'Dexlite' ? (it.amount_rp || it.amount) : 0), 0);
-                    const subDexliteLtr = items.reduce((acc, it) => acc + (it.fuel_type === 'Dexlite' ? (it.amount_liter || 0) : 0), 0);
-                    const subOli = items.reduce((acc, it) => acc + (it.fuel_type === 'Oli' ? (it.amount_liter || it.amount) : 0), 0);
+                    const subPertamaxRp = items.reduce((acc, it) => acc + fuelAmount(it, 'Pertamax', 'rp'), 0);
+                    const subPertamaxLtr = items.reduce((acc, it) => acc + fuelAmount(it, 'Pertamax', 'liter'), 0);
+                    const subDexliteRp = items.reduce((acc, it) => acc + fuelAmount(it, 'Dexlite', 'rp'), 0);
+                    const subDexliteLtr = items.reduce((acc, it) => acc + fuelAmount(it, 'Dexlite', 'liter'), 0);
+                    const subOli = items.reduce((acc, it) => acc + fuelAmount(it, 'Oli', 'liter'), 0);
 
                     return (
                       <React.Fragment key={regionName}>
@@ -378,11 +374,11 @@ const FuelDailyRecap = () => {
                             {visibleColumns.vehicle && <td className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{item.vehicle_operator}</td>}
                             {visibleColumns.petugas && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
                             
-                            {visibleColumns.pertamax_rp && <td className="border-2 border-black p-1 text-right">{item.fuel_type === 'Pertamax' ? (item.amount_rp || item.amount).toLocaleString('id-ID') : "-"}</td>}
-                            {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-1 text-center">{item.fuel_type === 'Pertamax' ? (item.amount_liter || "-") : "-"}</td>}
-                            {visibleColumns.dexlite_rp && <td className="border-2 border-black p-1 text-right">{item.fuel_type === 'Dexlite' ? (item.amount_rp || item.amount).toLocaleString('id-ID') : "-"}</td>}
-                            {visibleColumns.dexlite_ltr && <td className="border-2 border-black p-1 text-center">{item.fuel_type === 'Dexlite' ? (item.amount_liter || "-") : "-"}</td>}
-                            {visibleColumns.oli && <td className="border-2 border-black p-1 text-center">{item.fuel_type === 'Oli' ? (item.amount_liter || item.amount) : "-"}</td>}
+                            {visibleColumns.pertamax_rp && <td className="border-2 border-black p-1 text-right">{fuelAmount(item, 'Pertamax', 'rp') ? fuelAmount(item, 'Pertamax', 'rp').toLocaleString('id-ID') : "-"}</td>}
+                            {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Pertamax', 'liter') || "-"}</td>}
+                            {visibleColumns.dexlite_rp && <td className="border-2 border-black p-1 text-right">{fuelAmount(item, 'Dexlite', 'rp') ? fuelAmount(item, 'Dexlite', 'rp').toLocaleString('id-ID') : "-"}</td>}
+                            {visibleColumns.dexlite_ltr && <td className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Dexlite', 'liter') || "-"}</td>}
+                            {visibleColumns.oli && <td className="border-2 border-black p-1 text-center">{fuelAmount(item, 'Oli', 'liter') || "-"}</td>}
                             
                             {visibleColumns.location && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.location.street}{item.location.subDistrict && item.location.subDistrict !== " " ? `, ${item.location.subDistrict}` : ""}{item.location.village && item.location.village !== " " ? `, ${item.location.village}` : ""}</td>}
                             {visibleColumns.remarks && <td className="border-2 border-black p-1 italic whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || item.remarks || "-"}</td>}
