@@ -17,6 +17,8 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
 import { fuelAmount, getMergedCellSpan, mergeFuelRecapItems } from '@/utils/fuelRecap';
+import FuelRecapMenu from '@/components/FuelRecapMenu';
+import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import {
   Popover,
   PopoverContent,
@@ -203,6 +205,12 @@ const FuelDailyRecap = () => {
     }
   };
 
+  const handleSharePdf = async () => {
+    if (flatItems.length === 0) { showError("Tidak ada data untuk dibuatkan PDF"); return; }
+    try { await openShareablePdfPreview({ fileName: `Rekap_Harian_BBM_${selectedDate}.pdf` }); }
+    catch (error) { console.error(error); showError(error instanceof Error ? error.message : "PDF tidak dapat dibuat"); }
+  };
+
   const groupedByRegion: Record<string, any[]> = {};
   flatItems.forEach(item => {
     if (!groupedByRegion[item.region]) groupedByRegion[item.region] = [];
@@ -289,36 +297,7 @@ const FuelDailyRecap = () => {
               </PopoverContent>
             </Popover>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button aria-label="Cetak rekap" title="Cetak rekap" className="h-10 min-w-10 shrink-0 rounded-xl bg-blue-600 px-2 hover:bg-blue-700 sm:px-3">
-                  <Printer className="h-4 w-4 sm:mr-2" /> 
-                  <span className="hidden sm:inline">Cetak Rekap</span>
-                  <ChevronDown className="ml-1 h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => window.print()} className="cursor-pointer py-2">
-                  <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
-                  <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel
-                </DropdownMenuItem>
-                <div className="h-px bg-slate-100 my-1" />
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/daily-rekap')} className="cursor-pointer py-2">
-                  <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/weekly-rekap')} className="cursor-pointer py-2">
-                  <Table className="mr-2 h-4 w-4 text-purple-500" /> Rekap Mingguan
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/monthly-rekap')} className="cursor-pointer py-2">
-                  <FileText className="mr-2 h-4 w-4 text-orange-500" /> Rekap Bulanan
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/yearly-rekap')} className="cursor-pointer py-2">
-                  <CalendarDays className="mr-2 h-4 w-4 text-red-500" /> Rekap Tahunan
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <FuelRecapMenu signatureMode={signatureMode} onSignatureChange={setSignatureMode} onPrint={() => window.print()} onSharePdf={handleSharePdf} onExportExcel={handleExportExcel} />
           </div>
         </div>
       </div>
