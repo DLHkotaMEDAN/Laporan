@@ -67,7 +67,6 @@ const REGION_REQUIRED_ROLES = [
   USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_REKAP_LEMBUR,
-  USER_ROLES.ADMIN_BBM,
   USER_ROLES.USER,
 ] as const satisfies readonly UserRole[];
 
@@ -130,6 +129,9 @@ export const isAdminBbmAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_BBM
   || role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM
   || role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
+export const isGlobalFuelAdmin = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_BBM;
 
 export const isAdminWilayahAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_WILAYAH || role === USER_ROLES.ADMIN_WILAYAH_BBM;

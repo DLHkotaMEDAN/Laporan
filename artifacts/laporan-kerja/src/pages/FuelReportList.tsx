@@ -13,6 +13,7 @@ import {
 import { FuelReport, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { useAuth } from '@/context/AuthContext';
+import { isGlobalFuelAdmin } from '@/constants/access-control';
 import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -98,7 +99,7 @@ const FuelReportList = () => {
 
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
-  const fuelRegionId = isAdminBbm && !isSuperAdmin ? profile?.region_id || "__unassigned__" : null;
+  const fuelRegionId = isAdminBbm && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const canInputFuelReport = isSuperAdmin || isAdminBbm;

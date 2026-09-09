@@ -28,6 +28,7 @@ import {
   getRoleBadgeClass,
   roleRequiresRegion,
   roleRequiresTeam,
+  isGlobalFuelAdmin,
 } from '@/constants/access-control';
 
 const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
@@ -376,9 +377,12 @@ const UserManagement = () => {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId, teamId: '' })} disabled={!roleRequiresRegion(newUser.role)}>
+          <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={isGlobalFuelAdmin(newUser.role) || !roleRequiresRegion(newUser.role)}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
-            <SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {isGlobalFuelAdmin(newUser.role) && <SelectItem value="all">Semua Wilayah</SelectItem>}
+              {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+            </SelectContent>
           </Select>
           {roleRequiresTeam(newUser.role) && (
             <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!newUser.regionId}>
@@ -493,6 +497,8 @@ const UserManagement = () => {
                             {teams.filter(team => !profile.region_id || team.region_id === profile.region_id).map(team => <SelectItem key={team.id} value={team.id} className="text-xs">{team.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                      ) : isGlobalFuelAdmin(profile.role) ? (
+                        <span className="text-xs font-medium text-orange-600">Semua Wilayah</span>
                       ) : roleRequiresRegion(profile.role) ? (
                         <Select
                           value={profile.region_id || "none"}
@@ -591,7 +597,12 @@ const UserManagement = () => {
                 <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {roleRequiresRegion(editUser.role) && (
+            {isGlobalFuelAdmin(editUser.role) ? (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Wilayah</label>
+                <div className="rounded-md border bg-slate-50 px-3 py-2 text-sm font-medium text-orange-600">Semua Wilayah</div>
+              </div>
+            ) : roleRequiresRegion(editUser.role) && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Wilayah</label>
                 <Select value={editUser.regionId} onValueChange={regionId => setEditUser({ ...editUser, regionId, teamId: '' })}>

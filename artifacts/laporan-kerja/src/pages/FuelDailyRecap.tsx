@@ -15,6 +15,7 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
+import { isGlobalFuelAdmin } from '@/constants/access-control';
 import {
   Popover,
   PopoverContent,
@@ -70,7 +71,7 @@ const FuelDailyRecap = () => {
   const isAdmin = profile?.role === 'admin';
   const isRegularUser = profile?.role !== 'admin';
   const showRegion = visibleColumns.region && !isRegularUser;
-  const fuelRegionId = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' ? profile.region_id || "__unassigned__" : null;
+  const fuelRegionId = profile?.role !== 'admin' && (profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isGlobalFuelAdmin(profile?.role) ? profile.region_id || "__unassigned__" : null;
 
   useEffect(() => {
     if (isRegularUser) setVisibleColumns(prev => ({ ...prev, region: false }));

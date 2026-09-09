@@ -15,6 +15,7 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
+import { isGlobalFuelAdmin } from '@/constants/access-control';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -66,7 +67,7 @@ const FuelWeeklyRecap = () => {
 
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
-  const fuelRegionId = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' ? profile.region_id || "__unassigned__" : null;
+  const fuelRegionId = profile?.role !== 'admin' && (profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isGlobalFuelAdmin(profile?.role) ? profile.region_id || "__unassigned__" : null;
   const isRegularUser = profile?.role !== 'admin';
   const showRegion = visibleColumns.region && !isRegularUser;
 

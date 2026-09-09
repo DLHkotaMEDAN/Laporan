@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { isGlobalFuelAdmin } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -137,7 +138,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   // Admin BBM is a cross-region role. Only the combined/regional roles are
   // restricted to the region assigned to their profile.
-  const isRegionalFuelAdmin = (profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isSuperAdmin;
+  const isRegionalFuelAdmin = !isGlobalFuelAdmin(profile?.role) && (profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isSuperAdmin;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
