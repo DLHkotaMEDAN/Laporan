@@ -289,12 +289,12 @@ const FuelYearlyRecap = () => {
               </PopoverContent>
             </Popover>
             
-            <FuelRecapMenu signatureMode={signatureMode} onSignatureChange={setSignatureMode} onPrint={() => window.print()} onSharePdf={handleSharePdf} onExportExcel={handleExportExcel} />
+            <FuelRecapMenu signatureMode={signatureMode} onSignatureChange={setSignatureMode} onPrint={() => window.print()} onSharePdf={handleSharePdf} onExportExcel={handleExportExcel} editItems={reports.map(report => ({ id: report.id, label: `${report.date} — ${report.team}` }))} />
           </div>
         </div>
       </div>
 
-      <div className="print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
+        <div className="print-area recap-print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[210mm] w-full max-w-[297mm]">
         <div className="flex items-center justify-center gap-8 border-b-4 border-double border-black pb-4 mb-6">
           <img src={LOGO_MEDAN_URL} className="h-12 w-12 md:h-20 md:w-20 object-contain" alt="Logo Medan" />
           <div className="text-center"><h1 className="text-sm md:text-xl font-bold uppercase">Pemerintah Kota Medan</h1><h2 className="text-base md:text-2xl font-black uppercase">Dinas Lingkungan Hidup</h2><p className="text-[8px] md:text-xs italic">Jl. Pinang Baris, Lalang Kec. Medan Sunggal, Kota Medan, Sumatera Utara</p></div>

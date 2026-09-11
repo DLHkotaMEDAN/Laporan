@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, FileText, Printer, Share2, Table } from 'lucide-react';
+import { CalendarDays, ChevronDown, Edit, FileText, Printer, Share2, Table } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,9 +20,10 @@ type FuelRecapMenuProps = {
   onPrint: () => void;
   onSharePdf: () => void | Promise<void>;
   onExportExcel: () => void;
+  editItems: Array<{ id: string; label: string }>;
 };
 
-export default function FuelRecapMenu({ signatureMode, onSignatureChange, onPrint, onSharePdf, onExportExcel }: FuelRecapMenuProps) {
+export default function FuelRecapMenu({ signatureMode, onSignatureChange, onPrint, onSharePdf, onExportExcel, editItems }: FuelRecapMenuProps) {
   const navigate = useNavigate();
 
   return (
@@ -44,6 +45,14 @@ export default function FuelRecapMenu({ signatureMode, onSignatureChange, onPrin
             <DropdownMenuItem onClick={() => onSignatureChange('without-signature')}>Tanpa Tanda Tangan</DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        {editItems.length > 0 && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-72 w-80 overflow-y-auto">
+              {editItems.map(item => <DropdownMenuItem key={item.id} onClick={() => navigate(`/edit/${item.id}`)} className="cursor-pointer whitespace-normal">{item.label}</DropdownMenuItem>)}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onPrint} className="cursor-pointer py-2"><Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini</DropdownMenuItem>
         <DropdownMenuItem onClick={onSharePdf} className="cursor-pointer py-2"><Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Simpan PDF untuk Dibagikan</DropdownMenuItem>

@@ -18,6 +18,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import FuelPriceSettings from '@/components/FuelPriceSettings';
+import FuelTrashDialog from '@/components/FuelTrashDialog';
 import {
   Select,
   SelectContent,
@@ -84,10 +85,12 @@ const FuelReportList = () => {
   const navigate = useNavigate();
   const { profile, session, signOut } = useAuth();
   const [reports, setReports] = useState<FuelReport[]>([]);
+  const [allActiveReports, setAllActiveReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState("");
   const [appliedDate, setAppliedDate] = useState("");
@@ -155,8 +158,12 @@ const FuelReportList = () => {
         data = await fuelService.getAllReports(false, fuelRegionId);
       }
 
+      // Ambil seluruh data aktif sebagai pembanding sehingga filter tidak
+      // membuat salah satu pasangan duplikat hilang dari analisis.
+      const duplicateSource = await fuelService.getAllReports(false, fuelRegionId);
       if (id !== reqIdRef.current) return;
       setReports(data);
+      setAllActiveReports(duplicateSource);
       setCurrentPage(1);
     } catch (error) {
       if (id !== reqIdRef.current) return;
@@ -234,13 +241,13 @@ const FuelReportList = () => {
 
   const duplicateReportKeys = useMemo(() => {
     const counts = new Map<string, number>();
-    reports.forEach((report) => {
+    allActiveReports.forEach((report) => {
       const key = getFuelReportDuplicateKey(report);
       counts.set(key, (counts.get(key) || 0) + 1);
     });
 
     return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
-  }, [reports]);
+  }, [allActiveReports]);
 
   const duplicateReportCount = useMemo(() => {
     return reports.filter((report) => duplicateReportKeys.has(getFuelReportDuplicateKey(report))).length;
@@ -266,12 +273,12 @@ const FuelReportList = () => {
 
   const filteredReports = reports
     .filter(r => {
-      const search = searchQuery.toLowerCase();
+      const search = searchQuery.trim().toLowerCase();
       const matchSearch = !search ||
-        r.team.toLowerCase().includes(search) ||
-        r.region.toLowerCase().includes(search) ||
-        r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
-        r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
+        (r.team || '').toLowerCase().includes(search) ||
+        (r.region || '').toLowerCase().includes(search) ||
+        r.items?.some(item => (item.location?.street || '').toLowerCase().includes(search)) ||
+        r.items?.some(item => (item.vehicle_operator || '').toLowerCase().includes(search));
       const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
       return matchSearch && matchDuplicate;
     })
@@ -365,6 +372,11 @@ const FuelReportList = () => {
             <Button variant="outline" onClick={() => setIsPriceSettingsOpen(true)} className="bg-white border-slate-200 h-9 px-3 text-xs font-bold">
               <Settings2 className="mr-1.5 h-3.5 w-3.5 text-blue-600" /> Master Harga BBM
             </Button>
+            {canInputFuelReport && (
+              <Button variant="outline" onClick={() => setIsTrashOpen(true)} className="border-red-200 bg-red-50 text-red-700 h-9 px-3 text-xs font-bold hover:bg-red-100">
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Tempat Sampah
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="bg-white border-slate-200 h-9 px-3 text-xs">
@@ -669,9 +681,16 @@ const FuelReportList = () => {
         )}
       </div>
 
-      <FuelPriceSettings 
-        isOpen={isPriceSettingsOpen} 
-        onClose={() => setIsPriceSettingsOpen(false)} 
+      <FuelPriceSettings
+        isOpen={isPriceSettingsOpen}
+        onClose={() => setIsPriceSettingsOpen(false)}
+      />
+      <FuelTrashDialog
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        regionId={fuelRegionId}
+        canPermanentlyDelete={canInputFuelReport}
+        onRefresh={() => void loadReports(appliedDate, appliedMonth, appliedYear)}
       />
     </div>
   );
