@@ -164,6 +164,7 @@ Deno.serve(async (request) => {
       role: input.role,
       region_id: input.regionId ?? null,
       team_id: input.teamId ?? null,
+      is_active: true,
       updated_at: new Date().toISOString(),
     });
     if (profileError) {

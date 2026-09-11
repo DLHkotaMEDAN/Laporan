@@ -187,8 +187,9 @@ const Index = () => {
   const canViewOvertime = isAdmin || isOvertimeOnly;
   const isLaporanOnly = profile?.role === 'laporan';
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
-  const canManageReports = isLoggedIn && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
-  const canManageWorkPlans = isLoggedIn && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
+  const isAccountActive = profile?.is_active !== false;
+  const canManageReports = isLoggedIn && isAccountActive && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
+  const canManageWorkPlans = isLoggedIn && isAccountActive && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
   const canPrintDailyRecap = canPrintReportRecap(profile?.role, 'daily', session?.user?.email);
   const canPrintWeeklyRecap = canPrintReportRecap(profile?.role, 'weekly', session?.user?.email);
   const canPrintMonthlyRecap = canPrintReportRecap(profile?.role, 'monthly', session?.user?.email);
@@ -326,7 +327,7 @@ const Index = () => {
 
   const handleDeleteReport = async (e: React.MouseEvent, report: Report) => {
     e.stopPropagation();
-    if (isPimpinan) return;
+    if (!canManageReports) return;
     if (window.confirm(`Pindahkan laporan "${report.description}" ke tempat sampah?`)) {
       try {
         await reportService.deleteReport(report.id);
@@ -720,8 +721,8 @@ const Index = () => {
           isLoggedIn={isLoggedIn}
           canManageReports={canManageReports}
           canManageWorkPlans={canManageWorkPlans}
-          canManageFuel={isAdmin || isAdminBbm}
-          canManageFuelSpj={isAdmin || isAdminSpj}
+          canManageFuel={isAccountActive && (isAdmin || isAdminBbm)}
+          canManageFuelSpj={isAccountActive && (isAdmin || isAdminSpj)}
         />
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
@@ -1006,10 +1007,10 @@ const Index = () => {
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/daily-rekap?date=${report.date}&categories=${encodeURIComponent(report.category)}`); }}>
                                   <Eye size={13} />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/edit/${report.id}`); }}>
+                                {canManageReports && <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/edit/${report.id}`); }}>
                                   <Edit size={13} />
-                                </Button>
-                                {!isPimpinan && (
+                                </Button>}
+                                {canManageReports && (
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDeleteReport(e, report)}>
                                     <Trash2 size={13} />
                                   </Button>
@@ -1112,10 +1113,10 @@ const Index = () => {
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" disabled={isPimpinan} onClick={(e) => handleToggleWorkPlanVisibility(e, plan)}>
                                     {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
                                   </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" disabled={isPimpinan} onClick={(e) => { e.stopPropagation(); if (!isPimpinan) navigate(`/work-plans/edit/${plan.id}`); }}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" disabled={!canManageWorkPlans} onClick={(e) => { e.stopPropagation(); if (canManageWorkPlans) navigate(`/work-plans/edit/${plan.id}`); }}>
                                     <Edit size={13} />
                                   </Button>
-                                  {!isPimpinan && (
+                                  {canManageWorkPlans && (
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDeleteWorkPlan(e, plan)}>
                                       <Trash2 size={13} />
                                     </Button>

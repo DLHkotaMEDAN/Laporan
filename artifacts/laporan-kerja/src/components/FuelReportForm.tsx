@@ -316,6 +316,10 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (profile?.is_active === false) {
+      showError("Akun nonaktif hanya dapat melihat dan mencetak data.");
+      return;
+    }
     const isAllowed = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' || session?.user?.email === 'admin@gmail.com';
     if (!isAllowed) {
       showError("Anda tidak memiliki izin untuk menyimpan laporan ini");

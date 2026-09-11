@@ -14,6 +14,7 @@ import { FuelReport, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -96,6 +97,8 @@ const FuelReportList = () => {
   const [appliedDate, setAppliedDate] = useState("");
   const [appliedMonth, setAppliedMonth] = useState("semua");
   const [appliedYear, setAppliedYear] = useState("semua");
+  const [selectedRegion, setSelectedRegion] = useState("semua");
+  const [selectedTeam, setSelectedTeam] = useState("semua");
 
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 100;
@@ -104,14 +107,16 @@ const FuelReportList = () => {
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const fuelRegionId = isAdminBbm && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;
+  const isAccountActive = profile?.is_active !== false;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const canInputFuelReport = isSuperAdmin || isAdminBbm;
-  const isAllowed = canInputFuelReport || isPimpinan;
+  const canInputFuelReport = isAccountActive && (isSuperAdmin || isAdminBbm);
+  const isAllowed = isSuperAdmin || isAdminBbm || isPimpinan;
   const roleLabel = isAdmin
     ? "Administrator"
     : isPimpinan
       ? "Pimpinan"
       : "Admin BBM";
+  const { regions, teams: regionTeams } = useRegionFilterOptions(isSuperAdmin, selectedRegion);
 
   const reqIdRef = useRef(0);
   const specificDateInputRef = useRef<HTMLInputElement>(null);
@@ -218,7 +223,7 @@ const FuelReportList = () => {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (isPimpinan) return;
+    if (!isAccountActive || isPimpinan) return;
     if (!confirm("Hapus laporan ini?")) return;
     try {
       await fuelService.deleteReport(id);
@@ -236,6 +241,8 @@ const FuelReportList = () => {
     setAppliedDate("");
     setAppliedMonth("semua");
     setAppliedYear("semua");
+    setSelectedRegion("semua");
+    setSelectedTeam("semua");
     setCurrentPage(1);
   };
 
@@ -280,7 +287,11 @@ const FuelReportList = () => {
         r.items?.some(item => (item.location?.street || '').toLowerCase().includes(search)) ||
         r.items?.some(item => (item.vehicle_operator || '').toLowerCase().includes(search));
       const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
-      return matchSearch && matchDuplicate;
+      const selectedRegionName = regions.find((region) => region.id === selectedRegion)?.name;
+      const selectedTeamName = regionTeams.find((team) => team.id === selectedTeam)?.name;
+      const matchRegion = !isSuperAdmin || selectedRegion === "semua" || r.region_id === selectedRegion || normalizeText(r.region) === normalizeText(selectedRegionName);
+      const matchTeam = !isSuperAdmin || selectedTeam === "semua" || r.team_id === selectedTeam || normalizeText(r.team) === normalizeText(selectedTeamName);
+      return matchSearch && matchDuplicate && matchRegion && matchTeam;
     })
     .sort((a, b) => {
       const aKey = getFuelReportDuplicateKey(a);
@@ -476,6 +487,34 @@ const FuelReportList = () => {
                 </SelectContent>
               </Select>
             </div>
+            {isSuperAdmin && (
+              <>
+                <div className="col-span-1 md:col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-500">Wilayah</label>
+                  <Select value={selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam("semua"); setCurrentPage(1); }}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-9 text-sm">
+                      <SelectValue placeholder="Semua Wilayah" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semua">Semua Wilayah</SelectItem>
+                      {regions.map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-1 md:col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-500">Tim</label>
+                  <Select value={selectedTeam} onValueChange={(value) => { setSelectedTeam(value); setCurrentPage(1); }}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-9 text-sm">
+                      <SelectValue placeholder="Semua Tim" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semua">Semua Tim</SelectItem>
+                      {regionTeams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
             <div className="col-span-2 md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500">Reset</label>
               <Button variant="ghost" size="icon" onClick={resetFilters} className="h-9 w-full border border-dashed text-slate-400 hover:text-red-500 hover:bg-red-50">
@@ -483,7 +522,7 @@ const FuelReportList = () => {
               </Button>
             </div>
           </div>
-          {(appliedDate || appliedMonth !== "semua" || appliedYear !== "semua" || showDuplicatesOnly) && (
+          {(appliedDate || appliedMonth !== "semua" || appliedYear !== "semua" || showDuplicatesOnly || selectedRegion !== "semua" || selectedTeam !== "semua") && (
             <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
               <Search className="h-3 w-3 shrink-0" />
               {appliedDate ? (
@@ -492,6 +531,8 @@ const FuelReportList = () => {
                 <span>Menampilkan: <strong>{appliedMonth !== "semua" ? months[parseInt(appliedMonth)-1] : "Semua Bulan"}</strong> / <strong>{appliedYear !== "semua" ? appliedYear : "Semua Tahun"}</strong></span>
               )}
               {showDuplicatesOnly && <span className="font-bold text-amber-700">Data ganda saja</span>}
+              {selectedRegion !== "semua" && <span>Wilayah: <strong>{regions.find((region) => region.id === selectedRegion)?.name || selectedRegion}</strong></span>}
+              {selectedTeam !== "semua" && <span>Tim: <strong>{regionTeams.find((team) => team.id === selectedTeam)?.name || selectedTeam}</strong></span>}
             </div>
           )}
         </div>
@@ -607,7 +648,7 @@ const FuelReportList = () => {
                                   <TooltipContent><p>Lihat Detail</p></TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                              <TooltipProvider>
+                              {isAccountActive && <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => navigate(`/fuel-reports/edit/${row.reportId}`)}>
@@ -616,8 +657,8 @@ const FuelReportList = () => {
                                   </TooltipTrigger>
                                   <TooltipContent><p>Edit</p></TooltipContent>
                                 </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
+                              </TooltipProvider>}
+                              {isAccountActive && <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDelete(e, row.reportId)}>
@@ -626,7 +667,7 @@ const FuelReportList = () => {
                                   </TooltipTrigger>
                                   <TooltipContent><p>Hapus</p></TooltipContent>
                                 </Tooltip>
-                              </TooltipProvider>
+                              </TooltipProvider>}
                             </div>
                           </td>
                         )}

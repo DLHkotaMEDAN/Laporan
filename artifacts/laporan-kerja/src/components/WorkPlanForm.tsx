@@ -430,6 +430,10 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (profile?.is_active === false) {
+      showError("Akun nonaktif hanya dapat melihat dan mencetak data.");
+      return;
+    }
     if (isPimpinan) { showError("Akses ditolak"); return; }
     setIsSubmitting(true);
     try {

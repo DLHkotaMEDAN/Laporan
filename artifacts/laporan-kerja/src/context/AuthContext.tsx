@@ -12,6 +12,7 @@ interface Profile {
   username: string | null;
   region_id?: string | null;
   team_id?: string | null;
+  is_active?: boolean;
 }
 
 interface AuthContextType {

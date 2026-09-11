@@ -15,10 +15,11 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { 
-  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound, Pencil, Eye
+  User, Shield, Tag, Trash2, Search, Loader2, AlertCircle, RefreshCw, Clock, Mail, KeyRound, Pencil, Eye, Power, PowerOff
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
+import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import {
@@ -41,6 +42,7 @@ interface Profile {
   category: string | null;
   region_id: string | null;
   team_id: string | null;
+  is_active: boolean;
   updated_at: string;
 }
 
@@ -90,6 +92,8 @@ const getEdgeFunctionErrorMessage = async (error: unknown) => {
 };
 
 const UserManagement = () => {
+  const { profile: currentProfile, session } = useAuth();
+  const canMutateUsers = currentProfile?.is_active !== false && (currentProfile?.role === 'admin' || session?.user?.email === 'admin@gmail.com');
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,6 +134,7 @@ const UserManagement = () => {
 
   const handleCreateUser = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!canMutateUsers) { showError('Akun nonaktif hanya dapat melihat data.'); return; }
     setCreating(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-user', {
@@ -154,6 +159,7 @@ const UserManagement = () => {
           category: null,
           region_id: roleRequiresRegion(newUser.role) ? newUser.regionId || null : null,
           team_id: roleRequiresTeam(newUser.role) ? newUser.teamId || null : null,
+          is_active: true,
           updated_at: new Date().toISOString(),
         },
         ...currentProfiles.filter(profile => profile.id !== data.id),
@@ -208,6 +214,7 @@ const UserManagement = () => {
   };
 
   const handleUpdateProfile = async (id: string, updates: Partial<Profile>) => {
+    if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah data pengguna.'); return; }
     setUpdatingId(id);
     try {
       const { error } = await supabase
@@ -227,6 +234,7 @@ const UserManagement = () => {
   };
 
   const handleDeleteProfile = async (id: string, username: string) => {
+    if (!canMutateUsers) { showError('Akun nonaktif tidak dapat menghapus pengguna.'); return; }
     if (!confirm(`Hapus profil "${username}"? Pengguna ini tidak akan bisa mengakses fitur khusus role lagi.`)) return;
     
     try {
@@ -244,7 +252,33 @@ const UserManagement = () => {
     }
   };
 
+  const handleToggleActive = async (profile: Profile) => {
+    if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah status pengguna.'); return; }
+    const nextIsActive = profile.is_active === false;
+    const actionLabel = nextIsActive ? 'mengaktifkan' : 'menonaktifkan';
+    if (!confirm(`Yakin ingin ${actionLabel} akun "${profile.username || 'Pengguna'}"?`)) return;
+
+    setUpdatingId(profile.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: nextIsActive, updated_at: new Date().toISOString() })
+        .eq('id', profile.id);
+      if (error) throw error;
+
+      setProfiles(currentProfiles => currentProfiles.map(item => item.id === profile.id
+        ? { ...item, is_active: nextIsActive, updated_at: new Date().toISOString() }
+        : item));
+      showSuccess(nextIsActive ? 'Akun berhasil diaktifkan.' : 'Akun berhasil dinonaktifkan.');
+    } catch (error: any) {
+      showError('Gagal mengubah status akun: ' + error.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleResetPassword = async (profile: Profile) => {
+    if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah password.'); return; }
     const password = window.prompt(`Masukkan password baru untuk ${profile.username || 'pengguna'} (minimal 8 karakter):`);
     if (password === null) return;
     if (password.length < 8) {
@@ -279,6 +313,7 @@ const UserManagement = () => {
   };
 
   const handleSaveProfile = async () => {
+    if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah data pengguna.'); return; }
     if (!editingProfile) return;
     const requiresRegion = roleRequiresRegion(editUser.role);
     if (!editUser.username.trim()) {
@@ -359,25 +394,25 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreateUser} className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+      <form onSubmit={handleCreateUser} className={cn("rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3", !canMutateUsers && "opacity-60")}>
         <div>
           <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
         <div className={cn("grid gap-3", roleRequiresTeam(newUser.role) ? "md:grid-cols-6" : "md:grid-cols-5")}>
-          <Input required placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
-          <Input required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
-          <Input required minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
+          <Input required disabled={!canMutateUsers} placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
+          <Input required disabled={!canMutateUsers} type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
+          <Input required disabled={!canMutateUsers} minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
           <Select value={newUser.role} onValueChange={role => setNewUser({
             ...newUser,
             role: role as UserRole,
             regionId: roleRequiresRegion(role) ? newUser.regionId : '',
             teamId: '',
-          })}>
+          })} disabled={!canMutateUsers}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={isGlobalFuelAdmin(newUser.role) || !roleRequiresRegion(newUser.role)}>
+          <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={!canMutateUsers || isGlobalFuelAdmin(newUser.role) || !roleRequiresRegion(newUser.role)}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
             <SelectContent>
               {isGlobalFuelAdmin(newUser.role) && <SelectItem value="all">Semua Wilayah</SelectItem>}
@@ -385,13 +420,13 @@ const UserManagement = () => {
             </SelectContent>
           </Select>
           {roleRequiresTeam(newUser.role) && (
-            <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!newUser.regionId}>
+            <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!canMutateUsers || !newUser.regionId}>
             <SelectTrigger><SelectValue placeholder={newUser.regionId ? "Pilih tim" : "Pilih wilayah dahulu"} /></SelectTrigger>
               <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).length > 0 ? teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>) : <SelectItem value="no-team" disabled>Belum ada tim aktif untuk wilayah ini</SelectItem>}</SelectContent>
             </Select>
           )}
         </div>
-        <Button type="submit" disabled={creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+        <Button type="submit" disabled={!canMutateUsers || creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -441,7 +476,12 @@ const UserManagement = () => {
                           <User size={16} />
                         </div>
                         <div className="flex flex-col">
-                          <span className="truncate max-w-[150px] font-bold">{profile.username || "Tanpa Nama"}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="truncate max-w-[150px] font-bold">{profile.username || "Tanpa Nama"}</span>
+                            <Badge variant="outline" className={cn("px-1.5 py-0 text-[9px]", profile.is_active === false ? "border-slate-300 bg-slate-100 text-slate-500" : "border-emerald-200 bg-emerald-50 text-emerald-700")}>
+                              {profile.is_active === false ? 'Nonaktif' : 'Aktif'}
+                            </Badge>
+                          </div>
                           <span title={profile.email || 'Email tidak tersedia'} className="max-w-[220px] truncate text-[10px] text-slate-500 flex items-center gap-1"><Mail size={10} className="shrink-0" /> {profile.email || 'Email tidak tersedia'}</span>
                         </div>
                       </div>
@@ -457,7 +497,7 @@ const UserManagement = () => {
                             team_id: roleRequiresTeam(role) ? profile.team_id : null,
                           });
                         }}
-                        disabled={updatingId === profile.id}
+                        disabled={!canMutateUsers || updatingId === profile.id}
                       >
                         <SelectTrigger className={cn(
                           "h-9 text-[10px] font-bold uppercase",
@@ -481,7 +521,7 @@ const UserManagement = () => {
                             const team = teams.find(item => item.id === teamId);
                             if (team) void handleUpdateProfile(profile.id, { team_id: team.id, region_id: team.region_id });
                           }}
-                          disabled={updatingId === profile.id}
+                          disabled={!canMutateUsers || updatingId === profile.id}
                         >
                           <SelectTrigger className={cn(
                             "h-9 text-xs",
@@ -503,7 +543,7 @@ const UserManagement = () => {
                         <Select
                           value={profile.region_id || "none"}
                           onValueChange={(regionId) => void handleUpdateProfile(profile.id, { region_id: regionId, team_id: null })}
-                          disabled={updatingId === profile.id}
+                          disabled={!canMutateUsers || updatingId === profile.id}
                         >
                           <SelectTrigger className={cn("h-9 text-xs", !profile.region_id && "text-slate-400 italic")}>
                             <div className="flex items-center gap-2">
@@ -533,8 +573,18 @@ const UserManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        className={cn(profile.is_active === false ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-amber-500 hover:text-amber-700 hover:bg-amber-50")}
+                        disabled={!canMutateUsers || updatingId === profile.id}
+                        title={profile.is_active === false ? "Aktifkan akun" : "Nonaktifkan akun"}
+                        onClick={() => void handleToggleActive(profile)}
+                      >
+                        {profile.is_active === false ? <Power size={17} /> : <PowerOff size={17} />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                        disabled={updatingId === profile.id}
+                        disabled={!canMutateUsers || updatingId === profile.id}
                         title="Edit pengguna"
                         onClick={() => openEditProfile(profile)}
                       >
@@ -544,7 +594,7 @@ const UserManagement = () => {
                         variant="ghost"
                         size="icon"
                         className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                        disabled={updatingId === profile.id}
+                        disabled={!canMutateUsers || updatingId === profile.id}
                         title="Ubah password"
                         onClick={() => handleResetPassword(profile)}
                       >

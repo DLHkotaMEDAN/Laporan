@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 const FuelSpjTab = () => {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
+  const isAccountActive = profile?.is_active !== false;
   const [reports, setReports] = useState<FuelSpjReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,7 +41,7 @@ const FuelSpjTab = () => {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (isPimpinan) return;
+    if (!isAccountActive || isPimpinan) return;
     if (!confirm("Hapus laporan SPJ ini?")) return;
     try {
       await fuelSpjService.deleteReport(id);
@@ -154,7 +155,7 @@ const FuelSpjTab = () => {
                       <td rowSpan={row.totalEntries} className="px-2 py-3 text-center align-middle">
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/${row.report.id}`); }}><Eye size={13} /></Button>
-                          {!isPimpinan && (
+                          {!isPimpinan && isAccountActive && (
                             <>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); navigate(`/fuel-reports/spj/edit/${row.report.id}`); }}><Edit size={13} /></Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={(e) => handleDelete(e, row.report.id)}><Trash2 size={13} /></Button>

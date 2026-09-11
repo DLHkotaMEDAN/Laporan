@@ -67,6 +67,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   });
 
   const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
+  const isAccountActive = profile?.is_active !== false;
   const isSpjBbmAdmin = profile?.role === 'admin_spj_bbm';
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -158,6 +159,10 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!isAccountActive) {
+      showError("Akun nonaktif hanya dapat melihat dan mencetak data.");
+      return;
+    }
     const currentSpjNumbers = values.entries.map(e => e.spj_no.toLowerCase().trim());
     const hasInternalDuplicate = currentSpjNumbers.some((no, idx) => currentSpjNumbers.indexOf(no) !== idx);
     if (hasInternalDuplicate) {
