@@ -101,5 +101,23 @@ export const fuelSpjService = {
       .eq('id', id);
     
     if (error) throw error;
+  },
+
+  async restoreReport(id: string) {
+    const { error } = await supabase
+      .from('fuel_spj_reports')
+      .update({ deleted_at: null })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async hardDeleteReport(id: string) {
+    const { error } = await supabase
+      .from('fuel_spj_reports')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   }
 };

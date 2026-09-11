@@ -1,193 +1,113 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Trash2, RotateCcw, FileText, ClipboardList, 
-  Calendar, MapPin, Loader2, Search 
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, RotateCcw, FileText, ClipboardList, Fuel, Calendar, MapPin, Loader2 } from 'lucide-react';
 import { reportService } from '@/services/reportService';
 import { workPlanService } from '@/services/workPlanService';
+import { fuelService } from '@/services/fuelService';
+import { fuelSpjService } from '@/services/fuelSpjService';
 import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { Report } from '@/types/report';
 import { WorkPlan } from '@/types/workPlan';
-import { cn } from "@/lib/utils";
+import { FuelReport } from '@/types/fuelReport';
+import { FuelSpjReport } from '@/types/fuelSpjReport';
 
-interface TrashDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onRefresh: () => void;
-}
+interface TrashDialogProps { isOpen: boolean; onClose: () => void; onRefresh: () => void; }
+type TrashType = 'REPORT' | 'WORK_PLAN' | 'FUEL_REPORT' | 'FUEL_SPJ_REPORT';
 
 const TrashDialog = ({ isOpen, onClose, onRefresh }: TrashDialogProps) => {
   const { session, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
+  const [fuelReports, setFuelReports] = useState<FuelReport[]>([]);
+  const [fuelSpjReports, setFuelSpjReports] = useState<FuelSpjReport[]>([]);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
-  const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
-  const isUserRestricted = profile?.role === 'user' && !isPimpinan && !isAdminHarian && !isAdmin;
+  const role = profile?.role;
+  const isPimpinan = role === 'pimpinan' || session?.user?.email === 'pimpinan@gmail.com';
+  const isAdminHarian = role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com';
+  const isAdmin = role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isFuelAdmin = role === 'admin_bbm' || role === 'admin_rencana_kerja_bbm' || role === 'admin_wilayah_bbm';
+  const isSpjAdmin = role === 'admin_spj_bbm';
+  const canViewFuelTrash = isAdmin || isFuelAdmin || isPimpinan;
+  const canViewSpjTrash = isAdmin || isSpjAdmin || isPimpinan;
+  const isUserRestricted = role === 'user' && !isPimpinan && !isAdminHarian && !isAdmin;
+  const fuelRegionId = isFuelAdmin && !isAdmin ? profile?.region_id || '__unassigned__' : null;
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchDeletedData();
-    }
-  }, [isOpen]);
+  useEffect(() => { if (isOpen) void fetchDeletedData(); }, [isOpen, fuelRegionId, role]);
 
   const fetchDeletedData = async () => {
     setLoading(true);
     try {
       const categoryFilter = isUserRestricted ? profile?.category : 'semua';
-      const [deletedReports, deletedPlans] = await Promise.all([
+      const [deletedReports, deletedPlans, deletedFuel, deletedSpj] = await Promise.all([
         reportService.getAllReports(categoryFilter, true),
-        workPlanService.getAllWorkPlans(categoryFilter, true)
+        workPlanService.getAllWorkPlans(categoryFilter, true),
+        canViewFuelTrash ? fuelService.getAllReports(true, fuelRegionId) : Promise.resolve([]),
+        canViewSpjTrash ? fuelSpjService.getAllReports(true) : Promise.resolve([]),
       ]);
       setReports(deletedReports);
       setWorkPlans(deletedPlans);
-    } catch (error) {
-      showError("Gagal memuat data terhapus");
-    } finally {
-      setLoading(false);
-    }
+      setFuelReports(deletedFuel as FuelReport[]);
+      setFuelSpjReports(deletedSpj as FuelSpjReport[]);
+    } catch { showError('Gagal memuat data terhapus'); }
+    finally { setLoading(false); }
   };
 
-  const handleRestore = async (type: 'REPORT' | 'WORK_PLAN', id: string, title: string) => {
+  const handleRestore = async (type: TrashType, id: string, title: string) => {
     if (isPimpinan) return;
     setRestoringId(id);
     try {
-      if (type === 'REPORT') {
-        await reportService.restoreReport(id);
-      } else {
-        await workPlanService.restoreWorkPlan(id);
-      }
-
-      // Catat Log
-      if (session?.user) {
-        await auditLogService.logAction({
-          action: 'UPDATE',
-          entityType: type,
-          entityId: id,
-          details: { title: `Memulihkan data: ${title}` },
-          userId: session.user.id,
-          username: profile?.username || session.user.email || "User"
-        });
-      }
-
-      showSuccess("Data berhasil dipulihkan");
-      fetchDeletedData();
+      if (type === 'REPORT') await reportService.restoreReport(id);
+      if (type === 'WORK_PLAN') await workPlanService.restoreWorkPlan(id);
+      if (type === 'FUEL_REPORT') await fuelService.restoreReport(id);
+      if (type === 'FUEL_SPJ_REPORT') await fuelSpjService.restoreReport(id);
+      if (session?.user) await auditLogService.logAction({ action: 'UPDATE', entityType: type, entityId: id, details: { title: `Memulihkan data: ${title}` }, userId: session.user.id, username: profile?.username || session.user.email || 'User' });
+      showSuccess('Data berhasil dipulihkan');
+      await fetchDeletedData();
       onRefresh();
-    } catch (error) {
-      showError("Gagal memulihkan data");
-    } finally {
-      setRestoringId(null);
-    }
+    } catch { showError('Gagal memulihkan data'); }
+    finally { setRestoringId(null); }
   };
 
+  const action = (type: TrashType, id: string, title: string) => (
+    <Button size="sm" variant="outline" className="h-8 shrink-0 border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => void handleRestore(type, id, title)} disabled={!!restoringId || isPimpinan}>
+      {restoringId === id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="mr-1 h-3 w-3" />} Pulihkan
+    </Button>
+  );
+
+  const empty = (label: string) => <div className="py-10 text-center text-sm italic text-slate-400">Tidak ada {label} di tempat sampah</div>;
+  const busy = <div className="py-10 text-center text-slate-400"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />Memuat...</div>;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col p-0 overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[760px]">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <Trash2 className="h-5 w-5" /> Tempat Sampah
-          </DialogTitle>
-          <DialogDescription>
-            Data yang Anda hapus akan tersimpan di sini. Anda dapat memulihkannya kembali ke daftar utama.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-red-600"><Trash2 className="h-5 w-5" /> Tempat Sampah</DialogTitle>
+          <DialogDescription>Semua data terhapus tersedia dalam tab sesuai hak akses Anda.</DialogDescription>
         </DialogHeader>
-
-        <Tabs defaultValue="reports" className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <FileText size={14} /> Laporan ({reports.length})
-              </TabsTrigger>
-              <TabsTrigger value="workplans" className="flex items-center gap-2">
-                <ClipboardList size={14} /> Rencana ({workPlans.length})
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
+        <Tabs defaultValue="reports" className="flex flex-1 flex-col overflow-hidden">
+          <div className="px-6"><TabsList className="mb-4 flex w-full flex-wrap justify-start gap-1">
+            <TabsTrigger value="reports"><FileText className="mr-1 h-3.5 w-3.5" />Laporan ({reports.length})</TabsTrigger>
+            <TabsTrigger value="workplans"><ClipboardList className="mr-1 h-3.5 w-3.5" />Rencana ({workPlans.length})</TabsTrigger>
+            {canViewFuelTrash && <TabsTrigger value="fuel"><Fuel className="mr-1 h-3.5 w-3.5" />BBM ({fuelReports.length})</TabsTrigger>}
+            {canViewSpjTrash && <TabsTrigger value="spj"><FileText className="mr-1 h-3.5 w-3.5" />SPJ BBM ({fuelSpjReports.length})</TabsTrigger>}
+          </TabsList></div>
           <div className="flex-1 overflow-y-auto px-6 pb-6">
-            <TabsContent value="reports" className="mt-0 space-y-3">
-              {loading ? (
-                <div className="py-10 text-center text-slate-400"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" /> Memuat...</div>
-              ) : reports.length > 0 ? (
-                reports.map((report) => (
-                  <div key={report.id} className="p-3 border rounded-lg bg-slate-50 flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate">{report.description}</p>
-                      <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
-                        <span className="flex items-center gap-1"><Calendar size={10} /> {report.date}</span>
-                        <span className="flex items-center gap-1"><MapPin size={10} /> {report.location.street}</span>
-                      </div>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="shrink-0 text-blue-600 border-blue-200 hover:bg-blue-50 h-8"
-                      onClick={() => handleRestore('REPORT', report.id, report.description)}
-                      disabled={!!restoringId || isPimpinan}
-                    >
-                      {restoringId === report.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                      Pulihkan
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <div className="py-10 text-center text-slate-400 italic text-sm">Tidak ada laporan di tempat sampah</div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="workplans" className="mt-0 space-y-3">
-              {loading ? (
-                <div className="py-10 text-center text-slate-400"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" /> Memuat...</div>
-              ) : workPlans.length > 0 ? (
-                workPlans.map((plan) => (
-                  <div key={plan.id} className="p-3 border rounded-lg bg-slate-50 flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate">{plan.items[0]?.description || "Rencana Kerja"}</p>
-                      <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
-                        <span className="flex items-center gap-1"><Calendar size={10} /> {plan.date}</span>
-                        <Badge variant="outline" className="text-[8px] py-0 h-3.5">{plan.category}</Badge>
-                      </div>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="shrink-0 text-blue-600 border-blue-200 hover:bg-blue-50 h-8"
-                      onClick={() => handleRestore('WORK_PLAN', plan.id, plan.items[0]?.description || "Rencana Kerja")}
-                      disabled={!!restoringId || isPimpinan}
-                    >
-                      {restoringId === plan.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                      Pulihkan
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <div className="py-10 text-center text-slate-400 italic text-sm">Tidak ada rencana kerja di tempat sampah</div>
-              )}
-            </TabsContent>
+            <TabsContent value="reports" className="mt-0 space-y-3">{loading ? busy : reports.length ? reports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.description}</p><div className="mt-1 flex items-center gap-3 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><span><MapPin size={10} className="mr-1 inline" />{report.location.street}</span></div></div>{action('REPORT', report.id, report.description)}</div>) : empty('laporan')}</TabsContent>
+            <TabsContent value="workplans" className="mt-0 space-y-3">{loading ? busy : workPlans.length ? workPlans.map(plan => <div key={plan.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{plan.items[0]?.description || 'Rencana Kerja'}</p><div className="mt-1 flex items-center gap-3 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{plan.date}</span><Badge variant="outline" className="text-[8px]">{plan.category}</Badge></div></div>{action('WORK_PLAN', plan.id, plan.items[0]?.description || 'Rencana Kerja')}</div>) : empty('rencana kerja')}</TabsContent>
+            <TabsContent value="fuel" className="mt-0 space-y-3">{loading ? busy : fuelReports.length ? fuelReports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.team || 'Tanpa tim'} · {report.region || 'Tanpa wilayah'}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><Badge variant="outline" className="text-[9px]">{report.items?.length || 0} item BBM/Oli</Badge></div></div>{action('FUEL_REPORT', report.id, `${report.team} ${report.date}`)}</div>) : empty('laporan BBM')}</TabsContent>
+            <TabsContent value="spj" className="mt-0 space-y-3">{loading ? busy : fuelSpjReports.length ? fuelSpjReports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.team || 'Tanpa tim'} · {report.region || 'Tanpa wilayah'}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><Badge variant="outline" className="text-[9px]">{report.entries?.length || 0} entri SPJ</Badge></div></div>{action('FUEL_SPJ_REPORT', report.id, `${report.team} ${report.date}`)}</div>) : empty('laporan SPJ BBM')}</TabsContent>
           </div>
         </Tabs>
-        
-        <div className="p-4 bg-amber-50 border-t border-amber-100 text-[10px] text-amber-800 flex items-start gap-2">
-          <RotateCcw size={12} className="mt-0.5 shrink-0" />
-          <p>Hanya Administrator yang dapat menghapus data secara permanen dari sistem. Pengguna hanya dapat memulihkan data yang telah dihapus.</p>
-        </div>
+        <div className="flex items-start gap-2 border-t border-amber-100 bg-amber-50 p-4 text-[10px] text-amber-800"><RotateCcw size={12} className="mt-0.5 shrink-0" /><p>Data dapat dipulihkan dari tab yang sesuai. Pimpinan hanya dapat melihat isi tempat sampah.</p></div>
       </DialogContent>
     </Dialog>
   );

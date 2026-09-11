@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
 import FuelPriceSettings from '@/components/FuelPriceSettings';
+import TrashDialog from '@/components/TrashDialog';
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import {
@@ -44,6 +45,7 @@ const FuelSpjReportList = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("semua");
@@ -166,6 +168,7 @@ const FuelSpjReportList = () => {
             <Button variant="outline" onClick={() => setIsPriceSettingsOpen(true)} className="bg-white border-slate-200">
               <Settings2 className="mr-2 h-4 w-4" /> Master Harga BBM
             </Button>
+            <Button variant="outline" onClick={() => setIsTrashOpen(true)} className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><Trash2 className="mr-2 h-4 w-4" /> Tempat Sampah</Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -342,9 +345,14 @@ const FuelSpjReportList = () => {
         )}
       </div>
 
-      <FuelPriceSettings 
-        isOpen={isPriceSettingsOpen} 
-        onClose={() => setIsPriceSettingsOpen(false)} 
+      <FuelPriceSettings
+        isOpen={isPriceSettingsOpen}
+        onClose={() => setIsPriceSettingsOpen(false)}
+      />
+      <TrashDialog
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        onRefresh={() => void loadReports()}
       />
     </div>
   );

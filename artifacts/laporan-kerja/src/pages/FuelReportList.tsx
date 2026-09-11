@@ -18,7 +18,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import FuelPriceSettings from '@/components/FuelPriceSettings';
-import FuelTrashDialog from '@/components/FuelTrashDialog';
+import TrashDialog from '@/components/TrashDialog';
 import {
   Select,
   SelectContent,
@@ -372,11 +372,7 @@ const FuelReportList = () => {
             <Button variant="outline" onClick={() => setIsPriceSettingsOpen(true)} className="bg-white border-slate-200 h-9 px-3 text-xs font-bold">
               <Settings2 className="mr-1.5 h-3.5 w-3.5 text-blue-600" /> Master Harga BBM
             </Button>
-            {canInputFuelReport && (
-              <Button variant="outline" onClick={() => setIsTrashOpen(true)} className="border-red-200 bg-red-50 text-red-700 h-9 px-3 text-xs font-bold hover:bg-red-100">
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Tempat Sampah
-              </Button>
-            )}
+            {isAllowed && <Button variant="outline" onClick={() => setIsTrashOpen(true)} className="border-red-200 bg-red-50 text-red-700 h-9 px-3 text-xs font-bold hover:bg-red-100"><Trash2 className="mr-1.5 h-3.5 w-3.5" /> Tempat Sampah</Button>}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="bg-white border-slate-200 h-9 px-3 text-xs">
@@ -685,11 +681,9 @@ const FuelReportList = () => {
         isOpen={isPriceSettingsOpen}
         onClose={() => setIsPriceSettingsOpen(false)}
       />
-      <FuelTrashDialog
+      <TrashDialog
         isOpen={isTrashOpen}
         onClose={() => setIsTrashOpen(false)}
-        regionId={fuelRegionId}
-        canPermanentlyDelete={canInputFuelReport}
         onRefresh={() => void loadReports(appliedDate, appliedMonth, appliedYear)}
       />
     </div>
