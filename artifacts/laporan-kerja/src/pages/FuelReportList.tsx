@@ -108,6 +108,7 @@ const FuelReportList = () => {
   const fuelRegionId = isAdminBbm && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;
   const isAccountActive = profile?.is_active !== false;
+  const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const canInputFuelReport = isAccountActive && (isSuperAdmin || isAdminBbm);
   const isAllowed = isSuperAdmin || isAdminBbm || isPimpinan;
@@ -116,7 +117,7 @@ const FuelReportList = () => {
     : isPimpinan
       ? "Pimpinan"
       : "Admin BBM";
-  const { regions, teams: regionTeams } = useRegionFilterOptions(isSuperAdmin, selectedRegion);
+  const { regions, teams: regionTeams } = useRegionFilterOptions(canFilterByRegionTeam, selectedRegion);
 
   const reqIdRef = useRef(0);
   const specificDateInputRef = useRef<HTMLInputElement>(null);
@@ -289,8 +290,8 @@ const FuelReportList = () => {
       const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
       const selectedRegionName = regions.find((region) => region.id === selectedRegion)?.name;
       const selectedTeamName = regionTeams.find((team) => team.id === selectedTeam)?.name;
-      const matchRegion = !isSuperAdmin || selectedRegion === "semua" || r.region_id === selectedRegion || normalizeText(r.region) === normalizeText(selectedRegionName);
-      const matchTeam = !isSuperAdmin || selectedTeam === "semua" || r.team_id === selectedTeam || normalizeText(r.team) === normalizeText(selectedTeamName);
+      const matchRegion = !canFilterByRegionTeam || selectedRegion === "semua" || r.region_id === selectedRegion || normalizeText(r.region) === normalizeText(selectedRegionName);
+      const matchTeam = !canFilterByRegionTeam || selectedTeam === "semua" || r.team_id === selectedTeam || normalizeText(r.team) === normalizeText(selectedTeamName);
       return matchSearch && matchDuplicate && matchRegion && matchTeam;
     })
     .sort((a, b) => {
@@ -487,7 +488,7 @@ const FuelReportList = () => {
                 </SelectContent>
               </Select>
             </div>
-            {isSuperAdmin && (
+            {canFilterByRegionTeam && (
               <>
                 <div className="col-span-1 md:col-span-2 space-y-1">
                   <label className="text-[10px] font-bold uppercase text-slate-500">Wilayah</label>
@@ -502,7 +503,7 @@ const FuelReportList = () => {
                   </Select>
                 </div>
                 <div className="col-span-1 md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-slate-500">Tim</label>
+                  <label className="text-[10px] font-bold uppercase text-slate-500">Tim / Kategori</label>
                   <Select value={selectedTeam} onValueChange={(value) => { setSelectedTeam(value); setCurrentPage(1); }}>
                     <SelectTrigger className="bg-slate-50 border-slate-200 h-9 text-sm">
                       <SelectValue placeholder="Semua Tim" />

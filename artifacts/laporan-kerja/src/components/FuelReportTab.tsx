@@ -25,6 +25,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { isGlobalFuelAdmin } from '@/constants/access-control';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -86,7 +87,8 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
   const [selectedTeam, setSelectedTeam] = useState("semua");
 
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
-  const { regions, teams: regionTeams } = useRegionFilterOptions(isSuperAdmin, selectedRegion);
+  const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
+  const { regions, teams: regionTeams } = useRegionFilterOptions(canFilterByRegionTeam, selectedRegion);
 
   const [currentPage, setCurrentPage] = useState(1);
   const reqIdRef = useRef(0);
@@ -236,8 +238,8 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
       const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
       const selectedRegionName = regions.find((region) => region.id === selectedRegion)?.name;
       const selectedTeamName = regionTeams.find((team) => team.id === selectedTeam)?.name;
-      const matchRegion = !isSuperAdmin || selectedRegion === "semua" || r.region_id === selectedRegion || normalizeText(r.region) === normalizeText(selectedRegionName);
-      const matchTeam = !isSuperAdmin || selectedTeam === "semua" || r.team_id === selectedTeam || normalizeText(r.team) === normalizeText(selectedTeamName);
+      const matchRegion = !canFilterByRegionTeam || selectedRegion === "semua" || r.region_id === selectedRegion || normalizeText(r.region) === normalizeText(selectedRegionName);
+      const matchTeam = !canFilterByRegionTeam || selectedTeam === "semua" || r.team_id === selectedTeam || normalizeText(r.team) === normalizeText(selectedTeamName);
 
       return matchSearch && matchDuplicate && matchRegion && matchTeam;
     })
@@ -363,7 +365,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
               </SelectContent>
             </Select>
           </div>
-          {isSuperAdmin && (
+          {canFilterByRegionTeam && (
             <>
               <div className="col-span-1 md:col-span-2 space-y-1">
                 <label className="text-[10px] font-bold uppercase text-slate-500">Wilayah</label>
@@ -378,7 +380,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
                 </Select>
               </div>
               <div className="col-span-1 md:col-span-2 space-y-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500">Tim</label>
+                <label className="text-[10px] font-bold uppercase text-slate-500">Tim / Kategori</label>
                 <Select value={selectedTeam} onValueChange={(value) => { setSelectedTeam(value); setCurrentPage(1); }}>
                   <SelectTrigger className="bg-slate-50 border-slate-200 h-9 text-sm">
                     <SelectValue placeholder="Semua Tim" />
