@@ -172,7 +172,7 @@ export const canPrintReportRecapByRole = (
   || (isKnownRole(role) && REPORT_RECAP_ROLES_BY_PERIOD[period].includes(role));
 
 export const getRoleLandingPath = (role: string | null | undefined) => {
-  if (role === USER_ROLES.ADMIN_BBM) return '/fuel-reports';
+  if (role === USER_ROLES.ADMIN_BBM) return '/';
   if (role === USER_ROLES.ADMIN_SPJ_BBM) return '/fuel-reports/spj';
   if (role === USER_ROLES.ADMIN_RENCANA_KERJA) return '/work-plans/daily-rekap';
   return '/';
