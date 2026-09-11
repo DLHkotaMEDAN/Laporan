@@ -53,10 +53,15 @@ const TrashDialog = ({ isOpen, onClose, onRefresh }: TrashDialogProps) => {
         canViewFuelTrash ? fuelService.getAllReports(true, fuelRegionId) : Promise.resolve([]),
         canViewSpjTrash ? fuelSpjService.getAllReports(true) : Promise.resolve([]),
       ]);
-      setReports(deletedReports);
-      setWorkPlans(deletedPlans);
-      setFuelReports(deletedFuel as FuelReport[]);
-      setFuelSpjReports(deletedSpj as FuelSpjReport[]);
+      const newestFirst = <T extends { deleted_at?: string | null }>(items: T[]) => [...items].sort((a, b) => {
+        const aTime = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
+        const bTime = b.deleted_at ? new Date(b.deleted_at).getTime() : 0;
+        return bTime - aTime;
+      });
+      setReports(newestFirst(deletedReports));
+      setWorkPlans(newestFirst(deletedPlans));
+      setFuelReports(newestFirst(deletedFuel as FuelReport[]));
+      setFuelSpjReports(newestFirst(deletedSpj as FuelSpjReport[]));
     } catch { showError('Gagal memuat data terhapus'); }
     finally { setLoading(false); }
   };
@@ -85,6 +90,7 @@ const TrashDialog = ({ isOpen, onClose, onRefresh }: TrashDialogProps) => {
 
   const empty = (label: string) => <div className="py-10 text-center text-sm italic text-slate-400">Tidak ada {label} di tempat sampah</div>;
   const busy = <div className="py-10 text-center text-slate-400"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />Memuat...</div>;
+  const deletedAt = (value?: string | null) => value ? <span className="font-medium text-red-600">Dihapus: {new Date(value).toLocaleString('id-ID')}</span> : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
@@ -101,10 +107,10 @@ const TrashDialog = ({ isOpen, onClose, onRefresh }: TrashDialogProps) => {
             {canViewSpjTrash && <TabsTrigger value="spj"><FileText className="mr-1 h-3.5 w-3.5" />SPJ BBM ({fuelSpjReports.length})</TabsTrigger>}
           </TabsList></div>
           <div className="flex-1 overflow-y-auto px-6 pb-6">
-            <TabsContent value="reports" className="mt-0 space-y-3">{loading ? busy : reports.length ? reports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.description}</p><div className="mt-1 flex items-center gap-3 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><span><MapPin size={10} className="mr-1 inline" />{report.location.street}</span></div></div>{action('REPORT', report.id, report.description)}</div>) : empty('laporan')}</TabsContent>
-            <TabsContent value="workplans" className="mt-0 space-y-3">{loading ? busy : workPlans.length ? workPlans.map(plan => <div key={plan.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{plan.items[0]?.description || 'Rencana Kerja'}</p><div className="mt-1 flex items-center gap-3 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{plan.date}</span><Badge variant="outline" className="text-[8px]">{plan.category}</Badge></div></div>{action('WORK_PLAN', plan.id, plan.items[0]?.description || 'Rencana Kerja')}</div>) : empty('rencana kerja')}</TabsContent>
-            <TabsContent value="fuel" className="mt-0 space-y-3">{loading ? busy : fuelReports.length ? fuelReports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.team || 'Tanpa tim'} · {report.region || 'Tanpa wilayah'}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><Badge variant="outline" className="text-[9px]">{report.items?.length || 0} item BBM/Oli</Badge></div></div>{action('FUEL_REPORT', report.id, `${report.team} ${report.date}`)}</div>) : empty('laporan BBM')}</TabsContent>
-            <TabsContent value="spj" className="mt-0 space-y-3">{loading ? busy : fuelSpjReports.length ? fuelSpjReports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.team || 'Tanpa tim'} · {report.region || 'Tanpa wilayah'}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><Badge variant="outline" className="text-[9px]">{report.entries?.length || 0} entri SPJ</Badge></div></div>{action('FUEL_SPJ_REPORT', report.id, `${report.team} ${report.date}`)}</div>) : empty('laporan SPJ BBM')}</TabsContent>
+            <TabsContent value="reports" className="mt-0 space-y-3">{loading ? busy : reports.length ? reports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.description}</p><div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><span><MapPin size={10} className="mr-1 inline" />{report.location.street}</span>{deletedAt(report.deleted_at)}</div></div>{action('REPORT', report.id, report.description)}</div>) : empty('laporan')}</TabsContent>
+            <TabsContent value="workplans" className="mt-0 space-y-3">{loading ? busy : workPlans.length ? workPlans.map(plan => <div key={plan.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{plan.items[0]?.description || 'Rencana Kerja'}</p><div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{plan.date}</span><Badge variant="outline" className="text-[8px]">{plan.category}</Badge>{deletedAt(plan.deleted_at)}</div></div>{action('WORK_PLAN', plan.id, plan.items[0]?.description || 'Rencana Kerja')}</div>) : empty('rencana kerja')}</TabsContent>
+            <TabsContent value="fuel" className="mt-0 space-y-3">{loading ? busy : fuelReports.length ? fuelReports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.team || 'Tanpa tim'} · {report.region || 'Tanpa wilayah'}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><Badge variant="outline" className="text-[9px]">{report.items?.length || 0} item BBM/Oli</Badge>{deletedAt(report.deleted_at)}</div></div>{action('FUEL_REPORT', report.id, `${report.team} ${report.date}`)}</div>) : empty('laporan BBM')}</TabsContent>
+            <TabsContent value="spj" className="mt-0 space-y-3">{loading ? busy : fuelSpjReports.length ? fuelSpjReports.map(report => <div key={report.id} className="flex items-center justify-between gap-4 rounded-lg border bg-slate-50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{report.team || 'Tanpa tim'} · {report.region || 'Tanpa wilayah'}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500"><span><Calendar size={10} className="mr-1 inline" />{report.date}</span><Badge variant="outline" className="text-[9px]">{report.entries?.length || 0} entri SPJ</Badge>{deletedAt(report.deleted_at)}</div></div>{action('FUEL_SPJ_REPORT', report.id, `${report.team} ${report.date}`)}</div>) : empty('laporan SPJ BBM')}</TabsContent>
           </div>
         </Tabs>
         <div className="flex items-start gap-2 border-t border-amber-100 bg-amber-50 p-4 text-[10px] text-amber-800"><RotateCcw size={12} className="mt-0.5 shrink-0" /><p>Data dapat dipulihkan dari tab yang sesuai. Pimpinan hanya dapat melihat isi tempat sampah.</p></div>
