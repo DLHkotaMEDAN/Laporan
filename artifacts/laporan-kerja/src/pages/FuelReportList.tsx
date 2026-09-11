@@ -510,8 +510,8 @@ const FuelReportList = () => {
                   <tr className="bg-slate-700 text-white">
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-10">No</th>
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-24">Tanggal</th>
-                    <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-32">Tim</th>
                     <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-24">Wilayah</th>
+                    <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-32">Tim</th>
                     <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Kendaraan / Operator</th>
                     <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Jenis BBM</th>
                     <th className="px-3 py-2.5 text-right font-semibold border-r border-slate-600 w-20">Jml (L)</th>
@@ -558,15 +558,15 @@ const FuelReportList = () => {
                           </td>
                         )}
                         {isFirstItem && (
-                          <td rowSpan={row.totalItems} className={cn("px-3 py-2 font-semibold text-slate-800 border-r border-slate-100 align-middle", borderTop)}>
-                            {row.report.team}
-                          </td>
-                        )}
-                        {isFirstItem && (
                           <td rowSpan={row.totalItems} className={cn("px-3 py-2 border-r border-slate-100 align-middle", borderTop)}>
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] whitespace-nowrap">
                               {row.report.region}
                             </Badge>
+                          </td>
+                        )}
+                        {isFirstItem && (
+                          <td rowSpan={row.totalItems} className={cn("px-3 py-2 font-semibold text-slate-800 border-r border-slate-100 align-middle", borderTop)}>
+                            {row.report.team}
                           </td>
                         )}
 
