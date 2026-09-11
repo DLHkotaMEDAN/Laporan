@@ -29,6 +29,12 @@ type ListUserEmailsInput = {
   action: 'list-user-emails';
 };
 
+type SetUserActiveInput = {
+  action: 'set-user-active';
+  userId: string;
+  isActive: boolean;
+};
+
 const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
@@ -93,7 +99,7 @@ Deno.serve(async (request) => {
       .single();
     if (callerError || callerProfile?.role !== 'admin') throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
-    const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput | ListUserEmailsInput;
+    const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput | ListUserEmailsInput | SetUserActiveInput;
     if ('action' in input && input.action === 'list-user-emails') {
       const users: { id: string; email: string | undefined }[] = [];
       const perPage = 1000;
@@ -132,6 +138,16 @@ Deno.serve(async (request) => {
       if (passwordError) throw passwordError;
 
       return Response.json({ id: input.userId }, { headers: corsHeaders });
+    }
+    if ('action' in input && input.action === 'set-user-active') {
+      if (!input.userId || typeof input.isActive !== 'boolean') throw new Error('Status akun tidak valid.');
+      const { error: statusError } = await adminClient
+        .from('profiles')
+        .update({ is_active: input.isActive, updated_at: new Date().toISOString() })
+        .eq('id', input.userId);
+      if (statusError) throw statusError;
+
+      return Response.json({ id: input.userId, isActive: input.isActive }, { headers: corsHeaders });
     }
 
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');

@@ -260,18 +260,25 @@ const UserManagement = () => {
 
     setUpdatingId(profile.id);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: nextIsActive, updated_at: new Date().toISOString() })
-        .eq('id', profile.id);
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: { action: 'set-user-active', userId: profile.id, isActive: nextIsActive },
+      });
+      if (error || data?.error) {
+        // Fallback untuk Edge Function yang belum dideploy ulang.
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ is_active: nextIsActive, updated_at: new Date().toISOString() })
+          .eq('id', profile.id);
+        if (profileError) throw new Error(profileError.message || data?.error || error?.message);
+      }
 
       setProfiles(currentProfiles => currentProfiles.map(item => item.id === profile.id
         ? { ...item, is_active: nextIsActive, updated_at: new Date().toISOString() }
         : item));
       showSuccess(nextIsActive ? 'Akun berhasil diaktifkan.' : 'Akun berhasil dinonaktifkan.');
     } catch (error: any) {
-      showError('Gagal mengubah status akun: ' + error.message);
+      const message = error?.message || 'Kolom status akun belum tersedia di database.';
+      showError('Gagal mengubah status akun: ' + message);
     } finally {
       setUpdatingId(null);
     }
