@@ -24,7 +24,10 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   const [form, setForm] = useState({
     date: initialData?.date || new Date().toISOString().split('T')[0],
     name: initialData?.name || '', nip: initialData?.nip || '', position: initialData?.position || '',
-    work_location: initialData?.work_location || '', photo_url: initialData?.photo_url || '',
+    work_location: initialData?.work_location || '',
+    photo_url: initialData?.photo_url || '',
+    photo_before_url: initialData?.photo_before_url || initialData?.photo_url || '',
+    photo_after_url: initialData?.photo_after_url || '',
     start_time: initialData?.start_time || '00.00', end_time: initialData?.end_time || '05.00',
     attendance_count: String(initialData?.attendance_count ?? 1), region_id: initialData?.region_id || profile?.region_id || '',
     team_id: initialData?.team_id || '',
@@ -103,9 +106,20 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
     if (!form.team_id) return showError('Kategori / Tim wajib dipilih.');
     setSaving(true);
     try {
-      let photoUrl = form.photo_url;
-      if (photoUrl.startsWith('data:image')) photoUrl = await storageService.uploadPhoto(photoUrl, `lembur_${form.name.replace(/\s+/g, '_')}`);
-      const payload = { ...form, photo_url: photoUrl, attendance_count: Number(form.attendance_count) || 0, region_id: form.region_id, team_id: form.team_id };
+      let photoBeforeUrl = form.photo_before_url;
+      let photoAfterUrl = form.photo_after_url;
+      const photoName = form.name.trim().replace(/\s+/g, '_') || 'tanpa_nama';
+      if (photoBeforeUrl.startsWith('data:image')) photoBeforeUrl = await storageService.uploadPhoto(photoBeforeUrl, `lembur_${photoName}_sebelum`);
+      if (photoAfterUrl.startsWith('data:image')) photoAfterUrl = await storageService.uploadPhoto(photoAfterUrl, `lembur_${photoName}_sesudah`);
+      const payload = {
+        ...form,
+        photo_url: photoBeforeUrl,
+        photo_before_url: photoBeforeUrl,
+        photo_after_url: photoAfterUrl,
+        attendance_count: Number(form.attendance_count) || 0,
+        region_id: form.region_id,
+        team_id: form.team_id,
+      };
       if (initialData) await overtimeService.update(initialData.id, payload);
       else await overtimeService.create(payload);
       window.localStorage.removeItem(draftKey);
@@ -130,7 +144,10 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
         <div className="md:col-span-2"><Label htmlFor="overtime-location">Lokasi Pekerjaan</Label><Input id="overtime-location" value={form.work_location} onChange={e => setField('work_location', e.target.value)} required /></div>
         <div><Label htmlFor="overtime-start">Jam Mulai</Label><Input id="overtime-start" placeholder="00.00" value={form.start_time} onChange={e => setField('start_time', e.target.value)} required /></div>
         <div><Label htmlFor="overtime-end">Jam Selesai</Label><Input id="overtime-end" placeholder="05.00" value={form.end_time} onChange={e => setField('end_time', e.target.value)} required /></div>
-        <div className="md:col-span-2"><ImageUpload label="Foto Dokumentasi" value={form.photo_url} onChange={value => setField('photo_url', value)} aspectClassName="aspect-[2.4/1]" compressionSize={{ width: 2.4, height: 1 }} /></div>
+        <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+          <ImageUpload label="Foto Dokumentasi Sebelum" value={form.photo_before_url} onChange={value => setField('photo_before_url', value)} aspectClassName="aspect-[2.4/1]" compressionSize={{ width: 2.4, height: 1 }} />
+          <ImageUpload label="Foto Dokumentasi Sesudah" value={form.photo_after_url} onChange={value => setField('photo_after_url', value)} aspectClassName="aspect-[2.4/1]" compressionSize={{ width: 2.4, height: 1 }} />
+        </div>
       </div>
       <Button type="submit" className="mt-6" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Simpan Rekap Lembur</Button>
     </form>

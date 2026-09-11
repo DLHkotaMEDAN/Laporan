@@ -6,6 +6,8 @@ export interface OvertimeRecord {
   position: string;
   work_location: string;
   photo_url: string;
+  photo_before_url: string;
+  photo_after_url: string;
   start_time: string;
   end_time: string;
   attendance_count: number;
