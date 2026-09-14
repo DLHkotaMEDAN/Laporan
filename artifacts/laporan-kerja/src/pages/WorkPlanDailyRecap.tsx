@@ -69,9 +69,9 @@ const getInitialSelectedCategories = (searchParams: URLSearchParams) => {
 };
 
 const getSelectedCategoryLabel = (selectedCategories: string[]) => {
-  if (selectedCategories.includes('semua')) return 'Semua Kategori';
-  if (selectedCategories.length > 1) return `${selectedCategories.length} Kategori Terpilih`;
-  return selectedCategories[0] || 'Pilih Kategori';
+  if (selectedCategories.includes('semua')) return 'Semua Kategori / Tim';
+  if (selectedCategories.length > 1) return `${selectedCategories.length} Kategori / Tim Terpilih`;
+  return selectedCategories[0] || 'Pilih Kategori / Tim';
 };
 
 const WorkPlanDailyRecap = () => {
@@ -80,7 +80,8 @@ const WorkPlanDailyRecap = () => {
   const { session, profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
-  const { regions, teams } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const teamFilterRegion = isAdmin ? selectedRegion : (profile?.region_id || 'semua');
+  const { regions, teams } = useRegionFilterOptions(Boolean(session && profile && profile.role !== 'user'), teamFilterRegion);
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
   const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
@@ -202,7 +203,7 @@ const WorkPlanDailyRecap = () => {
       return next.length ? next : ['semua'];
     });
   };
-  const categoryOptions = isAdmin
+  const categoryOptions = teams.length > 0
     ? Array.from(new Set([...teams.map((team) => team.name), ...availableCategories])).sort((first, second) => first.localeCompare(second))
     : availableCategories;
   const noActivityColSpan = [
