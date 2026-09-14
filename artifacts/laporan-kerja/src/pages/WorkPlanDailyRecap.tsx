@@ -80,7 +80,7 @@ const WorkPlanDailyRecap = () => {
   const { session, profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
-  const { regions } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const { regions, teams } = useRegionFilterOptions(isAdmin, selectedRegion);
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
   const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);
   const [plans, setPlans] = useState<WorkPlan[]>([]);
@@ -202,6 +202,9 @@ const WorkPlanDailyRecap = () => {
       return next.length ? next : ['semua'];
     });
   };
+  const categoryOptions = isAdmin
+    ? Array.from(new Set([...teams.map((team) => team.name), ...availableCategories])).sort((first, second) => first.localeCompare(second))
+    : availableCategories;
   const noActivityColSpan = [
     printColumns.description,
     printColumns.location,
@@ -695,13 +698,13 @@ const WorkPlanDailyRecap = () => {
                 <PopoverContent className="w-[220px] p-0" align="start">
                   <div className="max-h-[320px] space-y-1 overflow-y-auto p-2">
                     <div className="flex cursor-pointer items-center space-x-2 rounded-md p-2 hover:bg-slate-100" onClick={() => toggleCategory('semua')}>
-                      <Checkbox checked={selectedCategories.includes('semua')} />
-                      <label className="cursor-pointer text-sm font-medium leading-none">Semua Kategori</label>
+                      <Checkbox checked={selectedCategories.includes('semua')} onCheckedChange={() => toggleCategory('semua')} onClick={(event) => event.stopPropagation()} />
+                      <span className="cursor-pointer text-sm font-medium leading-none">Semua Kategori / Tim</span>
                     </div>
-                    {availableCategories.map((category) => (
+                    {categoryOptions.map((category) => (
                       <div key={category} className="flex cursor-pointer items-center space-x-2 rounded-md p-2 hover:bg-slate-100" onClick={() => toggleCategory(category)}>
-                        <Checkbox checked={selectedCategories.includes(category)} />
-                        <label className="cursor-pointer text-sm font-medium leading-none">{category}</label>
+                        <Checkbox checked={selectedCategories.includes(category)} onCheckedChange={() => toggleCategory(category)} onClick={(event) => event.stopPropagation()} />
+                        <span className="cursor-pointer text-sm font-medium leading-none">{category}</span>
                       </div>
                     ))}
                   </div>
