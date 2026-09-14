@@ -177,6 +177,9 @@ const WorkPlanDailyRecap = () => {
   };
 
   const hasRemarks = plans.some(plan => plan.items.some(item => item.remarks && item.remarks.trim() !== ""));
+  const hasBasisForRemarks = tableMode === "complete" && plans.some((plan) => (
+    plan.items.some((item) => item.basis?.trim())
+  ));
   const isTimSiramSelected = selectedCategories.includes("Tim Siram");
   const visibleColumns = { ...userVisibleColumns, target_area: userVisibleColumns.target_area && !isTimSiramSelected };
   const toggleColumn = (column: keyof typeof userVisibleColumns) => setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
@@ -188,7 +191,7 @@ const WorkPlanDailyRecap = () => {
     ...visibleColumns,
     foreman: visibleColumns.foreman && hasForemanValues,
   };
-  const showRemarksColumn = hasRemarks && printColumns.remarks;
+  const showRemarksColumn = (hasRemarks || hasBasisForRemarks) && printColumns.remarks;
   const toggleCategory = (category: string) => {
     if (category === 'semua') {
       setSelectedCategories(['semua']);
@@ -295,6 +298,42 @@ const WorkPlanDailyRecap = () => {
     regionNumber += 1;
   }
 
+  // Tabel ringkas ditampilkan sebagai satu rangkaian baris, bukan per rencana
+  // kerja. Karena itu, hitung span Dasar Pengerjaan dari seluruh rangkaian agar
+  // dasar yang sama dan berurutan tidak ditulis ulang saat berganti rencana.
+  const compactBasisSpans = new Map<string, number>();
+  const compactBasisRows: Array<{ key: string; basisKey: string }> = [];
+  plans.forEach((plan) => {
+    if (plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN") {
+      compactBasisRows.push({ key: `compact-${plan.id}-no-activity`, basisKey: `no-activity-${plan.id}` });
+      return;
+    }
+
+    getUniqueWorkPlanItems(plan.items).forEach((item, itemIndex) => {
+      const rowCount = plan.category === "Tim Pohon" ? 1 : Math.max(item.tools.length, 1);
+      for (let toolIndex = 0; toolIndex < rowCount; toolIndex += 1) {
+        // Nilai kosong tidak digabung; hanya Dasar Pengerjaan yang benar-benar
+        // sama yang perlu disatukan pada hasil cetak.
+        const basis = getWorkPlanBasisKey(item.basis);
+        const basisKey = basis
+          ? `${plan.category.trim().toLocaleLowerCase("id-ID")}|${basis}`
+          : `empty-${plan.id}-${itemIndex}-${toolIndex}`;
+        compactBasisRows.push({ key: `compact-${plan.id}-${itemIndex}-${toolIndex}`, basisKey });
+      }
+    });
+  });
+  getSequentialSpans(compactBasisRows, (row) => row.basisKey).forEach((span, index) => {
+    compactBasisSpans.set(compactBasisRows[index].key, span);
+  });
+  const getCompactBasisSpan = (planId: string, itemIndex: number, toolIndex: number) => (
+    compactBasisSpans.get(`compact-${planId}-${itemIndex}-${toolIndex}`) ?? 1
+  );
+  // Hanya untuk tampilan cetak tabel lengkap: Keterangan asli diprioritaskan,
+  // lalu Dasar Pengerjaan dipakai sebagai cadangan bila Keterangan kosong.
+  const getPrintedRemark = (item: WorkPlan["items"][number]) => (
+    item.remarks?.trim() || (tableMode === "complete" ? item.basis?.trim() : "") || "-"
+  );
+
   const renderPlanRows = (plan: WorkPlan, pIdx: number) => {
     const regionCell = regionCells.get(plan.id);
     const isNoActivity = plan.items[0]?.description === "TIDAK ADA RENCANA KERJA/ KEGIATAN";
@@ -307,7 +346,7 @@ const WorkPlanDailyRecap = () => {
           {noActivityColSpan > 0 && <td colSpan={noActivityColSpan} className="border-2 border-black p-4 text-center font-black text-sm tracking-widest">
             TIDAK ADA RENCANA KERJA/ KEGIATAN
           </td>}
-          {showRemarksColumn && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{plan.items[0]?.remarks || "-"}</td>}
+          {showRemarksColumn && <td className="border-2 border-black p-1 italic text-center align-middle break-words">{getPrintedRemark(plan.items[0])}</td>}
         </tr>
       );
     }
@@ -402,8 +441,8 @@ const WorkPlanDailyRecap = () => {
       const remarkSpan = isFuelRemarkMergedCategory ? mergedRemarkSpans[itemIdx] : remarksSpan;
       const remarkRowsCount = isFuelRemarkMergedCategory && remarkSpan > 0 ? getSpanRows(itemIdx, remarkSpan) : toolSpan > 0 ? getSpanRows(itemIdx, toolSpan) : 0;
       const remarkValue = remarkSpan > 0
-        ? getLastValue(displayItems.slice(itemIdx, itemIdx + remarkSpan), (current) => current.remarks || "", (value) => value.trim() !== "")
-        : fuelRemarkSource.remarks || "";
+        ? getLastValue(displayItems.slice(itemIdx, itemIdx + remarkSpan), getPrintedRemark, (value) => value !== "-")
+        : getPrintedRemark(fuelRemarkSource);
       const toolItemClass = isTreeLayout ? "h-12 leading-tight" : "h-16";
 
       return toolsToRender.map((tool, toolIdx) => {
@@ -490,10 +529,10 @@ const WorkPlanDailyRecap = () => {
     });
   };
 
-  const columnWidths = hasRemarks
+  const columnWidths = showRemarksColumn
     ? ['3%', '6%', '11.5%', '12%', '6%', '10%', '4%', '6.5%', '7.5%', '7%', '6%', '5%', '10%', '5.5%']
     : ['3.5%', '7%', '12.5%', '13.5%', '7%', '11%', '4%', '7.5%', '8.5%', '7.5%', '5%', '5%', '7.5%'];
-  const displayColumnWidths = showRegionColumn && hasRemarks
+  const displayColumnWidths = showRegionColumn && showRemarksColumn
     ? [columnWidths[0], "6%", ...columnWidths.slice(1, -1), "15%"]
     : showRegionColumn
     ? [columnWidths[0], "6%", ...columnWidths.slice(1)]
@@ -502,7 +541,7 @@ const WorkPlanDailyRecap = () => {
   const colGroup = (
     <colgroup>
       {displayColumnWidths.map((width, index) => {
-        const column = (['no', ...(showRegionColumn ? ['region'] : []), 'category', 'description', 'location', 'target_area', 'tools', 'unit', 'personnel', 'coordinator', 'foreman', 'basis', 'fuel_need_liters', 'fuel_usage_estimate', ...(hasRemarks ? ['remarks'] : [])] as const)[index];
+        const column = (['no', ...(showRegionColumn ? ['region'] : []), 'category', 'description', 'location', 'target_area', 'tools', 'unit', 'personnel', 'coordinator', 'foreman', 'basis', 'fuel_need_liters', 'fuel_usage_estimate', ...(showRemarksColumn ? ['remarks'] : [])] as const)[index];
         if (column in printColumns && !printColumns[column as keyof typeof printColumns]) return null;
         return <col key={index} style={{ width }} />;
       })}
@@ -578,7 +617,6 @@ const WorkPlanDailyRecap = () => {
       })));
       const toolSpans = getSequentialSpans(displayItems, getItemToolsKey);
       const teamSpans = getSequentialSpans(displayItems, (item) => `${item.coordinator}|${item.foreman || ""}`);
-      const basisSpans = getSequentialSpans(displayItems, (item) => getWorkPlanBasisKey(item.basis));
 
       return displayItems.map((item, itemIdx) => {
         let toolGroupStart = itemIdx;
@@ -606,7 +644,7 @@ const WorkPlanDailyRecap = () => {
             <td className="border-2 border-black p-1 text-center align-middle">{Number(tool.members || 0) || "-"}</td>
             {teamSpans[itemIdx] > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={teamSpans[itemIdx]}>{item.coordinator || "-"}</td>}
             {showCompactForeman && teamSpans[itemIdx] > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={teamSpans[itemIdx]}>{item.foreman || "-"}</td>}
-            {basisSpans[itemIdx] > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={basisSpans[itemIdx]}>{item.basis || "-"}</td>}
+            {getCompactBasisSpan(plan.id, itemIdx, 0) > 0 && <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getCompactBasisSpan(plan.id, itemIdx, 0)}>{item.basis || "-"}</td>}
           </tr>
         );
       });
@@ -620,7 +658,6 @@ const WorkPlanDailyRecap = () => {
     const detailSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.detail));
     const locationSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.location));
     const toolSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.toolName));
-    const basisSpans = getSequentialSpans(compactRows, (row) => sameInPlan(row.basis));
     const unitSpans = getSequentialSpans(compactRows, (row) => sameInTool(row.toolName, row.unit));
     const usageSpans = getSequentialSpans(compactRows, (row) => sameInTool(row.toolName, row.usage));
     const personnelSpans = getSequentialSpans(compactRows, (row) => (
@@ -660,8 +697,8 @@ const WorkPlanDailyRecap = () => {
         {coordinatorSpans[rowIdx] > 0 && (
           <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={coordinatorSpans[rowIdx]}>{row.coordinator}</td>
         )}
-        {basisSpans[rowIdx] > 0 && (
-          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={basisSpans[rowIdx]}>{row.basis}</td>
+        {getCompactBasisSpan(plan.id, row.itemIndex, row.toolIndex) > 0 && (
+          <td className="border-2 border-black p-1 text-center align-middle break-words" rowSpan={getCompactBasisSpan(plan.id, row.itemIndex, row.toolIndex)}>{row.basis}</td>
         )}
       </tr>
     ));
@@ -925,7 +962,7 @@ const WorkPlanDailyRecap = () => {
                     <th className="border-2 border-black p-1">Alat Operasional</th>
                     <th className="border-2 border-black p-1">Unit</th>
                     <th className="border-2 border-black p-1">Kegunaan</th>
-                    <th className="border-2 border-black p-1">Pers</th>
+                    <th className="border-2 border-black p-1">Personil</th>
                     <th className="border-2 border-black p-1">Koordinator</th>
                     {showCompactForeman && <th className="border-2 border-black p-1">Mandor</th>}
                     <th className="border-2 border-black p-1">Dasar Pengerjaan</th>
@@ -948,7 +985,7 @@ const WorkPlanDailyRecap = () => {
                     {printColumns.target_area && <th className="border-2 border-black p-1">Target Luas (M²)</th>}
                     {printColumns.tools && <th className="border-2 border-black p-1">Alat Operasional</th>}
                     {printColumns.unit && <th className="border-2 border-black p-1">Unit</th>}
-                    {printColumns.personnel && <th className="border-2 border-black p-1">Pers</th>}
+                    {printColumns.personnel && <th className="border-2 border-black p-1">Personil</th>}
                     {printColumns.coordinator && <th className="border-2 border-black p-1">Koordinator</th>}
                     {printColumns.foreman && <th className="border-2 border-black p-1">Mandor</th>}
                     {printColumns.basis && <th className="border-2 border-black p-1 text-[8px] leading-tight whitespace-normal">Dasar<br />Pengerjaan</th>}
@@ -996,7 +1033,7 @@ const WorkPlanDailyRecap = () => {
           ) : (
             <table className="work-plan-table w-full border-collapse border-2 border-black text-[10px] leading-[1.35] table-fixed">
               <tbody>
-                <tr><td colSpan={hasRemarks ? 14 : 13} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
+                <tr><td colSpan={showRemarksColumn ? 14 : 13} className="border-2 border-black p-8 text-center italic text-slate-400">{loading ? 'Memuat data rekap...' : 'Tidak ada rencana kerja untuk periode ini'}</td></tr>
               </tbody>
             </table>
           )}
