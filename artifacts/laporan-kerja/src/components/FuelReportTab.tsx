@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, CreditCard as Edit, Search, RefreshCw, ListFilter as FilterX, CalendarDays, ArrowLeft, ArrowRight, Eye } from 'lucide-react';
+import { Trash2, CreditCard as Edit, Search, RefreshCw, ListFilter as FilterX, CalendarDays, ArrowLeft, ArrowRight, Eye, ArrowDownAZ, ArrowDownZA, ArrowDownUp } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -44,7 +44,27 @@ interface FlatRow {
   rowNo: number;
 }
 
+type SortKey = 'no' | 'date' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'remarks';
+type SortDirection = 'asc' | 'desc';
+
 const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
+
+const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): string | number => {
+  const items = report.items || [];
+  const firstItem = items[0];
+
+  switch (key) {
+    case 'date': return report.date || '';
+    case 'region': return report.region || '';
+    case 'team': return report.team || '';
+    case 'vehicle': return firstItem?.vehicle_operator || '';
+    case 'fuelType': return firstItem?.fuel_type || '';
+    case 'liters': return items.reduce((total, item) => total + Number(item.amount_liter || (item.fuel_type === 'Oli' ? item.amount : 0) || 0), 0);
+    case 'value': return items.reduce((total, item) => total + (item.fuel_type === 'Oli' ? 0 : Number(item.amount_rp || item.amount || 0)), 0);
+    case 'location': return firstItem?.location?.street || '';
+    case 'remarks': return firstItem?.item_remarks || '';
+  }
+};
 
 const getFuelReportDuplicateKey = (report: FuelReport) => {
   const items = (report.items || []).map((item) => ({
@@ -85,6 +105,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
   const [appliedYear, setAppliedYear] = useState("semua");
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [selectedTeam, setSelectedTeam] = useState("semua");
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
@@ -179,6 +200,15 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
     setAppliedYear("semua");
     setSelectedRegion("semua");
     setSelectedTeam("semua");
+    setSort(null);
+    setCurrentPage(1);
+  };
+
+  const handleSort = (key: SortKey) => {
+    setSort(current => ({
+      key,
+      direction: current?.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+    }));
     setCurrentPage(1);
   };
 
@@ -244,6 +274,15 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
       return matchSearch && matchDuplicate && matchRegion && matchTeam;
     })
     .sort((a, b) => {
+      if (sort) {
+        const aValue = sort.key === 'no' ? (reportOrderIndexes.get(a.id) || 0) : getReportSortValue(a, sort.key);
+        const bValue = sort.key === 'no' ? (reportOrderIndexes.get(b.id) || 0) : getReportSortValue(b, sort.key);
+        const comparison = typeof aValue === 'number' && typeof bValue === 'number'
+          ? aValue - bValue
+          : String(aValue).localeCompare(String(bValue), 'id', { numeric: true, sensitivity: 'base' });
+        if (comparison !== 0) return sort.direction === 'asc' ? comparison : -comparison;
+      }
+
       const aKey = getFuelReportDuplicateKey(a);
       const bKey = getFuelReportDuplicateKey(b);
       const aDuplicate = duplicateReportKeys.has(aKey);
@@ -288,6 +327,26 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
 
   const formatRp = (n: number) => n > 0 ? `Rp ${n.toLocaleString('id-ID')}` : '-';
   const formatL = (n: number) => n > 0 ? `${n.toLocaleString('id-ID')} L` : '-';
+  const sortableHeader = (label: string, key: SortKey, className: string) => {
+    const isActive = sort?.key === key;
+    const Icon = isActive && sort.direction === 'desc' ? ArrowDownZA : isActive ? ArrowDownAZ : ArrowDownUp;
+    const directionLabel = isActive && sort.direction === 'desc' ? 'Z ke A / besar ke kecil' : 'A ke Z / kecil ke besar';
+
+    return (
+      <th className={cn("px-3 py-2.5 font-semibold border-r border-slate-600", className)}>
+        <button
+          type="button"
+          onClick={() => handleSort(key)}
+          aria-label={`Urutkan ${label}: ${directionLabel}`}
+          title={`Urutkan ${label}: ${directionLabel}`}
+          className="inline-flex w-full items-center gap-1.5 rounded text-inherit outline-none transition-colors hover:text-orange-200 focus-visible:ring-2 focus-visible:ring-white/80"
+        >
+          <span>{label}</span>
+          <Icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-orange-300" : "text-slate-300")} aria-hidden="true" />
+        </button>
+      </th>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -427,16 +486,16 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
             <table className="w-full text-xs border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-slate-700 text-white">
-                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-10">No</th>
-                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-24">Tanggal</th>
-                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-24">Wilayah</th>
-                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-32">Tim</th>
-                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Kendaraan / Operator</th>
-                  <th className="px-3 py-2.5 text-center font-semibold border-r border-slate-600 w-20">Jenis BBM</th>
-                  <th className="px-3 py-2.5 text-right font-semibold border-r border-slate-600 w-20">Jml (L)</th>
-                  <th className="px-3 py-2.5 text-right font-semibold border-r border-slate-600 w-28">Nilai (Rp)</th>
-                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600">Lokasi</th>
-                  <th className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 w-28">Keterangan Item</th>
+                  {sortableHeader('No', 'no', 'text-center w-10')}
+                  {sortableHeader('Tanggal', 'date', 'text-center w-24')}
+                  {sortableHeader('Wilayah', 'region', 'text-left w-24')}
+                  {sortableHeader('Tim', 'team', 'text-left w-32')}
+                  {sortableHeader('Kendaraan / Operator', 'vehicle', 'text-left')}
+                  {sortableHeader('Jenis BBM', 'fuelType', 'text-center w-20')}
+                  {sortableHeader('Jml (L)', 'liters', 'text-right w-20')}
+                  {sortableHeader('Nilai (Rp)', 'value', 'text-right w-28')}
+                  {sortableHeader('Lokasi', 'location', 'text-left')}
+                  {sortableHeader('Keterangan Item', 'remarks', 'text-left w-28')}
                   <th className="px-3 py-2.5 text-center font-semibold w-20">Aksi</th>
                 </tr>
               </thead>

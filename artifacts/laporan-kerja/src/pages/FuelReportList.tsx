@@ -58,7 +58,6 @@ interface FlatRow {
 
 type SortKey = 'no' | 'date' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'remarks';
 type SortDirection = 'asc' | 'desc';
-
 const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
 
 const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): string | number => {
