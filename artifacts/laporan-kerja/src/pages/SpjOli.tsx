@@ -1,0 +1,101 @@
+"use client";
+
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Edit, FilterX, Loader2, Plus, Search, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
+import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { spjOliService } from '@/services/spjOliService';
+import { SpjOliRecord } from '@/types/spjOli';
+import { showError, showSuccess } from '@/utils/toast';
+import { cn } from '@/lib/utils';
+
+const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: '', team_id: '', spj_number: '', oil_name: '', quantity: 0, unit: 'Liter', location: '', remarks: '' };
+const canAccess = (role?: string) => ['admin', 'admin_spj_bbm', 'pimpinan'].includes(role || '');
+
+type SpjOliFormValues = typeof emptyRecord;
+
+const SpjOliInputForm = ({ form, regions, teams, editable, editing, onChange, onSubmit, onCancel }: {
+  form: SpjOliFormValues;
+  regions: { id: string; name: string }[];
+  teams: { id: string; region_id: string; name: string }[];
+  editable: boolean;
+  editing: boolean;
+  onChange: (key: keyof SpjOliFormValues, value: string | number) => void;
+  onSubmit: (event: React.FormEvent) => void;
+  onCancel: () => void;
+}) => (
+  <main className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia.</p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
+      <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-2">
+        <label className="space-y-1 text-sm font-semibold">Tanggal<Input type="date" value={form.date} onChange={e => onChange('date', e.target.value)} /></label>
+        <label className="space-y-1 text-sm font-semibold">Nomor SPJ<Input value={form.spj_number} onChange={e => onChange('spj_number', e.target.value)} /></label>
+        <label className="space-y-1 text-sm font-semibold">Wilayah<Select value={form.region_id} onValueChange={value => { onChange('region_id', value); onChange('team_id', ''); }}><SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger><SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></label>
+        <label className="space-y-1 text-sm font-semibold">Tim<Select value={form.team_id} onValueChange={value => onChange('team_id', value)} disabled={!form.region_id}><SelectTrigger><SelectValue placeholder="Pilih tim" /></SelectTrigger><SelectContent>{teams.filter(team => team.region_id === form.region_id).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></label>
+        <label className="space-y-1 text-sm font-semibold">Jenis / Nama Oli<Input value={form.oil_name} onChange={e => onChange('oil_name', e.target.value)} /></label>
+        <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-sm font-semibold">Jumlah<Input type="number" min="0" step="0.01" value={form.quantity} onChange={e => onChange('quantity', e.target.valueAsNumber || 0)} /></label><label className="space-y-1 text-sm font-semibold">Satuan<Select value={form.unit} onValueChange={value => onChange('unit', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Liter">Liter</SelectItem><SelectItem value="Botol">Botol</SelectItem><SelectItem value="Pcs">Pcs</SelectItem></SelectContent></Select></label></div>
+        <label className="space-y-1 text-sm font-semibold md:col-span-2">Lokasi<Input value={form.location} onChange={e => onChange('location', e.target.value)} placeholder="Lokasi penggunaan oli" /></label>
+        <label className="space-y-1 text-sm font-semibold md:col-span-2">Keterangan<Input value={form.remarks} onChange={e => onChange('remarks', e.target.value)} placeholder="Keterangan tambahan (opsional)" /></label>
+      </section>
+      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel}>Batal</Button><Button disabled={!editable} type="submit" className="bg-emerald-600 hover:bg-emerald-700">Simpan SPJ Oli</Button></div>
+    </form>
+  </main>
+);
+
+export default function SpjOli() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [params] = useSearchParams();
+  const { profile, session } = useAuth();
+  const editable = profile?.is_active !== false && profile?.role !== 'pimpinan' && session?.user?.email !== 'pimpinan@gmail.com';
+  const [records, setRecords] = useState<SpjOliRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [regionId, setRegionId] = useState('semua');
+  const [teamId, setTeamId] = useState('semua');
+  const [date, setDate] = useState('');
+  const [form, setForm] = useState(emptyRecord);
+  const { regions, teams } = useRegionFilterOptions(true, regionId === 'semua' ? 'semua' : regionId);
+  const isForm = window.location.pathname.endsWith('/create') || Boolean(id);
+  const period = params.get('period');
+
+  const load = async () => { try { setLoading(true); setRecords(await spjOliService.getAll()); } catch { showError('Gagal memuat data SPJ Oli'); } finally { setLoading(false); } };
+  useEffect(() => { if (!canAccess(profile?.role) && profile) navigate('/', { replace: true }); else void load(); }, [profile]);
+  useEffect(() => { if (id) spjOliService.getById(id).then(data => setForm({ ...data, remarks: data.remarks || '' })).catch(() => { showError('Data SPJ Oli tidak ditemukan'); navigate('/spj-oli'); }); }, [id]);
+
+  const visibleTeams = teams.filter(team => regionId === 'semua' || team.region_id === regionId);
+  const filtered = useMemo(() => records.filter(record => {
+    const text = `${record.spj_number} ${record.oil_name} ${record.location || ''} ${record.remarks || ''}`.toLowerCase();
+    if (search && !text.includes(search.toLowerCase())) return false;
+    if (regionId !== 'semua' && record.region_id !== regionId) return false;
+    if (teamId !== 'semua' && record.team_id !== teamId) return false;
+    if (date && record.date !== date) return false;
+    if (period) {
+      const days = period === 'weekly' ? 7 : period === 'monthly' ? 31 : 1;
+      const diff = (Date.now() - new Date(`${record.date}T00:00:00`).getTime()) / 86400000;
+      if (diff < 0 || diff >= days) return false;
+    }
+    return true;
+  }), [records, search, regionId, teamId, date, period]);
+
+  const regionName = (value: string) => regions.find(region => region.id === value)?.name || '-';
+  const teamName = (value: string) => teams.find(team => team.id === value)?.name || '-';
+  const update = (key: keyof typeof form, value: string | number) => setForm(current => ({ ...current, [key]: value }));
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
+    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/spj-oli'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
+  };
+  const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
+
+  if (!canAccess(profile?.role)) return null;
+  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} editable={editable} editing={Boolean(id)} onChange={update} onSubmit={submit} onCancel={() => navigate('/spj-oli')} />;
+  if (isForm) return <main className="min-h-screen bg-slate-50 p-4 md:p-8"><form onSubmit={submit} className="mx-auto max-w-3xl space-y-6"><div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{id ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia.</p></div><Button type="button" variant="outline" onClick={() => navigate('/spj-oli')}>Kembali</Button></div><section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-2"><label className="space-y-1 text-sm font-semibold">Tanggal<Input type="date" value={form.date} onChange={e => update('date', e.target.value)} /></label><label className="space-y-1 text-sm font-semibold">Nomor SPJ<Input value={form.spj_number} onChange={e => update('spj_number', e.target.value)} placeholder="Contoh: SPJ-OLI/001" /></label><label className="space-y-1 text-sm font-semibold">Wilayah<Select value={form.region_id} onValueChange={value => { update('region_id', value); update('team_id', ''); }}><SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger><SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></label><label className="space-y-1 text-sm font-semibold">Tim<Select value={form.team_id} onValueChange={value => update('team_id', value)} disabled={!form.region_id}><SelectTrigger><SelectValue placeholder="Pilih tim" /></SelectTrigger><SelectContent>{teams.filter(team => team.region_id === form.region_id).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></label><label className="space-y-1 text-sm font-semibold">Jenis / Nama Oli<Input value={form.oil_name} onChange={e => update('oil_name', e.target.value)} placeholder="Contoh: Oli Mesin SAE 15W-40" /></label><div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-sm font-semibold">Jumlah<Input type="number" min="0" step="0.01" value={form.quantity} onChange={e => update('quantity', e.target.valueAsNumber || 0)} /></label><label className="space-y-1 text-sm font-semibold">Satuan<Select value={form.unit} onValueChange={value => update('unit', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Liter">Liter</SelectItem><SelectItem value="Botol">Botol</SelectItem><SelectItem value="Pcs">Pcs</SelectItem></SelectContent></Select></label></div><label className="space-y-1 text-sm font-semibold md:col-span-2">Keterangan<Input value={form.remarks || ''} onChange={e => update('remarks', e.target.value)} placeholder="Keterangan tambahan (opsional)" /></label></section><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => navigate('/spj-oli')}>Batal</Button><Button disabled={!editable} type="submit" className="bg-emerald-600 hover:bg-emerald-700">Simpan SPJ Oli</Button></div></form></main>;
+
+  return <div className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black text-slate-950">SPJ Oli</h2><p className="text-sm text-slate-500">Pencatatan penggunaan oli berdasarkan wilayah dan tim.</p></div>{editable && <Button onClick={() => navigate('/spj-oli/create')} className="bg-emerald-600 hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4" /> Input SPJ Oli</Button>}</div><section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-5"><div className="relative md:col-span-2"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nomor SPJ atau nama oli" /></div><Select value={regionId} onValueChange={value => { setRegionId(value); setTeamId('semua'); }}><SelectTrigger><SelectValue placeholder="Wilayah" /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Wilayah</SelectItem>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select><Select value={teamId} onValueChange={setTeamId}><SelectTrigger><SelectValue placeholder="Tim" /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Tim</SelectItem>{visibleTeams.map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select><div className="flex gap-2"><Input type="date" value={date} onChange={e => setDate(e.target.value)} /><Button variant="outline" size="icon" onClick={() => { setSearch(''); setRegionId('semua'); setTeamId('semua'); setDate(''); }} title="Reset filter"><FilterX className="h-4 w-4" /></Button></div></section><section className="overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[950px] text-xs"><thead><tr className="bg-slate-700 text-white"><th className="p-3">No</th><th className="p-3">Tanggal</th><th className="p-3 text-left">Wilayah</th><th className="p-3 text-left">Tim</th><th className="p-3 text-left">No. SPJ</th><th className="p-3 text-left">Jenis Oli</th><th className="p-3 text-right">Jumlah</th><th className="p-3 text-left">Keterangan</th>{editable && <th className="p-3">Aksi</th>}</tr></thead><tbody>{loading ? <tr><td colSpan={9} className="p-10 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr> : filtered.length ? filtered.map((record, index) => <tr key={record.id} className={cn('border-t hover:bg-emerald-50/50', index % 2 && 'bg-slate-50/70')}><td className="p-3 text-center font-bold text-slate-500">{index + 1}</td><td className="p-3 text-center">{record.date}</td><td className="p-3"><Badge variant="outline" className="bg-emerald-50 text-emerald-700">{regionName(record.region_id)}</Badge></td><td className="p-3">{teamName(record.team_id)}</td><td className="p-3 font-semibold">{record.spj_number}</td><td className="p-3">{record.oil_name}</td><td className="p-3 text-right font-mono">{record.quantity} {record.unit}</td><td className="p-3 text-slate-500">{record.remarks || '-'}</td>{editable && <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => navigate(`/spj-oli/edit/${record.id}`)}><Edit className="h-4 w-4 text-blue-600" /></Button><Button variant="ghost" size="icon" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button></td>}</tr>) : <tr><td colSpan={9} className="p-12 text-center text-slate-500">Tidak ada data SPJ Oli.</td></tr>}</tbody></table></div><div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500"><b>{filtered.length}</b> data SPJ Oli ditampilkan {period && `• Rekap ${period === 'daily' ? 'Harian' : period === 'weekly' ? 'Mingguan' : 'Bulanan'}`}</div></section></div>;
+}

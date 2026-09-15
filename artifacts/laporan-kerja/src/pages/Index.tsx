@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
 import FuelReportTab from '@/components/FuelReportTab';
 import FuelSpjTab from '@/components/FuelSpjTab';
+import SpjOli from '@/pages/SpjOli';
 import OvertimeRecap from '@/pages/OvertimeRecap';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import QuickActions from '@/components/dashboard/QuickActions';
@@ -80,7 +81,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj'] as const;
+const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj', 'spj_oli'] as const;
 type MainTab = typeof validMainTabs[number];
 type IndexViewState = {
   activeTab?: MainTab;
@@ -758,6 +759,11 @@ const Index = () => {
                       <Table size={16} className="mr-2" /> Laporan SPJ
                     </TabsTrigger>
                   )}
+                  {(isAdmin || isPimpinan || isAdminSpj) && (
+                    <TabsTrigger value="spj_oli" className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
+                      <Fuel size={16} className="mr-2" /> SPJ Oli
+                    </TabsTrigger>
+                  )}
                 </>
               )}
             </TabsList>
@@ -843,6 +849,19 @@ const Index = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate('/fuel-reports/spj/yearly-rekap')} className="py-3 cursor-pointer">
                         <CalendarDays className="mr-3 h-4 w-4 text-red-600" /> Rekap Tahunan SPJ
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {activeTab === 'spj_oli' && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/spj-oli?period=daily')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian SPJ Oli
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/spj-oli?period=weekly')} className="py-3 cursor-pointer">
+                        <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan SPJ Oli
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/spj-oli?period=monthly')} className="py-3 cursor-pointer">
+                        <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan SPJ Oli
                       </DropdownMenuItem>
                     </>
                   )}
@@ -1156,6 +1175,11 @@ const Index = () => {
               {(isAdmin || isPimpinan || isAdminSpj) && (
                 <TabsContent value="fuel_spj" className="mt-0">
                   <FuelSpjTab />
+                </TabsContent>
+              )}
+              {(isAdmin || isPimpinan || isAdminSpj) && (
+                <TabsContent value="spj_oli" className="mt-0">
+                  <SpjOli />
                 </TabsContent>
               )}
             </>
