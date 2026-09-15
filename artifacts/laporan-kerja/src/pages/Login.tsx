@@ -110,11 +110,11 @@ const Login = () => {
 
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 h-11 font-bold mt-2"
+              className="mt-2 inline-flex h-11 w-full min-w-full shrink-0 items-center justify-center whitespace-nowrap bg-blue-600 font-bold hover:bg-blue-700"
               disabled={loading}
             >
               {loading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+                <><Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" /> Memproses...</>
               ) : (
                 "Masuk"
               )}
