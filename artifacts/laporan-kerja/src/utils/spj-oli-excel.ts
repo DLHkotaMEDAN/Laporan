@@ -18,13 +18,14 @@ export async function exportSpjOliExcel(
   regionName: (id: string) => string,
   teamName: (id: string) => string,
   showRegionColumn: boolean,
+  fileName: string,
 ) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Rekap SPJ Oli', {
     pageSetup: { orientation: 'landscape', paperSize: 8, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
   const headers = [
-    'No', 'Tanggal', 'No. SPJ',
+    'No', 'No. SPJ', 'Tanggal',
     ...(showRegionColumn ? ['Wilayah'] : []),
     'Tim', 'Alat Operasional/\nKendaraan', 'Nama Operator/\nSupir/Penerima',
     'Jenis Oli', 'Jumlah', 'Lokasi', 'Keterangan',
@@ -54,8 +55,8 @@ export async function exportSpjOliExcel(
   records.forEach((record, index) => {
     sheet.addRow([
       index + 1,
-      formatDate(record.date),
       record.spj_number,
+      formatDate(record.date),
       ...(showRegionColumn ? [regionName(record.region_id)] : []),
       teamName(record.team_id),
       record.vehicle_name || '-',
@@ -67,6 +68,42 @@ export async function exportSpjOliExcel(
     ]);
   });
 
+  // Gabungkan sel Tanggal untuk record yang berurutan pada tanggal yang sama,
+  // sama seperti tabel rekap pada layar dan hasil cetak.
+  let start = 0;
+  while (start < records.length) {
+    let end = start + 1;
+    while (end < records.length && records[end].date === records[start].date) end += 1;
+    if (end - start > 1) {
+      const firstDataRow = start + 5;
+      const lastDataRow = end + 4;
+      sheet.mergeCells(firstDataRow, 3, lastDataRow, 3);
+      sheet.getCell(firstDataRow, 3).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    }
+    start = end;
+  }
+
+  // Kolom Wilayah pada Excel mengikuti tabel rekap: gabungkan hanya jika
+  // tanggal dan wilayah pada baris yang berurutan memang sama.
+  if (showRegionColumn) {
+    start = 0;
+    while (start < records.length) {
+      let end = start + 1;
+      while (
+        end < records.length
+        && records[end].date === records[start].date
+        && records[end].region_id === records[start].region_id
+      ) end += 1;
+      if (end - start > 1) {
+        const firstDataRow = start + 5;
+        const lastDataRow = end + 4;
+        sheet.mergeCells(firstDataRow, 4, lastDataRow, 4);
+        sheet.getCell(firstDataRow, 4).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      }
+      start = end;
+    }
+  }
+
   sheet.eachRow((row, index) => {
     if (index < 5) return;
     row.height = 32;
@@ -77,9 +114,9 @@ export async function exportSpjOliExcel(
   });
 
   sheet.columns = showRegionColumn
-    ? [{ width: 6 }, { width: 14 }, { width: 18 }, { width: 22 }, { width: 20 }, { width: 28 }, { width: 28 }, { width: 20 }, { width: 14 }, { width: 28 }, { width: 28 }]
-    : [{ width: 6 }, { width: 14 }, { width: 18 }, { width: 20 }, { width: 28 }, { width: 28 }, { width: 20 }, { width: 14 }, { width: 28 }, { width: 28 }];
+    ? [{ width: 6 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 20 }, { width: 28 }, { width: 20 }, { width: 20 }, { width: 10 }, { width: 38 }, { width: 28 }]
+    : [{ width: 6 }, { width: 18 }, { width: 10 }, { width: 20 }, { width: 28 }, { width: 20 }, { width: 20 }, { width: 10 }, { width: 38 }, { width: 28 }];
 
   const buffer = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buffer]), `Rekap_SPJ_Oli_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  saveAs(new Blob([buffer]), `${fileName}.xlsx`);
 }

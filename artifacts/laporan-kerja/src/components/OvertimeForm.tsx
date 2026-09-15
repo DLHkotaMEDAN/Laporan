@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import ImageUpload from '@/components/ImageUpload';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
+import { useValueDraft } from '@/hooks/useFormDraft';
 import { storageService } from '@/services/storageService';
 import { overtimeService } from '@/services/overtimeService';
 import { OvertimeRecord } from '@/types/overtime';
@@ -17,7 +18,7 @@ import { showError, showSuccess } from '@/utils/toast';
 
 const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const isSuperAdmin = profile?.role === 'admin';
   const { regions } = useRegionFilterOptions(true, 'semua');
   const [saving, setSaving] = useState(false);
@@ -34,52 +35,12 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   });
   const { teams, loading: teamsLoading } = useAvailableTeams(form.region_id);
   const [personLookup, setPersonLookup] = useState(false);
-  const draftKey = initialData ? `overtime-edit-${initialData.id}` : 'overtime-create';
-  const draftReadyRef = useRef(false);
-  const skipNextSaveRef = useRef(true);
+  const draftKey = session?.user?.id ? `overtime:${session.user.id}:${initialData?.id ?? 'new'}` : undefined;
+  const { clearDraft, restoredAt } = useValueDraft(form, values => setForm(current => ({ ...current, ...values })), draftKey);
 
   useEffect(() => {
-    draftReadyRef.current = false;
-    skipNextSaveRef.current = true;
-    try {
-      const saved = window.localStorage.getItem(draftKey);
-      if (saved) {
-        const draft = JSON.parse(saved) as { savedAt?: number; values?: Partial<typeof form> };
-        if (draft.savedAt && Date.now() - draft.savedAt <= 14 * 24 * 60 * 60 * 1000 && draft.values) {
-          setForm(current => ({ ...current, ...draft.values }));
-        } else {
-          window.localStorage.removeItem(draftKey);
-        }
-      }
-    } catch {
-      // Draft is optional; the form remains usable when browser storage is unavailable.
-    }
-    draftReadyRef.current = true;
-  }, [draftKey]);
-
-  useEffect(() => {
-    if (!draftReadyRef.current) return;
-    if (skipNextSaveRef.current) {
-      skipNextSaveRef.current = false;
-      return;
-    }
-    const saveDraft = () => {
-      try {
-        window.localStorage.setItem(draftKey, JSON.stringify({ savedAt: Date.now(), values: form }));
-      } catch {
-        // Ignore storage quota and privacy-mode failures.
-      }
-    };
-    const timer = window.setTimeout(saveDraft, 300);
-    const saveWhenHidden = () => saveDraft();
-    document.addEventListener('visibilitychange', saveWhenHidden);
-    window.addEventListener('pagehide', saveWhenHidden);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('visibilitychange', saveWhenHidden);
-      window.removeEventListener('pagehide', saveWhenHidden);
-    };
-  }, [draftKey, form]);
+    if (restoredAt) showSuccess('Draf Rekap Lembur sebelumnya dipulihkan.');
+  }, [restoredAt]);
 
   useEffect(() => {
     if (!isSuperAdmin && profile?.region_id) setForm(current => ({ ...current, region_id: profile.region_id || '' }));
@@ -122,7 +83,7 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
       };
       if (initialData) await overtimeService.update(initialData.id, payload);
       else await overtimeService.create(payload);
-      window.localStorage.removeItem(draftKey);
+      await clearDraft();
       showSuccess(initialData ? 'Data lembur berhasil diperbarui.' : 'Data lembur berhasil disimpan.');
       navigate('/overtime');
     } catch (error) {
@@ -131,7 +92,7 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   };
 
   return <div className="mx-auto max-w-5xl space-y-5">
-    <div className="flex items-center justify-between"><Button type="button" variant="ghost" onClick={() => navigate('/overtime')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button><h1 className="text-xl font-bold">{initialData ? 'Edit Rekap Lembur' : 'Tambah Rekap Lembur'}</h1><span /></div>
+    <div className="flex items-center justify-between"><Button type="button" variant="ghost" onClick={() => navigate('/overtime')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button><div className="text-center"><h1 className="text-xl font-bold">{initialData ? 'Edit Rekap Lembur' : 'Tambah Rekap Lembur'}</h1><p className="text-[10px] text-slate-500">Draf tersimpan sementara di perangkat ini</p></div><span /></div>
     <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-5 shadow-sm">
       <div className="grid gap-4 md:grid-cols-2">
         <div><Label htmlFor="overtime-date">Tanggal</Label><Input id="overtime-date" type="date" value={form.date} onChange={e => setField('date', e.target.value)} required /></div>

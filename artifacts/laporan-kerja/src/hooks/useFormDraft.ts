@@ -48,7 +48,7 @@ const deleteDraft = async (key: string) => {
   }).finally(() => database.close());
 };
 
-/** Menyimpan isian form di perangkat, termasuk saat browser menjadi tidak aktif. */
+/** Menyimpan isian form hanya di perangkat, termasuk saat browser menjadi tidak aktif. */
 export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?: string) {
   const [isReady, setIsReady] = useState(!key);
   const [restoredAt, setRestoredAt] = useState<number | null>(null);
@@ -134,6 +134,104 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
       void save();
     };
   }, [form, key, save]);
+
+  const clearDraft = useCallback(async () => {
+    if (!key) return;
+    shouldPersistRef.current = false;
+    try {
+      await deleteDraft(key);
+      setLastSavedAt(null);
+    } catch (error) {
+      console.warn("Tidak dapat menghapus draf formulir", error);
+    }
+  }, [key]);
+
+  return { clearDraft, isReady, lastSavedAt, restoredAt };
+}
+
+/** Versi draf untuk form yang memakai useState biasa, bukan react-hook-form. */
+export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: string) {
+  const [isReady, setIsReady] = useState(!key);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
+  const valuesRef = useRef(values);
+  const restoreRef = useRef(restore);
+  const readyRef = useRef(!key);
+  const shouldPersistRef = useRef(Boolean(key));
+  const savingRef = useRef(false);
+  const pendingSaveRef = useRef(false);
+
+  valuesRef.current = values;
+  restoreRef.current = restore;
+
+  const save = useCallback(async () => {
+    if (!key || !readyRef.current || !shouldPersistRef.current) return;
+    if (savingRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
+    savingRef.current = true;
+    pendingSaveRef.current = false;
+    const savedAt = Date.now();
+    try {
+      await writeDraft(key, { savedAt, values: valuesRef.current });
+      setLastSavedAt(savedAt);
+    } catch (error) {
+      console.warn("Tidak dapat menyimpan draf formulir", error);
+    } finally {
+      savingRef.current = false;
+      if (pendingSaveRef.current && shouldPersistRef.current) void save();
+    }
+  }, [key]);
+
+  useEffect(() => {
+    let active = true;
+    readyRef.current = !key;
+    shouldPersistRef.current = Boolean(key);
+    setIsReady(!key);
+    setRestoredAt(null);
+    if (!key) return;
+
+    void (async () => {
+      try {
+        const draft = await readDraft<T>(key);
+        if (!active || !draft) return;
+        if (Date.now() - draft.savedAt <= EXPIRY_MS) {
+          restoreRef.current(draft.values);
+          setRestoredAt(draft.savedAt);
+          setLastSavedAt(draft.savedAt);
+        } else {
+          await deleteDraft(key);
+        }
+      } catch (error) {
+        console.warn("Tidak dapat memuat draf formulir", error);
+      } finally {
+        if (active) {
+          readyRef.current = true;
+          setIsReady(true);
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, [key]);
+
+  useEffect(() => {
+    if (!key || !readyRef.current) return;
+    const timer = window.setTimeout(() => { void save(); }, 350);
+    return () => window.clearTimeout(timer);
+  }, [key, save, values]);
+
+  useEffect(() => {
+    if (!key) return;
+    const saveImmediately = () => { void save(); };
+    document.addEventListener("visibilitychange", saveImmediately);
+    window.addEventListener("pagehide", saveImmediately);
+    return () => {
+      document.removeEventListener("visibilitychange", saveImmediately);
+      window.removeEventListener("pagehide", saveImmediately);
+      void save();
+    };
+  }, [key, save]);
 
   const clearDraft = useCallback(async () => {
     if (!key) return;

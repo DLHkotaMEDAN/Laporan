@@ -25,7 +25,6 @@ import FuelSpjTab from '@/components/FuelSpjTab';
 import SpjOli from '@/pages/SpjOli';
 import OvertimeRecap from '@/pages/OvertimeRecap';
 import DashboardStats from '@/components/dashboard/DashboardStats';
-import QuickActions from '@/components/dashboard/QuickActions';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
@@ -146,6 +145,38 @@ const PointList = ({ values, fallback }: { values: string[]; fallback: string })
     </div>
   );
 };
+
+const TabPageHeader = ({
+  title,
+  description,
+  actionLabel,
+  onAction,
+  showAction = true,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+  showAction?: boolean;
+}) => (
+  <div className="flex flex-col gap-3">
+    <div>
+      <h2 className="text-xl font-black text-slate-950">{title}</h2>
+      <p className="text-sm text-slate-500">{description}</p>
+    </div>
+    {showAction && (
+      <div className="w-full">
+        <Button
+          onClick={onAction}
+          className="inline-flex h-12 w-full items-center justify-center whitespace-nowrap bg-emerald-600 px-5 font-bold hover:bg-emerald-700"
+        >
+          <Plus className="mr-2 h-4 w-4 shrink-0" />
+          {actionLabel}
+        </Button>
+      </div>
+    )}
+  </div>
+);
 
 const Index = () => {
   const navigate = useNavigate();
@@ -717,15 +748,6 @@ const Index = () => {
           />
         )}
 
-        <QuickActions
-          isPimpinan={isPimpinan}
-          isLoggedIn={isLoggedIn}
-          canManageReports={canManageReports}
-          canManageWorkPlans={canManageWorkPlans}
-          canManageFuel={isAccountActive && (isAdmin || isAdminBbm)}
-          canManageFuelSpj={isAccountActive && (isAdmin || isAdminSpj)}
-        />
-
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
             <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
@@ -869,6 +891,49 @@ const Index = () => {
               </DropdownMenu>}
             </div>
           </div>
+
+          {activeTab === 'reports' && (
+            <TabPageHeader
+              title="Laporan Harian"
+              description="Pencatatan realisasi pekerjaan lapangan."
+              actionLabel="Input Laporan"
+              onAction={() => navigate('/create')}
+              showAction={canManageReports}
+            />
+          )}
+          {activeTab === 'workplans' && (
+            <TabPageHeader
+              title="Rencana Kerja"
+              description="Penyusunan agenda kerja tim dan lokasi."
+              actionLabel="Input Rencana Kerja"
+              onAction={() => navigate('/work-plans/create')}
+              showAction={canManageWorkPlans}
+            />
+          )}
+          {activeTab === 'overtime' && (
+            <TabPageHeader
+              title="Rekap Lembur"
+              description="Pencatatan kehadiran dan aktivitas lembur."
+              actionLabel="Input Rekap Lembur"
+              onAction={() => navigate('/overtime/create')}
+            />
+          )}
+          {activeTab === 'fuel_reports' && (
+            <TabPageHeader
+              title="Admin BBM"
+              description="Pencatatan penggunaan bahan bakar minyak."
+              actionLabel="Input BBM"
+              onAction={() => navigate('/fuel-reports/create')}
+            />
+          )}
+          {activeTab === 'fuel_spj' && (
+            <TabPageHeader
+              title="Laporan SPJ"
+              description="Pencatatan laporan pertanggungjawaban BBM."
+              actionLabel="Input Laporan SPJ"
+              onAction={() => navigate('/fuel-reports/spj/create')}
+            />
+          )}
 
           {/* Filter Section */}
           {(activeTab === "reports" || activeTab === "workplans") && !isOvertimeOnly && (

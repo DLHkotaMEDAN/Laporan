@@ -434,7 +434,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
           <div className="flex flex-col items-center">
             <h1 className="text-lg md:text-2xl font-bold text-primary">{isEditing && !isDuplicateMode ? "Edit Laporan" : "Input Laporan Baru"}</h1>
             {isDuplicateMode && <Badge className="bg-amber-100 text-amber-700 border-amber-200 mt-1 animate-pulse"><Copy size={10} className="mr-1" /> Mode Duplikat: Belum Tersimpan</Badge>}
-            <p className="text-[10px] text-slate-500 mt-1">{lastSavedAt ? "Draf tersimpan otomatis di perangkat ini" : "Draf akan tersimpan otomatis di perangkat ini"}</p>
+            <p className="text-[10px] text-slate-500 mt-1">{lastSavedAt ? "Draf tersimpan sementara di perangkat ini" : "Draf akan tersimpan sementara di perangkat ini"}</p>
           </div>
           <div className="flex gap-2">
             {isEditing && !isDuplicateMode && (

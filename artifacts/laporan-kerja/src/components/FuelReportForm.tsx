@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
 import {
   Dialog,
@@ -172,50 +173,10 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
     },
   });
 
-  // Keep unfinished input in this browser so navigating to another window or
-  // page does not force the user to enter the report again.
   const draftKey = session?.user?.id
-    ? `fuel-report-draft:${session.user.id}:${initialData?.id ?? 'new'}`
-    : null;
-  const draftRestoredRef = useRef(false);
-
-  useEffect(() => {
-    draftRestoredRef.current = false;
-    if (!draftKey) return;
-
-    try {
-      const savedDraft = window.localStorage.getItem(draftKey);
-      if (savedDraft) {
-        const parsedDraft = JSON.parse(savedDraft) as z.infer<typeof formSchema>;
-        if (parsedDraft.items?.some(item => item.pertamax_rp === undefined && item.dexlite_rp === undefined && item.oli_liter === undefined)) {
-          parsedDraft.items = toFormItems(parsedDraft.items as unknown as FuelReport['items']);
-        }
-        parsedDraft.items = parsedDraft.items
-          .filter(item => item.requires_fuel !== false)
-          .map(item => ({ ...item, requires_fuel: true }));
-        form.reset(parsedDraft);
-      }
-    } catch (error) {
-      console.warn('Draft laporan BBM tidak dapat dipulihkan:', error);
-    } finally {
-      draftRestoredRef.current = true;
-    }
-  }, [draftKey, form]);
-
-  useEffect(() => {
-    if (!draftKey) return;
-
-    const subscription = form.watch((values) => {
-      if (!draftRestoredRef.current) return;
-      try {
-        window.localStorage.setItem(draftKey, JSON.stringify(values));
-      } catch (error) {
-        console.warn('Draft laporan BBM tidak dapat disimpan:', error);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [draftKey, form]);
+    ? `fuel-report:${session.user.id}:${initialData?.id ?? 'new'}`
+    : undefined;
+  const { clearDraft } = useFormDraft(form, draftKey);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -381,11 +342,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         await fuelService.createReport(finalData);
         showSuccess("Laporan BBM disimpan");
       }
-      try {
-        if (draftKey) window.localStorage.removeItem(draftKey);
-      } catch (error) {
-        console.warn('Draft laporan BBM tidak dapat dihapus:', error);
-      }
+      await clearDraft();
       navigate('/fuel-reports');
     } catch (error: any) {
       showError(`Gagal simpan: ${error.message || "Terjadi kesalahan database"}`);
@@ -408,9 +365,12 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
           <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Kembali
           </Button>
-          <h1 className="text-2xl font-bold text-primary">
-            {isEditing ? "Edit Laporan BBM & Oli" : "Input Laporan BBM & Oli"}
-          </h1>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-primary">
+              {isEditing ? "Edit Laporan BBM & Oli" : "Input Laporan BBM & Oli"}
+            </h1>
+            <p className="text-[10px] text-slate-500">Draf tersimpan sementara di perangkat ini</p>
+          </div>
           <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
             {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Simpan...</> : <><Save className="h-4 w-4 mr-2" /> Simpan</>}
           </Button>

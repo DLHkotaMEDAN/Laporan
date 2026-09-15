@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { useValueDraft } from '@/hooks/useFormDraft';
 import { spjOliService } from '@/services/spjOliService';
 import { workPlanService } from '@/services/workPlanService';
 import { SpjOliRecord } from '@/types/spjOli';
@@ -42,7 +43,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, veh
       <datalist id="spj-oli-operator-options">{Array.from(new Set(savedRecords.map(record => record.operator_name).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-oil-options">{Array.from(new Set(savedRecords.map(record => record.oil_name).filter(Boolean))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-location-options">{Array.from(new Set(savedRecords.map(record => record.location).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
-      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia.</p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia. Draf tersimpan sementara di perangkat ini.</p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
       <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-2">
         <label className="space-y-1 text-sm font-semibold">Tanggal<Input type="date" value={form.date} onChange={e => onChange('date', e.target.value)} /></label>
         <label className="space-y-1 text-sm font-semibold">Nomor SPJ<Input list="spj-oli-number-options" value={form.spj_number} onChange={e => onChange('spj_number', e.target.value)} /></label>
@@ -76,6 +77,12 @@ export default function SpjOli() {
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; region_id: string; name: string }>();
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
   const isForm = window.location.pathname.endsWith('/create') || Boolean(id);
+  const draftKey = isForm && session?.user?.id ? `spj-oli:${session.user.id}:${id ?? 'new'}` : undefined;
+  const { clearDraft, isReady: isDraftReady, restoredAt } = useValueDraft(
+    form,
+    values => setForm({ ...emptyRecord, ...values }),
+    draftKey,
+  );
   const teamFilterRegion = isForm && form.region_id ? form.region_id : regionId;
   const { regions, teams } = useRegionFilterOptions(true, teamFilterRegion);
   const period = params.get('period');
@@ -84,7 +91,7 @@ export default function SpjOli() {
   useEffect(() => { if (!canAccess(profile?.role) && profile) navigate('/', { replace: true }); else void load(); }, [profile]);
   useEffect(() => { void workPlanService.getAllWorkPlans().then(setWorkPlans).catch(() => setWorkPlans([])); }, []);
   useEffect(() => {
-    if (!id) return;
+    if (!id || !isDraftReady || restoredAt) return;
     spjOliService.getById(id)
       .then(async data => {
         const teamId = data.team_id || '';
@@ -105,7 +112,11 @@ export default function SpjOli() {
         });
       })
       .catch(() => { showError('Data SPJ Oli tidak ditemukan'); navigate('/', { replace: true }); });
-  }, [id]);
+  }, [id, isDraftReady, restoredAt]);
+
+  useEffect(() => {
+    if (restoredAt) showSuccess('Draf SPJ Oli sebelumnya dipulihkan.');
+  }, [restoredAt]);
 
   // Data SPJ Oli lama bisa belum memiliki team_id. Pulihkan Tim dari kendaraan
   // yang tersimpan dengan mencocokkannya ke alat pada Rencana Kerja wilayah yang sama.
@@ -134,7 +145,7 @@ export default function SpjOli() {
     const vehiclesFromWorkPlans = workPlans
       .filter(plan => plan.region_id === form.region_id && plan.team_id === form.team_id)
       .filter(plan => !plan.category.toLowerCase().includes('taman'))
-      .flatMap(plan => plan.items.flatMap(item => item.tools.map(tool => tool.name?.trim()).filter(Boolean)));
+      .flatMap(plan => plan.items.flatMap(item => item.tools.map(tool => tool.name?.trim()).filter((value): value is string => Boolean(value))));
     const vehiclesFromSpjOli = savedRecordsForForm.map(record => record.vehicle_name?.trim()).filter(Boolean);
     return Array.from(new Set([...vehiclesFromWorkPlans, ...vehiclesFromSpjOli])).sort();
   }, [workPlans, savedRecordsForForm, form.region_id, form.team_id]);
@@ -158,7 +169,7 @@ export default function SpjOli() {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
-    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
+    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); await clearDraft(); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
   };
   const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
 

@@ -19,7 +19,6 @@ import { exportSpjOliExcel } from '@/utils/spj-oli-excel';
 export type SpjOliRecapPeriod = 'daily' | 'weekly' | 'monthly';
 type LogoMode = 'with-logo' | 'without-logo';
 type SignatureMode = 'with-signature' | 'without-signature';
-type TableMode = 'complete' | 'compact';
 
 const labels: Record<SpjOliRecapPeriod, string> = { daily: 'Harian', weekly: 'Mingguan', monthly: 'Bulanan' };
 const canAccess = (role?: string) => ['admin', 'admin_spj_bbm', 'pimpinan'].includes(role || '');
@@ -49,7 +48,6 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [logoMode, setLogoMode] = useState<LogoMode>('without-logo');
   const [signatureMode, setSignatureMode] = useState<SignatureMode>('without-signature');
-  const [tableMode, setTableMode] = useState<TableMode>('complete');
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const { regions, teams } = useRegionFilterOptions(true, selectedRegion);
 
@@ -82,6 +80,38 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
     return current >= start && current <= end;
   }), [records, selectedRegion, selectedTeam, selectedDate, period]);
 
+  // Satukan sel tanggal untuk record yang berurutan pada tanggal yang sama.
+  // Rincian SPJ/Oli tetap ditampilkan per baris agar tidak ada data yang hilang.
+  const dateRowSpans = useMemo(() => {
+    const spans = new Map<number, number>();
+    let start = 0;
+    while (start < filtered.length) {
+      let end = start + 1;
+      while (end < filtered.length && filtered[end].date === filtered[start].date) end += 1;
+      spans.set(start, end - start);
+      start = end;
+    }
+    return spans;
+  }, [filtered]);
+
+  // Wilayah digabung hanya apabila tanggal dan wilayahnya sama. Ini mencegah
+  // wilayah berbeda pada tanggal yang sama terlihat seolah-olah satu wilayah.
+  const regionRowSpans = useMemo(() => {
+    const spans = new Map<number, number>();
+    let start = 0;
+    while (start < filtered.length) {
+      let end = start + 1;
+      while (
+        end < filtered.length
+        && filtered[end].date === filtered[start].date
+        && filtered[end].region_id === filtered[start].region_id
+      ) end += 1;
+      spans.set(start, end - start);
+      start = end;
+    }
+    return spans;
+  }, [filtered]);
+
   const regionName = (id: string) => regions.find((region) => region.id === id)?.name || '-';
   const teamName = (id: string) => teams.find((team) => team.id === id)?.name || '-';
   const showRegionColumn = profile?.role === 'admin' || profile?.role === 'admin_spj_bbm';
@@ -89,9 +119,13 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   // Total selalu 100% supaya kolom terakhir (Keterangan) tidak keluar dari
   // batas A3 saat browser membuka dialog cetak.
   const columnWidths = showRegionColumn
-    ? ['3%', '8%', '9%', '10%', '9%', '13%', '13%', '8%', '6%', '11%', '10%']
-    : ['3%', '9%', '10%', '10%', '15%', '15%', '9%', '6%', '12%', '11%'];
+    ? ['3%', '9%', '6%', '10%', '9%', '13%', '10%', '8%', '5%', '17%', '10%']
+    : ['3%', '10%', '7%', '10%', '14%', '11%', '9%', '5%', '19%', '12%'];
   const periodLabel = formatPeriod(period, selectedDate);
+  const recapFileName = `Rekap SPJ OLI ${labels[period]} - ${selectedDate} - ${selectedRegion === 'semua' ? 'Semua Wilayah' : regionName(selectedRegion)}`
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
   const editRecords = filtered.slice(0, 50);
 
   const reset = () => {
@@ -104,14 +138,14 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const handlePrint = () => window.setTimeout(() => window.print(), 0);
   const handlePdf = async () => {
     try {
-      await openShareablePdfPreview({ fileName: `Rekap_SPJ_Oli_${period}` });
+      await openShareablePdfPreview({ fileName: `${recapFileName}.pdf` });
     } catch (error: any) {
       showError(error.message || 'Gagal membuat PDF');
     }
   };
   const handleExcel = async () => {
     try {
-      await exportSpjOliExcel(filtered, `REKAP SPJ OLI ${labels[period]}`, periodLabel, regionName, teamName, showRegionColumn);
+      await exportSpjOliExcel(filtered, `REKAP SPJ OLI ${labels[period]}`, periodLabel, regionName, teamName, showRegionColumn, recapFileName);
     } catch {
       showError('Gagal membuat file Excel');
     }
@@ -131,14 +165,12 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
           <>
             <DropdownMenuItem onClick={() => setLogoMode(logoMode === 'with-logo' ? 'without-logo' : 'with-logo')}><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSignatureMode(signatureMode === 'with-signature' ? 'without-signature' : 'with-signature')}><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTableMode(tableMode === 'complete' ? 'compact' : 'complete')}><Table className="mr-2 h-4 w-4 text-emerald-600" /> Mode Tabel: {tableMode === 'complete' ? 'Lengkap' : 'Ringkas'}</DropdownMenuItem>
             {editRecords.map((record) => <DropdownMenuItem key={record.id} onClick={() => navigate(`/spj-oli/edit/${record.id}`)} className="whitespace-normal"><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit: {record.spj_number} - {record.oil_name}</DropdownMenuItem>)}
           </>
         ) : (
           <>
             <DropdownMenuSub><DropdownMenuSubTrigger><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem onClick={() => setLogoMode('with-logo')}>Dengan Logo</DropdownMenuItem><DropdownMenuItem onClick={() => setLogoMode('without-logo')}>Tanpa Logo</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub>
             <DropdownMenuSub><DropdownMenuSubTrigger><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem onClick={() => setSignatureMode('with-signature')}>Ada Tanda Tangan</DropdownMenuItem><DropdownMenuItem onClick={() => setSignatureMode('without-signature')}>Tanpa Tanda Tangan</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub>
-            <DropdownMenuSub><DropdownMenuSubTrigger><Table className="mr-2 h-4 w-4 text-emerald-600" /> Mode Tabel: {tableMode === 'complete' ? 'Lengkap' : 'Ringkas'}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem onClick={() => setTableMode('complete')}>Tabel Lengkap</DropdownMenuItem><DropdownMenuItem onClick={() => setTableMode('compact')}>Tabel Ringkas</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub>
             {editRecords.length > 0 && <DropdownMenuSub><DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger><DropdownMenuSubContent className="w-80">{editRecords.map((record) => <DropdownMenuItem key={record.id} onClick={() => navigate(`/spj-oli/edit/${record.id}`)}>{record.spj_number} - {record.oil_name}</DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub>}
           </>
         )}
@@ -187,14 +219,14 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
           <div className="mb-5 text-center"><h3 className="text-xl font-bold uppercase underline">REKAP SPJ OLI {labels[period].toUpperCase()}{showRegionColumn ? (selectedRegion !== 'semua' ? ` — ${regionName(selectedRegion).toUpperCase()}` : ' — SEMUA WILAYAH') : ''}</h3><p className="text-lg font-bold">{periodLabel}</p></div>
 
           <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
-            <table className={`w-full min-w-[1200px] table-fixed border-collapse border-2 border-black ${tableMode === 'compact' ? 'text-[8px] leading-[1.25]' : 'text-[10px] leading-[1.35]'} print:w-full print:min-w-0`}>
+            <table className="w-full min-w-[1200px] table-fixed border-collapse border-2 border-black text-[10px] leading-[1.35] print:w-full print:min-w-0">
               <colgroup>
                 {columnWidths.map((width, index) => <col key={index} style={{ width }} />)}
               </colgroup>
               <thead><tr className="bg-slate-100">
                 <th className="border-2 border-black p-1">No</th>
-                <th className="border-2 border-black p-1">Tanggal</th>
                 <th className="border-2 border-black p-1">No. SPJ</th>
+                <th className="border-2 border-black p-1">Tanggal</th>
                 {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
                 <th className="border-2 border-black p-1">Tim</th>
                 <th className="border-2 border-black p-1 leading-tight">Alat Operasional/<br />Kendaraan</th>
@@ -208,14 +240,14 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
                 {loading ? <tr><td colSpan={columnCount} className="border-2 border-black p-12 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr> : filtered.length ? filtered.map((record, index) => (
                   <tr key={record.id} className="align-top break-inside-avoid odd:bg-white even:bg-slate-50 print:bg-white">
                     <td className="break-words border-2 border-black p-1 text-center">{index + 1}</td>
-                    <td className="break-words border-2 border-black p-1 text-center">{formatDate(record.date)}</td>
                     <td className="break-words border-2 border-black p-1 font-semibold">{record.spj_number}</td>
-                    {showRegionColumn && <td className="break-words border-2 border-black p-1">{regionName(record.region_id)}</td>}
+                    {dateRowSpans.has(index) && <td rowSpan={dateRowSpans.get(index)} className="whitespace-nowrap border-2 border-black p-1 text-center align-middle">{formatDate(record.date)}</td>}
+                    {showRegionColumn && regionRowSpans.has(index) && <td rowSpan={regionRowSpans.get(index)} className="break-words whitespace-normal align-middle border-2 border-black p-1">{regionName(record.region_id)}</td>}
                     <td className="break-words border-2 border-black p-1">{teamName(record.team_id)}</td>
                     <td className="break-words border-2 border-black p-1">{record.vehicle_name || '-'}</td>
-                    <td className="break-words border-2 border-black p-1">{record.operator_name || record.receiver_name || '-'}</td>
+                    <td className="break-words whitespace-normal border-2 border-black p-1">{record.operator_name || record.receiver_name || '-'}</td>
                     <td className="break-words border-2 border-black p-1">{record.oil_name}</td>
-                    <td className="break-words border-2 border-black p-1 text-right">{record.quantity} {record.unit}</td>
+                    <td className="whitespace-nowrap border-2 border-black p-1 text-right">{record.quantity} {record.unit}</td>
                     <td className="break-words border-2 border-black p-1">{record.location || '-'}</td>
                     <td className="break-words border-2 border-black p-1">{record.remarks || '-'}</td>
                   </tr>
