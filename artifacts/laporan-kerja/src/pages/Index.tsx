@@ -854,13 +854,13 @@ const Index = () => {
                   )}
                   {activeTab === 'spj_oli' && (
                     <>
-                      <DropdownMenuItem onClick={() => navigate('/spj-oli?period=daily')} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate('/spj-oli/daily-rekap')} className="py-3 cursor-pointer">
                         <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian SPJ Oli
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/spj-oli?period=weekly')} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate('/spj-oli/weekly-rekap')} className="py-3 cursor-pointer">
                         <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan SPJ Oli
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/spj-oli?period=monthly')} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate('/spj-oli/monthly-rekap')} className="py-3 cursor-pointer">
                         <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan SPJ Oli
                       </DropdownMenuItem>
                     </>

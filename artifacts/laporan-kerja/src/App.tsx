@@ -46,6 +46,7 @@ import FuelSpjWeeklyRecap from "./pages/FuelSpjWeeklyRecap";
 import FuelSpjMonthlyRecap from "./pages/FuelSpjMonthlyRecap";
 import FuelSpjYearlyRecap from "./pages/FuelSpjYearlyRecap";
 import SpjOli from "./pages/SpjOli";
+import SpjOliRecap from "./pages/SpjOliRecap";
 import {
   USER_ROLES,
   canAccessFuelArea,
@@ -232,6 +233,9 @@ const App = () => (
             <Route path="/spj-oli" element={<FuelSpjRoute><SpjOli /></FuelSpjRoute>} />
             <Route path="/spj-oli/create" element={<FuelSpjRoute><SpjOli /></FuelSpjRoute>} />
             <Route path="/spj-oli/edit/:id" element={<FuelSpjRoute><SpjOli /></FuelSpjRoute>} />
+            <Route path="/spj-oli/daily-rekap" element={<FuelSpjRoute><SpjOliRecap period="daily" /></FuelSpjRoute>} />
+            <Route path="/spj-oli/weekly-rekap" element={<FuelSpjRoute><SpjOliRecap period="weekly" /></FuelSpjRoute>} />
+            <Route path="/spj-oli/monthly-rekap" element={<FuelSpjRoute><SpjOliRecap period="monthly" /></FuelSpjRoute>} />
             
             <Route path="/create" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditReport /></ProtectedRoute>} />

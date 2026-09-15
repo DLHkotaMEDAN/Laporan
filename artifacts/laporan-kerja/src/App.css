@@ -40,3 +40,20 @@
 .read-the-docs {
   color: #888;
 }
+@media print {
+  /* Let the browser use the full printable A3 width. A fixed 390 mm box can
+     be scaled down by some printer drivers, leaving wide blank margins. */
+  @page { size: A3 landscape; margin: 5mm; }
+  html, body, #root { background: white !important; margin: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; }
+  .spj-oli-a3-print,
+  .spj-oli-a3-print > div { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  .spj-oli-a3-print .print-area { box-sizing: border-box !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; min-height: 0 !important; overflow: visible !important; }
+  .spj-oli-a3-print .no-print, .spj-oli-a3-print [data-radix-portal], .spj-oli-a3-print [role="menu"], .spj-oli-a3-print [data-radix-popper-content-wrapper] { display: none !important; visibility: hidden !important; }
+  .spj-oli-a3-print .recap-print-area { width: 100% !important; max-width: none !important; }
+  .spj-oli-a3-print .recap-table-scroll { overflow: visible !important; }
+  .spj-oli-a3-print table { table-layout: fixed !important; width: 100% !important; min-width: 0 !important; max-width: none !important; }
+  .spj-oli-a3-print table col { min-width: 0 !important; max-width: none !important; }
+  .spj-oli-a3-print thead { display: table-header-group !important; }
+  .spj-oli-a3-print tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .spj-oli-a3-print th, .spj-oli-a3-print td { overflow-wrap: anywhere !important; word-break: break-word !important; }
+}

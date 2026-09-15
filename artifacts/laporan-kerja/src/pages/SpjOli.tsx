@@ -104,8 +104,26 @@ export default function SpjOli() {
           remarks: data.remarks || '',
         });
       })
-      .catch(() => { showError('Data SPJ Oli tidak ditemukan'); navigate('/spj-oli'); });
+      .catch(() => { showError('Data SPJ Oli tidak ditemukan'); navigate('/', { replace: true }); });
   }, [id]);
+
+  // Data SPJ Oli lama bisa belum memiliki team_id. Pulihkan Tim dari kendaraan
+  // yang tersimpan dengan mencocokkannya ke alat pada Rencana Kerja wilayah yang sama.
+  useEffect(() => {
+    if (!id || form.team_id || !form.region_id || !form.vehicle_name || !workPlans.length) return;
+    const vehicle = form.vehicle_name.trim().toLowerCase();
+    const matchingTeamIds = Array.from(new Set(workPlans
+      .filter(plan => plan.region_id === form.region_id && plan.team_id && !plan.category.toLowerCase().includes('taman'))
+      .filter(plan => plan.items.some(item => item.tools.some(tool => {
+        const toolName = tool.name?.trim().toLowerCase();
+        return toolName && (toolName === vehicle || vehicle.includes(toolName) || toolName.includes(vehicle));
+      })))
+      .map(plan => plan.team_id as string)));
+
+    if (matchingTeamIds.length === 1) {
+      update('team_id', matchingTeamIds[0]);
+    }
+  }, [id, form.team_id, form.region_id, form.vehicle_name, workPlans]);
 
   const visibleTeams = teams.filter(team => regionId === 'semua' || team.region_id === regionId);
   const savedRecordsForForm = useMemo(() => records
@@ -145,7 +163,7 @@ export default function SpjOli() {
   const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
 
   if (!canAccess(profile?.role)) return null;
-  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} onChange={update} onSubmit={submit} onCancel={() => navigate('/spj-oli')} />;
+  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
 
   return <div className="space-y-5"><div className="flex flex-col gap-3"><div><h2 className="text-xl font-black text-slate-950">SPJ Oli</h2><p className="text-sm text-slate-500">Pencatatan penggunaan oli berdasarkan wilayah dan tim.</p></div>{editable && <div className="w-full"><Button onClick={() => navigate('/spj-oli/create')} style={{ width: '100%', minWidth: '180px' }} className="inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap bg-emerald-600 px-5 font-bold hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4 shrink-0" /> Input SPJ Oli</Button></div>}</div><section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-5"><div className="relative md:col-span-2"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nomor SPJ atau nama oli" /></div><Select value={regionId} onValueChange={value => { setRegionId(value); setTeamId('semua'); }}><SelectTrigger><SelectValue placeholder="Wilayah" /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Wilayah</SelectItem>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select><Select value={teamId} onValueChange={setTeamId}><SelectTrigger><SelectValue placeholder="Tim" /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Tim</SelectItem>{visibleTeams.map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select><div className="flex gap-2"><Input type="date" value={date} onChange={e => setDate(e.target.value)} /><Button variant="outline" size="icon" onClick={() => { setSearch(''); setRegionId('semua'); setTeamId('semua'); setDate(''); }} title="Reset filter"><FilterX className="h-4 w-4" /></Button></div></section><section className="overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[950px] text-xs"><thead><tr className="bg-slate-700 text-white"><th className="p-3">No</th><th className="p-3">Tanggal</th><th className="p-3 text-left">Wilayah</th><th className="p-3 text-left">Tim</th><th className="p-3 text-left">No. SPJ</th><th className="p-3 text-left">Jenis Oli</th><th className="p-3 text-right">Jumlah</th><th className="p-3 text-left">Keterangan</th>{editable && <th className="p-3">Aksi</th>}</tr></thead><tbody>{loading ? <tr><td colSpan={9} className="p-10 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr> : filtered.length ? filtered.map((record, index) => <tr key={record.id} className={cn('border-t hover:bg-emerald-50/50', index % 2 && 'bg-slate-50/70')}><td className="p-3 text-center font-bold text-slate-500">{index + 1}</td><td className="p-3 text-center">{record.date}</td><td className="p-3"><Badge variant="outline" className="bg-emerald-50 text-emerald-700">{regionName(record.region_id)}</Badge></td><td className="p-3">{teamName(record.team_id)}</td><td className="p-3 font-semibold">{record.spj_number}</td><td className="p-3">{record.oil_name}</td><td className="p-3 text-right font-mono">{record.quantity} {record.unit}</td><td className="p-3 text-slate-500">{record.remarks || '-'}</td>{editable && <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => navigate(`/spj-oli/edit/${record.id}`)}><Edit className="h-4 w-4 text-blue-600" /></Button><Button variant="ghost" size="icon" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button></td>}</tr>) : <tr><td colSpan={9} className="p-12 text-center text-slate-500">Tidak ada data SPJ Oli.</td></tr>}</tbody></table></div><div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500"><b>{filtered.length}</b> data SPJ Oli ditampilkan {period && `• Rekap ${period === 'daily' ? 'Harian' : period === 'weekly' ? 'Mingguan' : 'Bulanan'}`}</div></section></div>;
 }
