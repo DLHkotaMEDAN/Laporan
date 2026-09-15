@@ -749,51 +749,51 @@ const Index = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border ring-1 ring-slate-100">
-            <TabsList className="grid w-full grid-cols-2 md:flex md:w-auto gap-1 bg-transparent h-auto p-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-gradient-to-r from-white via-slate-50 to-blue-50/70 p-2.5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] ring-1 ring-white">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1.5 bg-transparent p-0 md:flex md:w-auto">
               {canViewReportsTab && !isOvertimeOnly && <TabsTrigger
                 value="reports" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
+                className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-400 md:text-sm data-[state=active]:border-blue-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(37,99,235,0.32)]"
               >
                 <FileText size={16} /> Laporan Harian
               </TabsTrigger>}
               {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
                 value="workplans" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
+                className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 md:text-sm data-[state=active]:border-emerald-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(5,150,105,0.28)]"
               >
                 <ClipboardList size={16} /> Rencana Kerja
               </TabsTrigger>}
               {canViewOvertime && !isAdminHarian && <TabsTrigger
                 value="overtime"
-                className="data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold transition-all"
+                className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-amber-400 md:text-sm data-[state=active]:border-amber-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(217,119,6,0.28)]"
               >
                 <FileText size={16} /> Rekap Lembur
               </TabsTrigger>}
               {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && !isAdminHarian && (
                 <>
                   {(isAdmin || isAdminBbm) && (
-                    <TabsTrigger value="fuel_reports" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
-                      <Fuel size={16} className="mr-2" /> Admin BBM
+                    <TabsTrigger value="fuel_reports" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-orange-400 md:text-sm data-[state=active]:border-orange-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(234,88,12,0.28)]">
+                      <Fuel size={16} /> Admin BBM
                     </TabsTrigger>
                   )}
                   {(isAdmin || isPimpinan || isAdminSpj) && (
-                    <TabsTrigger value="fuel_spj" className="data-[state=active]:bg-blue-800 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
-                      <Table size={16} className="mr-2" /> Laporan SPJ
+                    <TabsTrigger value="fuel_spj" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-400 md:text-sm data-[state=active]:border-blue-700 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-800 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(30,64,175,0.28)]">
+                      <Table size={16} /> Laporan SPJ
                     </TabsTrigger>
                   )}
                   {(isAdmin || isPimpinan || isAdminSpj) && (
-                    <TabsTrigger value="spj_oli" className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white py-2.5 px-6 rounded-xl text-xs md:text-sm font-bold">
-                      <Fuel size={16} className="mr-2" /> SPJ Oli
+                    <TabsTrigger value="spj_oli" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 md:text-sm data-[state=active]:border-emerald-600 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-700 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(4,120,87,0.28)]">
+                      <Fuel size={16} /> SPJ Oli
                     </TabsTrigger>
                   )}
                 </>
               )}
             </TabsList>
 
-            <div className="flex items-center gap-2 px-2">
+            <div className="flex items-center gap-2 border-t border-slate-200/80 px-2 pt-2 md:border-l md:border-t-0 md:pl-4 md:pt-0">
               {(activeTab !== 'reports' || canPrintAnyReportRecap) && <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700 border-slate-200 h-10 px-4 font-bold rounded-xl">
+                  <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 bg-white px-4 font-bold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md">
                     <Printer className="h-4 w-4 mr-2 text-blue-600" /> Cetak Rekap <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
