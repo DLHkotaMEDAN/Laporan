@@ -168,7 +168,8 @@ const TabPageHeader = ({
       <div className="w-full">
         <Button
           onClick={onAction}
-          className="inline-flex h-12 w-full items-center justify-center whitespace-nowrap bg-emerald-600 px-5 font-bold hover:bg-emerald-700"
+          style={{ width: '100%', minWidth: '180px' }}
+          className="inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap bg-emerald-600 px-5 font-bold hover:bg-emerald-700"
         >
           <Plus className="mr-2 h-4 w-4 shrink-0" />
           {actionLabel}
