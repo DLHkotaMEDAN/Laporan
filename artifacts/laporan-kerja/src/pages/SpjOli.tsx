@@ -79,7 +79,22 @@ export default function SpjOli() {
   const load = async () => { try { setLoading(true); setRecords(await spjOliService.getAll()); } catch { showError('Gagal memuat data SPJ Oli'); } finally { setLoading(false); } };
   useEffect(() => { if (!canAccess(profile?.role) && profile) navigate('/', { replace: true }); else void load(); }, [profile]);
   useEffect(() => { void workPlanService.getAllWorkPlans().then(setWorkPlans).catch(() => setWorkPlans([])); }, []);
-  useEffect(() => { if (id) spjOliService.getById(id).then(data => setForm({ ...data, remarks: data.remarks || '' })).catch(() => { showError('Data SPJ Oli tidak ditemukan'); navigate('/spj-oli'); }); }, [id]);
+  useEffect(() => {
+    if (!id) return;
+    spjOliService.getById(id)
+      .then(data => setForm({
+        ...emptyRecord,
+        ...data,
+        region_id: data.region_id || '',
+        team_id: data.team_id || '',
+        vehicle_name: data.vehicle_name || '',
+        receiver_name: data.receiver_name || '',
+        operator_name: data.operator_name || '',
+        location: data.location || '',
+        remarks: data.remarks || '',
+      }))
+      .catch(() => { showError('Data SPJ Oli tidak ditemukan'); navigate('/spj-oli'); });
+  }, [id]);
 
   const visibleTeams = teams.filter(team => regionId === 'semua' || team.region_id === regionId);
   const savedRecordsForForm = useMemo(() => records
