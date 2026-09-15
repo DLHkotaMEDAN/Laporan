@@ -108,17 +108,22 @@ const Login = () => {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="mt-2 inline-flex h-11 w-full min-w-full shrink-0 items-center justify-center whitespace-nowrap bg-blue-600 font-bold hover:bg-blue-700"
-              disabled={loading}
-            >
-              {loading ? (
-                <><Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" /> Memproses...</>
-              ) : (
-                "Masuk"
-              )}
-            </Button>
+            <div className="mt-2 block w-full" style={{ width: '100%' }}>
+              <Button
+                type="submit"
+                style={{ width: '100%', minWidth: '100%', display: 'inline-flex' }}
+                className="h-11 w-full min-w-full shrink-0 items-center justify-center whitespace-nowrap bg-blue-600 font-bold hover:bg-blue-700"
+                disabled={loading}
+              >
+                <span className="inline-flex w-full items-center justify-center whitespace-nowrap">
+                  {loading ? (
+                    <><Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" /> Memproses...</>
+                  ) : (
+                    "Masuk"
+                  )}
+                </span>
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
