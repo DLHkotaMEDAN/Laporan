@@ -424,7 +424,19 @@ const FuelMonthlyRecap = () => {
           .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
           @page { size: landscape; margin: 1cm; }
           .overflow-x-auto { overflow: visible !important; }
-          table { width: 100% !important; min-width: 0 !important; }
+          table {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+          }
+          th, td {
+            box-sizing: border-box !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow-wrap: anywhere !important;
+          }
+          @page { size: A3 landscape; margin: 10mm; }
         }
       `}} />
     </div>

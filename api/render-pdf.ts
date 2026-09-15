@@ -79,10 +79,20 @@ export default async function handler(request: RequestLike, response: ResponseLi
       .pdf-export .recap-table-scroll {
         overflow: visible !important;
       }
-      .pdf-export table {
-        table-layout: fixed !important;
-        width: 100% !important;
-      }
+    .pdf-export table {
+      table-layout: fixed !important;
+      width: 100% !important;
+    }
+    .pdf-export table,
+    .pdf-export th,
+    .pdf-export td {
+      box-sizing: border-box !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow-wrap: anywhere !important;
+    }
+    @page { size: A3 landscape; margin: 10mm; }
+    html, body { margin: 0 !important; padding: 0 !important; }
       .pdf-export table.min-w-\\[1200px\\],
       .pdf-export table.min-w-\\[297mm\\],
       .pdf-export table.min-w-\\[420mm\\] {

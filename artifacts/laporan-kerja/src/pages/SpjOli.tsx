@@ -129,7 +129,7 @@ export default function SpjOli() {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
-    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/spj-oli'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
+    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
   };
   const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
 
