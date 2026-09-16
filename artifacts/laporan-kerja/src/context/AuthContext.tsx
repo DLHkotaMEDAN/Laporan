@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { UserRole } from '@/constants/access-control';
@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const loginAuditUsers = useRef(new Set<string>());
 
   const fetchProfile = async (userId: string) => {
     setLoading(true);
@@ -78,11 +79,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    const logLogin = (session: Session, source: 'password' | 'session_restore') => {
+      if (loginAuditUsers.current.has(session.user.id)) return;
+      loginAuditUsers.current.add(session.user.id);
+      void auditLogService.logAction({
+        action: 'LOGIN',
+        entityType: 'AUTH',
+        details: { method: source === 'password' ? 'password' : 'existing_session', source },
+        userId: session.user.id,
+        username: session.user.email,
+        userEmail: session.user.email,
+      });
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        logLogin(session, 'session_restore');
       } else {
         setLoading(false);
       }
@@ -96,15 +111,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Jalankan setelah callback auth selesai agar tidak mengunci event loop Auth.
         if (event === 'SIGNED_IN') {
           window.setTimeout(() => {
-            void auditLogService.logAction({
-              action: 'LOGIN',
-              entityType: 'AUTH',
-              details: { method: 'password', source: 'login_form' },
-              userId: session.user.id,
-              username: session.user.email,
-              userEmail: session.user.email,
-            });
+            logLogin(session, 'password');
           }, 0);
+        } else if (event === 'INITIAL_SESSION') {
+          logLogin(session, 'session_restore');
         }
       } else {
         setProfile(null);
@@ -126,6 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         userEmail: user.email,
         role: profile?.role,
       });
+      loginAuditUsers.current.delete(user.id);
     }
     await supabase.auth.signOut();
   };

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { auditLogService } from '@/services/auditLogService';
 
 export const storageService = {
   async uploadPhoto(base64: string, fileName: string): Promise<string> {
@@ -31,6 +32,12 @@ export const storageService = {
       .from('report-photos')
       .getPublicUrl(filePath);
 
+    void auditLogService.logCurrentUser({
+      action: 'CREATE',
+      entityType: 'REPORT_PHOTO',
+      entityId: filePath,
+      details: { bucket: 'report-photos', file_name: filePath, source_name: fileName },
+    });
     return publicUrl;
   },
 
@@ -52,6 +59,12 @@ export const storageService = {
           console.error("Gagal menghapus file dari storage:", error);
         } else {
           console.log(`[storage] Berhasil menghapus foto lama: ${fileName}`);
+          void auditLogService.logCurrentUser({
+            action: 'DELETE',
+            entityType: 'REPORT_PHOTO',
+            entityId: fileName,
+            details: { bucket: 'report-photos', file_name: fileName, mode: 'replace_or_cleanup' },
+          });
         }
       }
     } catch (e) {

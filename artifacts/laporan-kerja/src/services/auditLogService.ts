@@ -42,20 +42,33 @@ export const auditLogService = {
           role = profile?.role || null;
         }
       }
+      const payload = {
+        action: params.action,
+        entity_type: params.entityType,
+        entity_id: params.entityId,
+        details: params.details,
+        user_id: params.userId,
+        username: params.username || params.userEmail || 'User',
+        user_email: userEmail,
+        role,
+      };
       const { error } = await supabase
         .from('audit_logs')
-        .insert([{
-          action: params.action,
-          entity_type: params.entityType,
-          entity_id: params.entityId,
-          details: params.details,
-          user_id: params.userId,
-          username: params.username || params.userEmail || 'User',
-          user_email: userEmail,
-          role,
-        }]);
-      
-      if (error) console.error("Gagal mencatat log:", error);
+        .insert([payload]);
+
+      if (error) {
+        // Kompatibilitas dengan audit_logs lama sebelum migration kolom
+        // user_email/role dijalankan di Supabase.
+        const isMissingExtendedColumn = /user_email|role|column|schema cache/i.test(error.message || '');
+        if (isMissingExtendedColumn) {
+          const { user_email: _userEmail, role: _role, ...legacyPayload } = payload;
+          const { error: legacyError } = await supabase.from('audit_logs').insert([legacyPayload]);
+          if (!legacyError) return;
+          console.error("Gagal mencatat log versi lama:", legacyError);
+        } else {
+          console.error("Gagal mencatat log:", error);
+        }
+      }
     } catch (e) {
       console.error("Error audit log:", e);
     }
