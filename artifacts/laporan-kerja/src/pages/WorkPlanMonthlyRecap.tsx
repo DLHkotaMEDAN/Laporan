@@ -25,6 +25,7 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { WorkPlanColumnPicker } from '@/components/WorkPlanColumnPicker';
+import WorkPlanCompactTable, { workPlanCompactColumnLabels } from '@/components/WorkPlanCompactTable';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { monthlyPdfFileName } from '@/utils/pdf-file-name';
@@ -57,6 +58,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
 type SignatureMode = "with-signature" | "without-signature";
 type LogoMode = "with-logo" | "without-logo";
+type TableMode = "complete" | "compact";
 
 const workPlanColumnLabels = {
   date: "Hari/Tanggal", category: "Tim/Kec.", description: "Detail Kegiatan", location: "Lokasi", target_area: "Target Luas (M²)",
@@ -95,6 +97,7 @@ const WorkPlanMonthlyRecap = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialSelectedCategories(searchParams));
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const [tableMode, setTableMode] = useState<TableMode>("complete");
   const [userVisibleColumns, setVisibleColumns] = useState({ date: true, category: true, description: true, location: true, target_area: !isAdmin, tools: true, unit: true, personnel: true, coordinator: true, foreman: true, basis: true, fuel_need_liters: false, fuel_usage_estimate: true, remarks: true });
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   useEffect(() => {
@@ -429,7 +432,26 @@ const WorkPlanMonthlyRecap = () => {
                 </div>
               </PopoverContent>
             </Popover>
-            <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} disabledColumns={{ target_area: isTimSiramSelected }} onToggle={toggleColumn} />
+            {tableMode === 'compact' ? (
+              <WorkPlanColumnPicker
+                columns={{
+                  date: visibleColumns.date,
+                  category: visibleColumns.category,
+                  description: visibleColumns.description,
+                  location: visibleColumns.location,
+                  tools: visibleColumns.tools,
+                  unit: visibleColumns.unit,
+                  personnel: visibleColumns.personnel,
+                  coordinator: visibleColumns.coordinator,
+                  foreman: visibleColumns.foreman,
+                  basis: visibleColumns.basis,
+                }}
+                labels={workPlanCompactColumnLabels}
+                onToggle={(column) => toggleColumn(column)}
+              />
+            ) : (
+              <WorkPlanColumnPicker columns={visibleColumns} labels={workPlanColumnLabels} disabledColumns={{ target_area: isTimSiramSelected }} onToggle={toggleColumn} />
+            )}
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[110px] md:w-[150px] h-10 text-xs md:text-sm"><SelectValue placeholder="Bulan" /></SelectTrigger>
               <SelectContent>{months.map((m, i) => <SelectItem key={i+1} value={(i+1).toString()}>{m}</SelectItem>)}</SelectContent>
@@ -516,10 +538,12 @@ const WorkPlanMonthlyRecap = () => {
             {isCompactViewport ? <>
               <DropdownMenuItem onClick={() => setLogoMode(logoMode === 'with-logo' ? 'without-logo' : 'with-logo')} className="cursor-pointer py-2"><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSignatureMode(signatureMode === 'with-signature' ? 'without-signature' : 'with-signature')} className="cursor-pointer py-2"><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTableMode(tableMode === 'complete' ? 'compact' : 'complete')} className="cursor-pointer py-2"><Table className="mr-2 h-4 w-4 text-emerald-600" /> Mode Tabel: {tableMode === 'complete' ? 'Lengkap' : 'Ringkas'}</DropdownMenuItem>
               {isLoggedIn && plans.map((plan) => <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)} className="cursor-pointer py-2 whitespace-normal"><Edit className="mr-2 h-4 w-4 shrink-0 text-blue-600" /> Edit: {plan.category} - {plan.items[0]?.description || 'Rencana Kerja'}</DropdownMenuItem>)}
             </> : <>
               <DropdownMenuSub><DropdownMenuSubTrigger><Image className="mr-2 h-4 w-4 text-blue-600" /> Logo: {logoMode === 'with-logo' ? 'Dengan Logo' : 'Tanpa Logo'}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem onClick={() => setLogoMode('with-logo')}>Dengan Logo</DropdownMenuItem><DropdownMenuItem onClick={() => setLogoMode('without-logo')}>Tanpa Logo</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub>
               <DropdownMenuSub><DropdownMenuSubTrigger><PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem onClick={() => setSignatureMode('with-signature')}>Ada Tanda Tangan</DropdownMenuItem><DropdownMenuItem onClick={() => setSignatureMode('without-signature')}>Tanpa Tanda Tangan</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub>
+              <DropdownMenuSub><DropdownMenuSubTrigger><Table className="mr-2 h-4 w-4 text-emerald-600" /> Mode Tabel: {tableMode === 'complete' ? 'Lengkap' : 'Ringkas'}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem onClick={() => setTableMode('complete')}>Tabel Lengkap</DropdownMenuItem><DropdownMenuItem onClick={() => setTableMode('compact')}>Tabel Ringkas</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub>
               {isLoggedIn && plans.length > 0 && <DropdownMenuSub><DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger><DropdownMenuSubContent className="w-80">{plans.map((plan) => <DropdownMenuItem key={plan.id} onClick={() => navigate(`/work-plans/edit/${plan.id}`)}>{plan.category} - {plan.items[0]?.description || 'Rencana Kerja'}</DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub>}
             </>}
             <DropdownMenuSeparator />
@@ -554,7 +578,8 @@ const WorkPlanMonthlyRecap = () => {
         <div className="recap-table-scroll overflow-x-auto print:overflow-visible">
           {plans.length > 0 ? (
             <>
-              <table className="split-table-before-footer w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
+              {tableMode === "compact" && <WorkPlanCompactTable plans={plans} mode="monthly" showRegionColumn={showRegionColumn} regions={regions} columns={visibleColumns} />}
+              <table className={`${tableMode === "compact" ? "hidden" : ""} split-table-before-footer w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0`}>
                 {colGroup}
                 <thead>
                   <tr className="bg-slate-100">
@@ -582,7 +607,7 @@ const WorkPlanMonthlyRecap = () => {
               </table>
 
               <div className="keep-together">
-                <table className="continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0">
+                <table className={`${tableMode === "compact" ? "hidden" : ""} continuation-table w-full min-w-[1200px] border-collapse border-2 border-black text-[9px] table-fixed print:w-full print:min-w-0`}>
                   {colGroup}
                   <thead className="hidden print:table-header-group">
                     <tr className="bg-slate-100">

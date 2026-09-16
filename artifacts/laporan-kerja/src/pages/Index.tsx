@@ -1252,14 +1252,14 @@ const Index = () => {
                   <FuelSpjTab />
                 </TabsContent>
               )}
-              {(isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
-                <TabsContent value="spj_oli" className="mt-0">
-                  <SpjOli />
-                </TabsContent>
-              )}
             </>
           )}
         </Tabs>
+        {activeTab === 'spj_oli' && (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
+          <div className="mt-6">
+            <SpjOli />
+          </div>
+        )}
       </main>
       
       <TrashDialog 

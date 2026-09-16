@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type Props<T extends string> = {
-  columns: Record<T, boolean>;
+  columns: Partial<Record<T, boolean>>;
   labels: Record<T, string>;
   onToggle: (column: T) => void;
   disabledColumns?: Partial<Record<T, boolean>>;
@@ -21,7 +21,7 @@ export const WorkPlanColumnPicker = <T extends string>({ columns, labels, onTogg
         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Tampilkan kolom:</p>
         <div className="space-y-2">
           {(Object.keys(labels) as T[]).map((column) => <div key={column} className="flex items-center space-x-2">
-            <Checkbox id={`work-plan-col-${column}`} checked={columns[column]} disabled={disabledColumns[column]} onCheckedChange={() => onToggle(column)} />
+            <Checkbox id={`work-plan-col-${column}`} checked={columns[column] ?? false} disabled={disabledColumns[column]} onCheckedChange={() => onToggle(column)} />
             <Label htmlFor={`work-plan-col-${column}`} className={`cursor-pointer text-sm ${disabledColumns[column] ? "text-slate-400" : ""}`}>{labels[column]}</Label>
           </div>)}
         </div>

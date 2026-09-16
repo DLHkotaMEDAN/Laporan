@@ -34,7 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const pusatTeams = ['Tim Babat', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
+const pusatTeams = ['Tim Babat 1', 'Tim Babat 2', 'Tim Babat 3', 'Tim Babat 4', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
 
 const formatRupiahInput = (value: number | string | null | undefined) => {
   const digits = String(value ?? '').replace(/\D/g, '');

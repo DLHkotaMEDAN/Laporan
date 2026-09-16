@@ -20,7 +20,8 @@ import { supabase } from '@/lib/supabase';
 import { isSpjOliAdmin } from '@/constants/access-control';
 
 const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: '', team_id: '', spj_number: '', vehicle_name: '', receiver_name: '', operator_name: '', oil_name: '', quantity: 0, unit: 'Liter', location: '', remarks: '' };
-const canAccess = (role?: string) => ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
+const canAccess = (role?: string, email?: string | null) =>
+  email === 'admin@gmail.com' || ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
 const defaultOilOptions = ['Oli Hydraulic', 'Oli Mesin', 'Minyak Rem'];
 
 const getNextSpjNumber = (value: string) => value.replace(/^(\d+)/, (_, number: string) => String(Number(number) + 1).padStart(number.length, '0'));
@@ -59,7 +60,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spj
         <label className="space-y-1 text-sm font-semibold">Nama Operator / Pengemudi / Penerima<Input list="spj-oli-operator-options" value={form.operator_name} onChange={e => onChange('operator_name', e.target.value)} placeholder="Nama operator, pengemudi, atau penerima" /></label>
         <label className="space-y-1 text-sm font-semibold">Jenis Oli / Minyak Rem<Input list="spj-oli-oil-options" value={form.oil_name} onChange={e => onChange('oil_name', e.target.value)} placeholder="Pilih atau ketik jenis oli / minyak rem" /></label>
         <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-sm font-semibold">Jumlah<Input type="number" min="0" step="0.01" value={form.quantity} onChange={e => onChange('quantity', e.target.valueAsNumber || 0)} /></label><label className="space-y-1 text-sm font-semibold">Satuan<Select value={form.unit} onValueChange={value => onChange('unit', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Liter">Liter</SelectItem><SelectItem value="Botol">Botol</SelectItem><SelectItem value="Pcs">Pcs</SelectItem></SelectContent></Select></label></div>
-        <label className="space-y-1 text-sm font-semibold md:col-span-2">Lokasi<Input list="spj-oli-location-options" value={form.location} onChange={e => onChange('location', e.target.value)} placeholder="Lokasi penggunaan oli" /></label>
+        <label className="space-y-1 text-sm font-semibold md:col-span-2">Lokasi Kerja<Input list="spj-oli-location-options" value={form.location} onChange={e => onChange('location', e.target.value)} placeholder="Lokasi kerja penggunaan oli" /></label>
         <label className="space-y-1 text-sm font-semibold md:col-span-2">Keterangan<Input value={form.remarks} onChange={e => onChange('remarks', e.target.value)} placeholder="Keterangan tambahan (opsional)" /></label>
       </section>
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel}>Batal</Button><Button disabled={!editable} type="submit" className="bg-emerald-600 hover:bg-emerald-700">Simpan SPJ Oli</Button></div>
@@ -98,14 +99,14 @@ export default function SpjOli() {
 
   const load = async () => { try { setLoading(true); setRecords(await spjOliService.getAll()); } catch { showError('Gagal memuat data SPJ Oli'); } finally { setLoading(false); } };
   useEffect(() => {
-    if (!canAccess(profile?.role) && profile) { navigate('/', { replace: true }); return; }
+    if (!canAccess(profile?.role, session?.user?.email) && profile) { navigate('/', { replace: true }); return; }
     if (lockedRegionId) {
       setRegionId(lockedRegionId);
       setTeamId('semua');
       if (isForm) setForm(current => current.region_id === lockedRegionId ? current : { ...current, region_id: lockedRegionId, team_id: '' });
     }
     void load();
-  }, [profile, lockedRegionId, isForm]);
+  }, [profile, session?.user?.email, lockedRegionId, isForm]);
   useEffect(() => { void workPlanService.getAllWorkPlans().then(setWorkPlans).catch(() => setWorkPlans([])); }, []);
   useEffect(() => {
     if (!id || !isDraftReady || restoredAt) return;
@@ -199,7 +200,92 @@ export default function SpjOli() {
   };
   const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
 
-  if (!canAccess(profile?.role)) return null;
+  if (!canAccess(profile?.role, session?.user?.email)) return null;
   if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} spjNumberRecords={records} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-xl font-black text-slate-950">SPJ Oli</h2>
+          <p className="text-sm text-slate-500">Pencatatan penggunaan oli dan minyak rem berdasarkan wilayah dan tim.</p>
+        </div>
+        {editable && (
+          <div className="w-full">
+            <Button onClick={() => navigate('/spj-oli/create')} className="inline-flex h-12 w-full min-w-[180px] items-center justify-center whitespace-nowrap bg-emerald-600 px-5 font-bold hover:bg-emerald-700">
+              <Plus className="mr-2 h-4 w-4 shrink-0" /> Input SPJ Oli
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-5">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+          <Input className="pl-9" value={search} onChange={event => setSearch(event.target.value)} placeholder="Cari nomor SPJ atau jenis oli / minyak rem" />
+        </div>
+        <Select value={lockedRegionId || regionId} onValueChange={value => { setRegionId(value); setTeamId('semua'); }} disabled={Boolean(lockedRegionId)}>
+          <SelectTrigger><SelectValue placeholder="Wilayah" /></SelectTrigger>
+          <SelectContent>
+            {!lockedRegionId && <SelectItem value="semua">Semua Wilayah</SelectItem>}
+            {regions.filter(region => !lockedRegionId || region.id === lockedRegionId).map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={teamId} onValueChange={setTeamId}>
+          <SelectTrigger><SelectValue placeholder="Tim / Operator" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua Tim / Operator</SelectItem>
+            {visibleTeams.map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2">
+          <Input type="date" value={date} onChange={event => setDate(event.target.value)} />
+          <Button variant="outline" size="icon" onClick={() => { setSearch(''); setRegionId(lockedRegionId || 'semua'); setTeamId('semua'); setDate(''); }} title="Reset filter">
+            <FilterX className="h-4 w-4" />
+          </Button>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[950px] text-xs">
+            <thead>
+              <tr className="bg-slate-700 text-white">
+                <th className="p-3">No</th>
+                <th className="p-3">Tanggal</th>
+                <th className="p-3 text-left">Wilayah</th>
+                <th className="p-3 text-left">Tim / Operator</th>
+                <th className="p-3 text-left">No. SPJ</th>
+                <th className="p-3 text-left">Jenis Oli / Minyak Rem</th>
+                <th className="p-3 text-right">Jumlah</th>
+                <th className="p-3 text-left">Keterangan</th>
+                {editable && <th className="p-3">Aksi</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={editable ? 9 : 8} className="p-10 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr>
+              ) : filtered.length ? filtered.map((record, index) => (
+                <tr key={record.id} className={cn('border-t hover:bg-emerald-50/50', index % 2 && 'bg-slate-50/70')}>
+                  <td className="p-3 text-center font-bold text-slate-500">{index + 1}</td>
+                  <td className="p-3 text-center">{record.date}</td>
+                  <td className="p-3"><Badge variant="outline" className="bg-emerald-50 text-emerald-700">{regionName(record.region_id)}</Badge></td>
+                  <td className="p-3">{teamName(record.team_id)}</td>
+                  <td className="p-3 font-semibold">{record.spj_number}</td>
+                  <td className="p-3">{record.oil_name}</td>
+                  <td className="p-3 text-right font-mono">{record.quantity} {record.unit}</td>
+                  <td className="p-3 text-slate-500">{record.remarks || '-'}</td>
+                  {editable && <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => navigate(`/spj-oli/edit/${record.id}`)}><Edit className="h-4 w-4 text-blue-600" /></Button><Button variant="ghost" size="icon" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button></td>}
+                </tr>
+              )) : (
+                <tr><td colSpan={editable ? 9 : 8} className="p-12 text-center text-slate-500">Tidak ada data SPJ Oli.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500"><b>{filtered.length}</b> data SPJ Oli ditampilkan.</div>
+      </section>
+    </div>
+  );
 
 }

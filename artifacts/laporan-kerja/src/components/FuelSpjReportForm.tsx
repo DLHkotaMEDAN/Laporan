@@ -24,7 +24,7 @@ import { FuelType } from '@/types/fuelReport';
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 
-const pusatTeams = ['Tim Babat', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
+const pusatTeams = ['Tim Babat 1', 'Tim Babat 2', 'Tim Babat 3', 'Tim Babat 4', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
 
 const locationSchema = z.object({
   street: z.string().min(1, "Wajib diisi"),
