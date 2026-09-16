@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  ArrowLeft, Trash2, RefreshCw, ShieldAlert, 
+  ArrowLeft, Trash2, RefreshCw, ShieldAlert,
   Loader2, Database, Users, History,
   FileText, ClipboardList,
   RotateCcw, HardDrive, TrendingUp, BarChart3, Eye, Info, X,
-  Zap, Activity, Globe, Cpu, Eraser
+  Zap, Activity, Globe, Cpu, Eraser, Search, Filter, LogIn,
+  Pencil, PanelTop
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -112,6 +113,21 @@ const Maintenance = () => {
       && (!logFrom || createdAt >= new Date(`${logFrom}T00:00:00`))
       && (!logUntil || createdAt <= new Date(`${logUntil}T23:59:59.999`));
   }), [logs, logAction, logEntity, logUser, logSearch, logFrom, logUntil]);
+  const logSummary = useMemo(() => ({
+    total: visibleLogs.length,
+    sessions: visibleLogs.filter((log) => log.action === 'LOGIN' || log.action === 'LOGOUT').length,
+    changes: visibleLogs.filter((log) => ['CREATE', 'UPDATE', 'DELETE'].includes(log.action)).length,
+    pages: visibleLogs.filter((log) => log.action === 'VIEW').length,
+  }), [visibleLogs]);
+  const hasLogFilters = Boolean(logSearch || logAction !== 'ALL' || logEntity !== 'ALL' || logUser !== 'ALL' || logFrom || logUntil);
+  const clearLogFilters = () => {
+    setLogSearch('');
+    setLogAction('ALL');
+    setLogEntity('ALL');
+    setLogUser('ALL');
+    setLogFrom('');
+    setLogUntil('');
+  };
 
   const loadLandingPhotos = useCallback(async () => {
     const stored = await Promise.all([landingHeroProfile, ...landingProfiles].map(async (profile) => ({
@@ -508,11 +524,15 @@ const Maintenance = () => {
           <TabsContent value="users"><Card className="shadow-md border-t-4 border-t-blue-600"><CardHeader><CardTitle className="text-lg flex items-center gap-2"><Users className="text-blue-600" /> Manajemen Pengguna</CardTitle></CardHeader><CardContent><UserManagement /></CardContent></Card></TabsContent>
 
           <TabsContent value="history">
-            <Card className="shadow-md border-t-4 border-t-blue-600">
-              <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <CardTitle className="text-lg flex items-center gap-2"><History className="text-blue-600" /> Riwayat Aktivitas Pengguna</CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  <Button 
+            <Card className="overflow-hidden border-0 shadow-md">
+              <CardHeader className="border-t-4 border-t-blue-600 bg-white pb-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-lg"><History className="text-blue-600" /> Riwayat Aktivitas Pengguna</CardTitle>
+                    <p className="mt-1 text-xs text-slate-500">Pantau login, halaman yang dibuka, dan perubahan data seluruh pengguna.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                  <Button
                     variant="outline" 
                     size="sm" 
                     onClick={handleCleanupLogs} 
@@ -529,25 +549,49 @@ const Maintenance = () => {
                   >
                     <Trash2 className="h-4 w-4 mr-2" /> Bersihkan Semua Log
                   </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="mb-4 grid gap-2 rounded-lg border bg-slate-50 p-3 md:grid-cols-6">
-                  <Input className="md:col-span-2" placeholder="Cari pengguna atau detail..." value={logSearch} onChange={(event) => setLogSearch(event.target.value)} />
-                  <select className="h-10 rounded-md border bg-white px-3 text-sm" value={logAction} onChange={(event) => setLogAction(event.target.value)}>
-                    <option value="ALL">Semua aksi</option><option value="LOGIN">Login</option><option value="LOGOUT">Logout</option><option value="VIEW">Buka halaman</option><option value="CREATE">Tambah</option><option value="UPDATE">Ubah</option><option value="DELETE">Hapus</option><option value="EXPORT">Ekspor</option><option value="PRINT">Cetak</option>
-                  </select>
-                  <select className="h-10 rounded-md border bg-white px-3 text-sm" value={logEntity} onChange={(event) => setLogEntity(event.target.value)}>
-                    <option value="ALL">Semua modul</option>{Array.from(new Set(logs.map((log) => log.entity_type))).map((entity) => <option key={entity} value={entity}>{entity}</option>)}
-                  </select>
-                  <select className="h-10 rounded-md border bg-white px-3 text-sm" value={logUser} onChange={(event) => setLogUser(event.target.value)}>
-                    <option value="ALL">Semua pengguna</option>{logUsers.filter(([id]) => id).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                  </select>
-                  <div className="flex gap-2"><Input type="date" title="Dari tanggal" value={logFrom} onChange={(event) => setLogFrom(event.target.value)} /><Input type="date" title="Sampai tanggal" value={logUntil} onChange={(event) => setLogUntil(event.target.value)} /></div>
+              <CardContent className="space-y-5 bg-slate-50/70 p-4 md:p-6">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {[
+                    { label: 'Aktivitas tampil', value: logSummary.total, icon: History, iconClass: 'text-blue-500' },
+                    { label: 'Sesi login/logout', value: logSummary.sessions, icon: LogIn, iconClass: 'text-violet-500' },
+                    { label: 'Perubahan data', value: logSummary.changes, icon: Pencil, iconClass: 'text-amber-500' },
+                    { label: 'Halaman dibuka', value: logSummary.pages, icon: PanelTop, iconClass: 'text-emerald-500' },
+                  ].map(({ label, value, icon: Icon, iconClass }) => (
+                    <div key={label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</span><Icon className={`h-4 w-4 ${iconClass}`} /></div>
+                      <p className="mt-2 text-2xl font-black text-slate-800">{value}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500">
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-700"><Filter className="h-4 w-4 text-blue-600" /> Filter riwayat</div>
+                    <div className="flex items-center gap-3"><span className="text-xs text-slate-400">{hasLogFilters ? `${visibleLogs.length} hasil tersaring` : `${logs.length} log terbaru`}</span>{hasLogFilters && <Button variant="ghost" size="sm" onClick={clearLogFilters} className="h-7 px-2 text-xs text-blue-600">Reset filter</Button>}</div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                    <label className="space-y-1.5 xl:col-span-2"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cari pengguna/detail</span><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input className="pl-9" placeholder="Nama, email, modul..." value={logSearch} onChange={(event) => setLogSearch(event.target.value)} /></div></label>
+                    <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Aksi</span><select className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={logAction} onChange={(event) => setLogAction(event.target.value)}>
+                    <option value="ALL">Semua aksi</option><option value="LOGIN">Login</option><option value="LOGOUT">Logout</option><option value="VIEW">Buka halaman</option><option value="CREATE">Tambah</option><option value="UPDATE">Ubah</option><option value="DELETE">Hapus</option><option value="EXPORT">Ekspor</option><option value="PRINT">Cetak</option>
+                    </select></label>
+                    <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Modul</span><select className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={logEntity} onChange={(event) => setLogEntity(event.target.value)}>
+                    <option value="ALL">Semua modul</option>{Array.from(new Set(logs.map((log) => log.entity_type))).map((entity) => <option key={entity} value={entity}>{entity}</option>)}
+                    </select></label>
+                    <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Pengguna</span><select className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={logUser} onChange={(event) => setLogUser(event.target.value)}>
+                    <option value="ALL">Semua pengguna</option>{logUsers.filter(([id]) => id).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                    </select></label>
+                    <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Dari tanggal</span><Input type="date" value={logFrom} onChange={(event) => setLogFrom(event.target.value)} /></label>
+                    <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Sampai tanggal</span><Input type="date" value={logUntil} onChange={(event) => setLogUntil(event.target.value)} /></label>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                  <table className="min-w-[1050px] w-full text-left text-sm">
+                    <thead className="border-b bg-slate-100 text-[10px] uppercase font-bold tracking-wide text-slate-500">
                       <tr>
                         <th className="px-4 py-3">Tanggal & Waktu</th>
                         <th className="px-4 py-3">Pengguna</th>
@@ -557,36 +601,39 @@ const Maintenance = () => {
                         <th className="px-4 py-3">Keterangan</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y">
+                    <tbody className="divide-y divide-slate-100">
                       {visibleLogs.length > 0 ? visibleLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-slate-50/50">
-                          <td className="px-4 py-3 text-[11px] text-slate-500 whitespace-nowrap">{format(new Date(log.created_at), 'dd MMM yyyy, HH:mm:ss', { locale: localeId })}</td>
-                          <td className="px-4 py-3 font-medium"><div>{log.username || "System"}</div><div className="text-[10px] font-normal text-slate-400">{log.user_email || '-'}</div></td>
-                          <td className="px-4 py-3 text-[10px] text-slate-500">{log.role || '-'}</td>
+                        <tr key={log.id} className="align-top odd:bg-white even:bg-slate-50/40 hover:bg-blue-50/40">
+                          <td className="whitespace-nowrap px-4 py-3"><div className="font-semibold text-slate-700">{format(new Date(log.created_at), 'dd MMM yyyy', { locale: localeId })}</div><div className="mt-0.5 text-[11px] text-slate-400">{format(new Date(log.created_at), 'HH:mm:ss')}</div></td>
+                          <td className="px-4 py-3"><div className="flex items-start gap-2.5"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-black text-blue-700">{String(log.username || log.user_email || 'S').slice(0, 1).toUpperCase()}</div><div className="min-w-0"><div className="font-semibold text-slate-700">{log.username || "System"}</div><div className="max-w-[190px] truncate text-[10px] text-slate-400">{log.user_email || '-'}</div></div></div></td>
+                          <td className="px-4 py-3"><Badge variant="outline" className="max-w-[150px] truncate text-[9px] font-medium text-slate-600">{log.role || 'System'}</Badge></td>
                           <td className="px-4 py-3">
                             <Badge className={cn(
-                              "text-[9px] font-bold",
-                              log.action === 'DELETE' ? "bg-red-100 text-red-700" : 
-                              log.action === 'UPDATE' ? "bg-amber-100 text-amber-700" :
-                              log.action === 'LOGIN' || log.action === 'LOGOUT' ? "bg-purple-100 text-purple-700" :
-                              "bg-green-100 text-green-700"
+                              "border text-[9px] font-bold shadow-none",
+                              log.action === 'DELETE' ? "border-red-200 bg-red-50 text-red-700" :
+                              log.action === 'UPDATE' ? "border-amber-200 bg-amber-50 text-amber-700" :
+                              log.action === 'LOGIN' || log.action === 'LOGOUT' ? "border-violet-200 bg-violet-50 text-violet-700" :
+                              log.action === 'VIEW' ? "border-sky-200 bg-sky-50 text-sky-700" :
+                              "border-emerald-200 bg-emerald-50 text-emerald-700"
                             )}>
-                              {log.action}
+                              {log.action === 'LOGIN' ? 'LOGIN' : log.action === 'LOGOUT' ? 'LOGOUT' : log.action === 'VIEW' ? 'BUKA HALAMAN' : log.action}
                             </Badge>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
-                              {log.entity_type === 'REPORT' ? <FileText size={12} className="text-blue-500" /> : <ClipboardList size={12} className="text-green-500" />}
-                              {log.entity_type}
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                              {log.entity_type === 'REPORT' ? <FileText size={14} className="text-blue-500" /> : log.entity_type === 'PAGE' ? <PanelTop size={14} className="text-sky-500" /> : log.entity_type === 'AUTH' ? <LogIn size={14} className="text-violet-500" /> : <ClipboardList size={14} className="text-green-500" />}
+                              <span>{log.entity_type}</span>
                             </div>
                           </td>
-                          <td className="max-w-[420px] px-4 py-3 text-[11px] text-slate-600"><div className="font-medium">{String(log.details?.title || log.details?.description || log.details?.path || log.details?.mode || '-')}</div><div className="mt-1 break-words text-[10px] text-slate-400">{JSON.stringify(log.details || {})}</div></td>
+                          <td className="max-w-[430px] px-4 py-3 text-[11px] text-slate-600"><div className="font-medium text-slate-700">{String(log.details?.title || log.details?.description || log.details?.path || log.details?.mode || '-')}</div>{log.entity_id && <div className="mt-1 text-[10px] text-slate-400">ID: {log.entity_id}</div>}<details className="mt-1.5 text-[10px] text-slate-400"><summary className="cursor-pointer font-medium text-blue-600 hover:text-blue-700">Lihat detail</summary><pre className="mt-2 max-w-[390px] whitespace-pre-wrap break-words rounded-md bg-slate-50 p-2 font-mono text-[10px] text-slate-500">{JSON.stringify(log.details || {}, null, 2)}</pre></details></td>
                         </tr>
                       )) : (
                         <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400 italic">Belum ada riwayat aktivitas yang sesuai filter</td></tr>
                       )}
                     </tbody>
                   </table>
+                  </div>
+                  <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-3 text-[11px] text-slate-400"><span>Menampilkan {visibleLogs.length} dari {logs.length} log terbaru</span><span>Waktu mengikuti zona lokal perangkat</span></div>
                 </div>
               </CardContent>
             </Card>
