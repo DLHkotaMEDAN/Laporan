@@ -30,6 +30,8 @@ import {
   roleRequiresRegion,
   roleRequiresTeam,
   isGlobalFuelAdmin,
+  isSpjOliAdmin,
+  roleCanSelectRegion,
 } from '@/constants/access-control';
 
 const categories = ["Taman Kota", "Taman Amplas", "Taman Area", "Tim Babat", "Tim Siram", "Tim Pohon"];
@@ -143,7 +145,7 @@ const UserManagement = () => {
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
-          regionId: roleRequiresRegion(newUser.role) ? newUser.regionId : null,
+          regionId: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
           teamId: roleRequiresTeam(newUser.role) ? newUser.teamId : null,
         },
       });
@@ -157,7 +159,7 @@ const UserManagement = () => {
           email: data.email || newUser.email.trim().toLowerCase(),
           role: newUser.role,
           category: null,
-          region_id: roleRequiresRegion(newUser.role) ? newUser.regionId || null : null,
+          region_id: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
           team_id: roleRequiresTeam(newUser.role) ? newUser.teamId || null : null,
           is_active: true,
           updated_at: new Date().toISOString(),
@@ -323,6 +325,7 @@ const UserManagement = () => {
     if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah data pengguna.'); return; }
     if (!editingProfile) return;
     const requiresRegion = roleRequiresRegion(editUser.role);
+    const canSelectRegion = roleCanSelectRegion(editUser.role);
     if (!editUser.username.trim()) {
       showError('Nama pengguna wajib diisi.');
       return;
@@ -339,7 +342,7 @@ const UserManagement = () => {
     const updates = {
       username: editUser.username.trim(),
       role: editUser.role,
-      region_id: requiresRegion ? editUser.regionId : null,
+      region_id: canSelectRegion ? editUser.regionId || null : null,
       team_id: roleRequiresTeam(editUser.role) ? editUser.teamId : null,
     };
 
@@ -410,22 +413,28 @@ const UserManagement = () => {
           <Input required disabled={!canMutateUsers} placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
           <Input required disabled={!canMutateUsers} type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
           <Input required disabled={!canMutateUsers} minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
+          <div className="space-y-1">
+          <label className="text-xs font-semibold text-blue-900">Hak akses</label>
           <Select value={newUser.role} onValueChange={role => setNewUser({
             ...newUser,
             role: role as UserRole,
-            regionId: roleRequiresRegion(role) ? newUser.regionId : '',
+            regionId: roleCanSelectRegion(role) ? newUser.regionId : '',
             teamId: '',
           })} disabled={!canMutateUsers}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={!canMutateUsers || isGlobalFuelAdmin(newUser.role) || !roleRequiresRegion(newUser.role)}>
+          </div>
+          <div className="space-y-1">
+          <label className="text-xs font-semibold text-blue-900">Cakupan wilayah</label>
+          <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId || (isSpjOliAdmin(newUser.role) ? 'all' : '')} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={!canMutateUsers || isGlobalFuelAdmin(newUser.role) || !roleCanSelectRegion(newUser.role)}>
             <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
             <SelectContent>
-              {isGlobalFuelAdmin(newUser.role) && <SelectItem value="all">Semua Wilayah</SelectItem>}
+              {(isGlobalFuelAdmin(newUser.role) || isSpjOliAdmin(newUser.role)) && <SelectItem value="all">Semua Wilayah</SelectItem>}
               {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
             </SelectContent>
           </Select>
+          </div>
           {roleRequiresTeam(newUser.role) && (
             <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!canMutateUsers || !newUser.regionId}>
             <SelectTrigger><SelectValue placeholder={newUser.regionId ? "Pilih tim" : "Pilih wilayah dahulu"} /></SelectTrigger>
@@ -500,7 +509,7 @@ const UserManagement = () => {
                           const role = val as UserRole;
                           void handleUpdateProfile(profile.id, {
                             role,
-                            region_id: roleRequiresRegion(role) ? profile.region_id : null,
+                            region_id: roleCanSelectRegion(role) ? profile.region_id : null,
                             team_id: roleRequiresTeam(role) ? profile.team_id : null,
                           });
                         }}
@@ -546,6 +555,15 @@ const UserManagement = () => {
                         </Select>
                       ) : isGlobalFuelAdmin(profile.role) ? (
                         <span className="text-xs font-medium text-orange-600">Semua Wilayah</span>
+                      ) : isSpjOliAdmin(profile.role) ? (
+                        <Select
+                          value={profile.region_id || "all"}
+                          onValueChange={(regionId) => void handleUpdateProfile(profile.id, { region_id: regionId === 'all' ? null : regionId, team_id: null })}
+                          disabled={!canMutateUsers || updatingId === profile.id}
+                        >
+                          <SelectTrigger className="h-9 text-xs"><div className="flex items-center gap-2"><Tag size={12} /><SelectValue /></div></SelectTrigger>
+                          <SelectContent><SelectItem value="all">Semua Wilayah</SelectItem>{regions.map(region => <SelectItem key={region.id} value={region.id} className="text-xs">{region.name}</SelectItem>)}</SelectContent>
+                        </Select>
                       ) : roleRequiresRegion(profile.role) ? (
                         <Select
                           value={profile.region_id || "none"}
@@ -647,7 +665,7 @@ const UserManagement = () => {
               <Select value={editUser.role} onValueChange={role => setEditUser({
                 ...editUser,
                 role: role as UserRole,
-                regionId: roleRequiresRegion(role) ? editUser.regionId : '',
+                regionId: roleCanSelectRegion(role) ? editUser.regionId : '',
                 teamId: roleRequiresTeam(role) ? editUser.teamId : '',
               })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -658,6 +676,14 @@ const UserManagement = () => {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Wilayah</label>
                 <div className="rounded-md border bg-slate-50 px-3 py-2 text-sm font-medium text-orange-600">Semua Wilayah</div>
+              </div>
+            ) : isSpjOliAdmin(editUser.role) ? (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Cakupan Wilayah SPJ Oli</label>
+                <Select value={editUser.regionId || 'all'} onValueChange={regionId => setEditUser({ ...editUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Semua Wilayah</SelectItem>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
             ) : roleRequiresRegion(editUser.role) && (
               <div className="space-y-1.5">

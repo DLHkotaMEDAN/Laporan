@@ -17,6 +17,7 @@ export const USER_ROLES = {
   ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
+  ADMIN_SPJ_OLI: 'admin_spj_oli',
   PIMPINAN: 'pimpinan',
   USER: 'user',
 } as const;
@@ -27,6 +28,7 @@ export const USER_ROLE_VALUES = Object.values(USER_ROLES) as readonly UserRole[]
 
 export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN, label: 'Super Admin / Administrator' },
+  { value: USER_ROLES.ADMIN_SPJ_OLI, label: 'Admin SPJ Oli (Semua / Per Wilayah)' },
   { value: USER_ROLES.ADMIN_WILAYAH, label: 'Admin Wilayah (Laporan & Rencana Kerja)' },
   { value: USER_ROLES.ADMIN_WILAYAH_BBM, label: 'Admin Wilayah (Laporan & Rencana Kerja) + Admin BBM' },
   { value: USER_ROLES.LAPORAN, label: 'Laporan' },
@@ -133,6 +135,17 @@ export const isAdminBbmAccess = (role: string | null | undefined) =>
 export const isGlobalFuelAdmin = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_BBM;
 
+export const isSpjOliAdmin = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_SPJ_OLI;
+
+export const roleCanSelectRegion = (role: string | null | undefined) =>
+  roleRequiresRegion(role) || isSpjOliAdmin(role);
+
+export const canAccessAllSpjOliRegions = (role: string | null | undefined, regionId?: string | null) =>
+  role === USER_ROLES.ADMIN
+  || role === USER_ROLES.ADMIN_SPJ_BBM
+  || (isSpjOliAdmin(role) && !regionId);
+
 export const isAdminWilayahAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_WILAYAH || role === USER_ROLES.ADMIN_WILAYAH_BBM;
 
@@ -157,7 +170,8 @@ export const canAccessFuelArea = (role: string | null | undefined, email?: strin
   isSuperAdminAccess(role, email)
   || isPimpinanAccess(role, email)
   || isAdminBbmAccess(role)
-  || role === USER_ROLES.ADMIN_SPJ_BBM;
+  || role === USER_ROLES.ADMIN_SPJ_BBM
+  || isSpjOliAdmin(role);
 
 export const canPrintAdminRecap = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email);
@@ -174,6 +188,7 @@ export const canPrintReportRecapByRole = (
 export const getRoleLandingPath = (role: string | null | undefined) => {
   if (role === USER_ROLES.ADMIN_BBM) return '/';
   if (role === USER_ROLES.ADMIN_SPJ_BBM) return '/fuel-reports/spj';
+  if (role === USER_ROLES.ADMIN_SPJ_OLI) return '/?tab=spj_oli';
   if (role === USER_ROLES.ADMIN_RENCANA_KERJA) return '/work-plans/daily-rekap';
   return '/';
 };
@@ -211,6 +226,8 @@ export const getRoleBadgeClass = (role: string | null | undefined) => {
       return 'text-orange-600 border-orange-200 bg-orange-50';
     case USER_ROLES.ADMIN_SPJ_BBM:
       return 'text-blue-800 border-blue-300 bg-blue-100';
+    case USER_ROLES.ADMIN_SPJ_OLI:
+      return 'text-emerald-800 border-emerald-300 bg-emerald-100';
     default:
       return 'text-blue-600 border-blue-200 bg-blue-50';
   }

@@ -9,6 +9,7 @@ export type Resource =
   | 'fuel_spj_reports'
   | 'fuel_prices'
   | 'spj_bbm'
+  | 'spj_oli'
   | 'audit_logs'
   | 'profiles'
   | 'settings'
@@ -61,6 +62,10 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'fuel_spj_reports', action: 'read' },
     { resource: 'fuel_spj_reports', action: 'update' },
     { resource: 'fuel_spj_reports', action: 'delete' },
+    { resource: 'spj_oli', action: 'create' },
+    { resource: 'spj_oli', action: 'read' },
+    { resource: 'spj_oli', action: 'update' },
+    { resource: 'spj_oli', action: 'delete' },
     { resource: 'audit_logs', action: 'read' },
     { resource: 'profiles', action: 'read' },
     { resource: 'profiles', action: 'update' },
@@ -143,6 +148,17 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'work_plans', action: 'read' },
     { resource: 'work_plans', action: 'update' },
     { resource: 'work_plans', action: 'delete' },
+    { resource: 'profiles', action: 'read' },
+  ],
+
+  // Admin SPJ Oli – akses global bila wilayah kosong, atau hanya wilayah yang ditetapkan.
+  [USER_ROLES.ADMIN_SPJ_OLI]: [
+    { resource: 'spj_oli', action: 'create' },
+    { resource: 'spj_oli', action: 'read', condition: ctx => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+    { resource: 'spj_oli', action: 'update', condition: ctx => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+    { resource: 'spj_oli', action: 'delete', condition: ctx => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+    { resource: 'spj_oli', action: 'export' },
+    { resource: 'spj_oli', action: 'print' },
     { resource: 'profiles', action: 'read' },
   ],
 

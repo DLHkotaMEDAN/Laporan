@@ -134,11 +134,26 @@ const FuelSpjRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const SpjOliRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  const isAllowed = profile?.role === USER_ROLES.ADMIN
+    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
+    || profile?.role === USER_ROLES.ADMIN_SPJ_OLI
+    || profile?.role === USER_ROLES.PIMPINAN;
+  if (!isAllowed) return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+
+  return <>{children}</>;
+};
+
 const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => {
   const { profile, loading } = useAuth();
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
-  if (isAdminBbmAccess(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM) {
+  if (isAdminBbmAccess(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_OLI) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
 
@@ -230,12 +245,12 @@ const App = () => (
             <Route path="/fuel-reports/spj/monthly-rekap" element={<FuelSpjRoute><FuelSpjMonthlyRecap /></FuelSpjRoute>} />
             <Route path="/fuel-reports/spj/yearly-rekap" element={<FuelSpjRoute><FuelSpjYearlyRecap /></FuelSpjRoute>} />
 
-            <Route path="/spj-oli" element={<FuelSpjRoute><SpjOli /></FuelSpjRoute>} />
-            <Route path="/spj-oli/create" element={<FuelSpjRoute><SpjOli /></FuelSpjRoute>} />
-            <Route path="/spj-oli/edit/:id" element={<FuelSpjRoute><SpjOli /></FuelSpjRoute>} />
-            <Route path="/spj-oli/daily-rekap" element={<FuelSpjRoute><SpjOliRecap period="daily" /></FuelSpjRoute>} />
-            <Route path="/spj-oli/weekly-rekap" element={<FuelSpjRoute><SpjOliRecap period="weekly" /></FuelSpjRoute>} />
-            <Route path="/spj-oli/monthly-rekap" element={<FuelSpjRoute><SpjOliRecap period="monthly" /></FuelSpjRoute>} />
+            <Route path="/spj-oli" element={<SpjOliRoute><SpjOli /></SpjOliRoute>} />
+            <Route path="/spj-oli/create" element={<SpjOliRoute><SpjOli /></SpjOliRoute>} />
+            <Route path="/spj-oli/edit/:id" element={<SpjOliRoute><SpjOli /></SpjOliRoute>} />
+            <Route path="/spj-oli/daily-rekap" element={<SpjOliRoute><SpjOliRecap period="daily" /></SpjOliRoute>} />
+            <Route path="/spj-oli/weekly-rekap" element={<SpjOliRoute><SpjOliRecap period="weekly" /></SpjOliRoute>} />
+            <Route path="/spj-oli/monthly-rekap" element={<SpjOliRoute><SpjOliRecap period="monthly" /></SpjOliRoute>} />
             
             <Route path="/create" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditReport /></ProtectedRoute>} />

@@ -54,6 +54,7 @@ const USER_ROLES = {
   ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
+  ADMIN_SPJ_OLI: 'admin_spj_oli',
   PIMPINAN: 'pimpinan',
   USER: 'user',
 } as const;

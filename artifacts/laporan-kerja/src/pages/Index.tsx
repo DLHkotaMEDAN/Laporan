@@ -208,13 +208,14 @@ const Index = () => {
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
+  const isAdminSpjOli = profile?.role === 'admin_spj_oli';
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
-  const accountRegionId = !isAdmin && roleRequiresRegion(profile?.role) ? profile?.region_id || "__unassigned__" : null;
+  const accountRegionId = !isAdmin && (roleRequiresRegion(profile?.role) || isAdminSpjOli) ? profile?.region_id || "__unassigned__" : null;
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
-  const isFuelSpecialist = (isAdminBbm || isAdminSpj) && !isCombinedWorkspace;
+  const isFuelSpecialist = (isAdminBbm || isAdminSpj || isAdminSpjOli) && !isCombinedWorkspace;
   const canViewReportsTab = !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
   const isOvertimeOnly = profile?.role === 'admin_rekap_lembur';
   const canViewOvertime = isAdmin || isOvertimeOnly;
@@ -252,7 +253,7 @@ const Index = () => {
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
     }
-  }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, authLoading, navigate, accountRegionId]);
+  }, [profile, isLoggedIn, isAdminBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId]);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -266,12 +267,14 @@ const Index = () => {
       setActiveTab("fuel_reports");
     } else if (isAdminSpj) {
       setActiveTab("fuel_spj");
+    } else if (isAdminSpjOli) {
+      setActiveTab("spj_oli");
     } else if (savedTab) {
       setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && savedTab === "reports" ? "workplans" : savedTab);
     } else {
       setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdminBbm, isAdminSpj, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
+  }, [isAdminBbm, isAdminSpj, isAdminSpjOli, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
@@ -770,7 +773,7 @@ const Index = () => {
               >
                 <FileText size={16} /> Rekap Lembur
               </TabsTrigger>}
-              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && !isAdminHarian && (
+              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj || isAdminSpjOli) && !isAdminHarian && (
                 <>
                   {(isAdmin || isAdminBbm) && (
                     <TabsTrigger value="fuel_reports" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-orange-400 md:text-sm data-[state=active]:border-orange-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(234,88,12,0.28)]">
@@ -782,7 +785,7 @@ const Index = () => {
                       <Table size={16} /> Laporan SPJ
                     </TabsTrigger>
                   )}
-                  {(isAdmin || isPimpinan || isAdminSpj) && (
+                  {(isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
                     <TabsTrigger value="spj_oli" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 md:text-sm data-[state=active]:border-emerald-600 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-700 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(4,120,87,0.28)]">
                       <Fuel size={16} /> SPJ Oli
                     </TabsTrigger>
@@ -1231,7 +1234,7 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj) && (
+          {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj || isAdminSpjOli) && (
             <>
               {(isAdmin || isAdminBbm) && (
                 <TabsContent value="fuel_reports" className="mt-0">
@@ -1243,7 +1246,7 @@ const Index = () => {
                   <FuelSpjTab />
                 </TabsContent>
               )}
-              {(isAdmin || isPimpinan || isAdminSpj) && (
+              {(isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
                 <TabsContent value="spj_oli" className="mt-0">
                   <SpjOli />
                 </TabsContent>

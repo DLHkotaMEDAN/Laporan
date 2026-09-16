@@ -15,13 +15,14 @@ import { SpjOliRecord } from '@/types/spjOli';
 import { showError } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { exportSpjOliExcel } from '@/utils/spj-oli-excel';
+import { canAccessAllSpjOliRegions, isSpjOliAdmin } from '@/constants/access-control';
 
 export type SpjOliRecapPeriod = 'daily' | 'weekly' | 'monthly';
 type LogoMode = 'with-logo' | 'without-logo';
 type SignatureMode = 'with-signature' | 'without-signature';
 
 const labels: Record<SpjOliRecapPeriod, string> = { daily: 'Harian', weekly: 'Mingguan', monthly: 'Bulanan' };
-const canAccess = (role?: string) => ['admin', 'admin_spj_bbm', 'pimpinan'].includes(role || '');
+const canAccess = (role?: string) => ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
 const getLogoUrl = (fileName: string) => supabase.storage.from('assets').getPublicUrl(fileName).data.publicUrl;
 const LOGO_MEDAN_URL = getLogoUrl('logo-medan.jpg');
 const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
@@ -41,6 +42,7 @@ const formatPeriod = (period: SpjOliRecapPeriod, date: string) => {
 export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const lockedRegionId = isSpjOliAdmin(profile?.role) ? profile?.region_id || '' : '';
   const [records, setRecords] = useState<SpjOliRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState('semua');
@@ -50,6 +52,13 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const [signatureMode, setSignatureMode] = useState<SignatureMode>('without-signature');
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const { regions, teams } = useRegionFilterOptions(true, selectedRegion);
+
+  useEffect(() => {
+    if (lockedRegionId) {
+      setSelectedRegion(lockedRegionId);
+      setSelectedTeam('semua');
+    }
+  }, [lockedRegionId]);
 
   useEffect(() => {
     spjOliService.getAll()
@@ -67,6 +76,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   }, []);
 
   const filtered = useMemo(() => records.filter((record) => {
+    if (lockedRegionId && record.region_id !== lockedRegionId) return false;
     if (selectedRegion !== 'semua' && record.region_id !== selectedRegion) return false;
     if (selectedTeam !== 'semua' && record.team_id !== selectedTeam) return false;
     if (period === 'daily') return record.date === selectedDate;
@@ -78,7 +88,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
     return current >= start && current <= end;
-  }), [records, selectedRegion, selectedTeam, selectedDate, period]);
+  }), [records, selectedRegion, lockedRegionId, selectedTeam, selectedDate, period]);
 
   // Satukan sel tanggal untuk record yang berurutan pada tanggal yang sama.
   // Rincian SPJ/Oli tetap ditampilkan per baris agar tidak ada data yang hilang.
@@ -114,7 +124,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
 
   const regionName = (id: string) => regions.find((region) => region.id === id)?.name || '-';
   const teamName = (id: string) => teams.find((team) => team.id === id)?.name || '-';
-  const showRegionColumn = profile?.role === 'admin' || profile?.role === 'admin_spj_bbm';
+  const showRegionColumn = canAccessAllSpjOliRegions(profile?.role, profile?.region_id);
   const columnCount = showRegionColumn ? 11 : 10;
   // Total selalu 100% supaya kolom terakhir (Keterangan) tidak keluar dari
   // batas A3 saat browser membuka dialog cetak.
@@ -129,7 +139,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const editRecords = filtered.slice(0, 50);
 
   const reset = () => {
-    setSelectedRegion('semua');
+    setSelectedRegion(lockedRegionId || 'semua');
     setSelectedTeam('semua');
     setSelectedDate(new Date().toISOString().slice(0, 10));
   };
@@ -205,7 +215,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
 
         <section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-4 print:hidden">
           <div><label className="mb-1 block text-xs font-bold text-slate-500">{period === 'monthly' ? 'Bulan Acuan' : period === 'weekly' ? 'Tanggal Minggu' : 'Tanggal'}</label><Input type={period === 'monthly' ? 'month' : 'date'} value={period === 'monthly' ? selectedDate.slice(0, 7) : selectedDate} onChange={(event) => setSelectedDate(period === 'monthly' ? `${event.target.value}-01` : event.target.value)} /></div>
-          <div><label className="mb-1 block text-xs font-bold text-slate-500">Wilayah</label><Select value={selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam('semua'); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Wilayah</SelectItem>{regions.map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></div>
+          <div><label className="mb-1 block text-xs font-bold text-slate-500">Wilayah</label><Select value={lockedRegionId || selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam('semua'); }} disabled={Boolean(lockedRegionId)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{!lockedRegionId && <SelectItem value="semua">Semua Wilayah</SelectItem>}{regions.filter((region) => !lockedRegionId || region.id === lockedRegionId).map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></div>
           <div><label className="mb-1 block text-xs font-bold text-slate-500">Tim</label><Select value={selectedTeam} onValueChange={setSelectedTeam}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Tim</SelectItem>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></div>
           <div className="flex items-end"><Button variant="outline" onClick={reset} className="w-full"><FilterX className="mr-2 h-4 w-4" /> Reset Filter</Button></div>
         </section>
