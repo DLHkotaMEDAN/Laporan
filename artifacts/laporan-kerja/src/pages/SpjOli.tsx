@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Edit, FilterX, Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,12 +27,13 @@ const getNextSpjNumber = (value: string) => value.replace(/^(\d+)/, (_, number: 
 
 type SpjOliFormValues = typeof emptyRecord;
 
-const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, vehicleOptions, editable, editing, regionLocked, onChange, onSubmit, onCancel }: {
+const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spjNumberRecords, vehicleOptions, editable, editing, regionLocked, onChange, onSubmit, onCancel }: {
   form: SpjOliFormValues;
   regions: { id: string; name: string }[];
   teams: { id: string; region_id: string; name: string }[];
   selectedTeam?: { id: string; region_id: string; name: string };
   savedRecords: SpjOliRecord[];
+  spjNumberRecords: SpjOliRecord[];
   vehicleOptions: string[];
   editable: boolean;
   editing: boolean;
@@ -43,7 +44,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, veh
 }) => (
   <main className="min-h-screen bg-slate-50 p-4 md:p-8">
     <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6">
-      <datalist id="spj-oli-number-options">{Array.from(new Set(savedRecords.map(record => record.spj_number).filter(Boolean))).map(value => <option key={value} value={value} />)}</datalist>
+      <datalist id="spj-oli-number-options">{Array.from(new Set(spjNumberRecords.map(record => record.spj_number).filter(Boolean))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-vehicle-options">{vehicleOptions.map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-operator-options">{Array.from(new Set(savedRecords.map(record => record.operator_name).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-oil-options">{Array.from(new Set([...defaultOilOptions, ...savedRecords.map(record => record.oil_name).filter(Boolean)])).map(value => <option key={value} value={value} />)}</datalist>
@@ -51,7 +52,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, veh
       <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia. Draf tersimpan sementara di perangkat ini.</p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
       <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-2">
         <label className="space-y-1 text-sm font-semibold">Tanggal<Input type="date" value={form.date} onChange={e => onChange('date', e.target.value)} /></label>
-        <label className="space-y-1 text-sm font-semibold">Nomor SPJ<Input list="spj-oli-number-options" value={form.spj_number} onChange={e => onChange('spj_number', e.target.value)} />{(() => { const lastSpjNumber = [...savedRecords].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())[0]?.spj_number?.trim(); return lastSpjNumber ? <span className="block rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-800">Nomor SPJ terakhir: <b>{lastSpjNumber}</b>. Nomor lanjutan: <b>{getNextSpjNumber(lastSpjNumber)}</b></span> : null; })()}</label>
+        <label className="space-y-1 text-sm font-semibold">Nomor SPJ<Input list="spj-oli-number-options" value={form.spj_number} onChange={e => onChange('spj_number', e.target.value)} />{(() => { const lastSpjNumber = [...spjNumberRecords].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())[0]?.spj_number?.trim(); return lastSpjNumber ? <span className="block rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-800">Nomor SPJ terakhir: <b>{lastSpjNumber}</b>. Nomor lanjutan: <b>{getNextSpjNumber(lastSpjNumber)}</b></span> : null; })()}</label>
         <label className="space-y-1 text-sm font-semibold">Wilayah<Select value={form.region_id} onValueChange={value => { onChange('region_id', value); onChange('team_id', ''); }} disabled={regionLocked}><SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger><SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></label>
         <label className="space-y-1 text-sm font-semibold">Tim / Operator<Select value={form.team_id} onValueChange={value => onChange('team_id', value)} disabled={!form.region_id}><SelectTrigger><SelectValue placeholder="Pilih Tim / Operator" /></SelectTrigger><SelectContent>{[...teams.filter(team => team.region_id === form.region_id), ...(selectedTeam && !teams.some(team => team.id === selectedTeam.id) ? [selectedTeam] : [])].map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></label>
         <label className="space-y-1 text-sm font-semibold">Alat Operasional / Kendaraan<Input list="spj-oli-vehicle-options" value={form.vehicle_name} onChange={e => onChange('vehicle_name', e.target.value)} placeholder="Pilih atau ketik kendaraan" /></label>
@@ -83,6 +84,7 @@ export default function SpjOli() {
   const [form, setForm] = useState(emptyRecord);
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; region_id: string; name: string }>();
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
+  const nextSpjNumberInitialized = useRef(false);
   const isForm = window.location.pathname.endsWith('/create') || Boolean(id);
   const draftKey = isForm && session?.user?.id ? `spj-oli:${session.user.id}:${id ?? 'new'}` : undefined;
   const { clearDraft, isReady: isDraftReady, restoredAt } = useValueDraft(
@@ -182,6 +184,14 @@ export default function SpjOli() {
   const regionName = (value: string) => regions.find(region => region.id === value)?.name || '-';
   const teamName = (value: string) => teams.find(team => team.id === value)?.name || '-';
   const update = (key: keyof typeof form, value: string | number) => setForm(current => ({ ...current, [key]: value }));
+  useEffect(() => {
+    if (id || !isForm || !isDraftReady || restoredAt || nextSpjNumberInitialized.current || form.spj_number.trim()) return;
+    const lastSpjNumber = [...records]
+      .sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())[0]?.spj_number?.trim();
+    if (!lastSpjNumber) return;
+    setForm(current => current.spj_number.trim() ? current : { ...current, spj_number: getNextSpjNumber(lastSpjNumber) });
+    nextSpjNumberInitialized.current = true;
+  }, [id, isForm, isDraftReady, restoredAt, form.spj_number, records]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
@@ -190,6 +200,6 @@ export default function SpjOli() {
   const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
 
   if (!canAccess(profile?.role)) return null;
-  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
+  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} spjNumberRecords={records} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
 
 }
