@@ -416,37 +416,49 @@ const UserManagement = () => {
           <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
-        <div className={cn("grid gap-3", roleRequiresTeam(newUser.role) ? "md:grid-cols-6" : "md:grid-cols-5")}>
-          <Input required disabled={!canMutateUsers} placeholder="Nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
-          <Input required disabled={!canMutateUsers} type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
-          <Input required disabled={!canMutateUsers} minLength={8} type="password" placeholder="Password minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
-          <div className="space-y-1">
-          <label className="text-xs font-semibold text-blue-900">Hak akses</label>
-          <Select value={newUser.role} onValueChange={role => setNewUser({
-            ...newUser,
-            role: role as UserRole,
-            regionId: roleCanSelectRegion(role) ? newUser.regionId : '',
-            teamId: '',
-          })} disabled={!canMutateUsers}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-          </Select>
+        <div className={cn("grid items-end gap-3", roleRequiresTeam(newUser.role) ? "md:grid-cols-6" : "md:grid-cols-5")}>
+          <div className="min-w-0 space-y-1.5">
+            <label htmlFor="new-user-username" className="text-xs font-semibold text-blue-900">Nama pengguna</label>
+            <Input id="new-user-username" required disabled={!canMutateUsers} placeholder="Masukkan nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
           </div>
-          <div className="space-y-1">
-          <label className="text-xs font-semibold text-blue-900">Cakupan wilayah</label>
-          <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId || (isSpjOliAdmin(newUser.role) ? 'all' : '')} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={!canMutateUsers || isGlobalFuelAdmin(newUser.role) || !roleCanSelectRegion(newUser.role)}>
-            <SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
-            <SelectContent>
-              {(isGlobalFuelAdmin(newUser.role) || isSpjOliAdmin(newUser.role)) && <SelectItem value="all">Semua Wilayah</SelectItem>}
-              {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="min-w-0 space-y-1.5">
+            <label htmlFor="new-user-email" className="text-xs font-semibold text-blue-900">Email</label>
+            <Input id="new-user-email" required disabled={!canMutateUsers} type="email" placeholder="nama@contoh.com" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} />
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <label htmlFor="new-user-password" className="text-xs font-semibold text-blue-900">Password</label>
+            <Input id="new-user-password" required disabled={!canMutateUsers} minLength={8} type="password" placeholder="Minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <label className="text-xs font-semibold text-blue-900">Hak akses</label>
+            <Select value={newUser.role} onValueChange={role => setNewUser({
+              ...newUser,
+              role: role as UserRole,
+              regionId: roleCanSelectRegion(role) ? newUser.regionId : '',
+              teamId: '',
+            })} disabled={!canMutateUsers}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <label className="text-xs font-semibold text-blue-900">Cakupan wilayah</label>
+            <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId || (isSpjOliAdmin(newUser.role) ? 'all' : '')} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={!canMutateUsers || isGlobalFuelAdmin(newUser.role) || !roleCanSelectRegion(newUser.role)}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
+              <SelectContent>
+                {(isGlobalFuelAdmin(newUser.role) || isSpjOliAdmin(newUser.role)) && <SelectItem value="all">Semua Wilayah</SelectItem>}
+                {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           {roleRequiresTeam(newUser.role) && (
-            <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!canMutateUsers || !newUser.regionId}>
-            <SelectTrigger><SelectValue placeholder={newUser.regionId ? "Pilih tim" : "Pilih wilayah dahulu"} /></SelectTrigger>
-              <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).length > 0 ? teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>) : <SelectItem value="no-team" disabled>Belum ada tim aktif untuk wilayah ini</SelectItem>}</SelectContent>
-            </Select>
+            <div className="min-w-0 space-y-1.5">
+              <label className="text-xs font-semibold text-blue-900">Tim</label>
+              <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!canMutateUsers || !newUser.regionId}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={newUser.regionId ? "Pilih tim" : "Pilih wilayah dahulu"} /></SelectTrigger>
+                <SelectContent>{teams.filter(team => team.region_id === newUser.regionId).length > 0 ? teams.filter(team => team.region_id === newUser.regionId).map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>) : <SelectItem value="no-team" disabled>Belum ada tim aktif untuk wilayah ini</SelectItem>}</SelectContent>
+              </Select>
+            </div>
           )}
         </div>
         <Button type="submit" disabled={!canMutateUsers || creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
