@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { OvertimeRecord } from '@/types/overtime';
+import { auditLogService } from '@/services/auditLogService';
 
 export const overtimeService = {
   async getAll(regionId?: string | null) {
@@ -12,6 +13,7 @@ export const overtimeService = {
   async getById(id: string) {
     const { data, error } = await supabase.from('overtime_records').select('*, team:teams(name), region:regions(name)').eq('id', id).single();
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'OVERTIME', entityId: data.id, details: { date: data.date, name: data.name, nip: data.nip } });
     return data as OvertimeRecord;
   },
   async findPersonByNip(nip: string, regionId?: string | null) {
@@ -29,11 +31,13 @@ export const overtimeService = {
   async create(record: Omit<OvertimeRecord, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase.from('overtime_records').insert(record).select().single();
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'OVERTIME', entityId: id, details: { fields: Object.keys(record) } });
     return data as OvertimeRecord;
   },
   async update(id: string, record: Partial<Omit<OvertimeRecord, 'id' | 'created_at' | 'updated_at'>>) {
     const { data, error } = await supabase.from('overtime_records').update(record).eq('id', id).select().single();
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'OVERTIME', entityId: id, details: { mode: 'hard_delete' } });
     return data as OvertimeRecord;
   },
   async remove(id: string) {

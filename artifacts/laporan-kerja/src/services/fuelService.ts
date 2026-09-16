@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { FuelReport } from '@/types/fuelReport';
+import { auditLogService } from '@/services/auditLogService';
 
 const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
   const rows: T[] = [];
@@ -95,6 +96,7 @@ export const fuelService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'FUEL_REPORT', entityId: data.id, details: { date: data.date, team: data.team, region: data.region } });
     return data;
   },
 
@@ -107,6 +109,7 @@ export const fuelService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'FUEL_REPORT', entityId: id, details: { date: data.date, team: data.team, region: data.region, fields: Object.keys(report) } });
     return data;
   },
 
@@ -117,6 +120,7 @@ export const fuelService = {
       .eq('id', id);
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'FUEL_REPORT', entityId: id, details: { mode: 'soft_delete' } });
   },
 
   async restoreReport(id: string) {
@@ -126,6 +130,7 @@ export const fuelService = {
       .eq('id', id);
 
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'FUEL_REPORT', entityId: id, details: { mode: 'restore' } });
   },
 
   async hardDeleteReport(id: string) {
@@ -135,5 +140,6 @@ export const fuelService = {
       .eq('id', id);
 
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'FUEL_REPORT', entityId: id, details: { mode: 'hard_delete' } });
   }
 };

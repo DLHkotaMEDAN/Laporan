@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { UserRole } from '@/constants/access-control';
+import { auditLogService } from '@/services/auditLogService';
 
 interface Profile {
   id: string;
@@ -87,11 +88,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        // Jalankan setelah callback auth selesai agar tidak mengunci event loop Auth.
+        if (event === 'SIGNED_IN') {
+          window.setTimeout(() => {
+            void auditLogService.logAction({
+              action: 'LOGIN',
+              entityType: 'AUTH',
+              details: { method: 'password', source: 'login_form' },
+              userId: session.user.id,
+              username: session.user.email,
+              userEmail: session.user.email,
+            });
+          }, 0);
+        }
       } else {
         setProfile(null);
         setLoading(false);
@@ -102,6 +116,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    if (user) {
+      await auditLogService.logAction({
+        action: 'LOGOUT',
+        entityType: 'AUTH',
+        details: { source: 'user_action' },
+        userId: user.id,
+        username: profile?.username || user.email,
+        userEmail: user.email,
+        role: profile?.role,
+      });
+    }
     await supabase.auth.signOut();
   };
 

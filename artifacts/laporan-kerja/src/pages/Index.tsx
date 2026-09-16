@@ -246,6 +246,12 @@ const Index = () => {
 
   useEffect(() => {
     if (authLoading || !isLoggedIn) return;
+    // Admin SPJ Oli hanya memerlukan data SPJ Oli. Jangan memuat laporan
+    // harian/rencana kerja yang memang tidak diberi akses oleh RLS.
+    if (isAdminSpjOli) {
+      setLoading(false);
+      return;
+    }
     loadData();
     if (accountRegionId && selectedRegion !== accountRegionId) {
       setSelectedRegion(accountRegionId);

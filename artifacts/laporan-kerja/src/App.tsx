@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Index from "./pages/Index";
 import CreateReport from "./pages/CreateReport";
@@ -57,8 +58,37 @@ import {
   isAdminRencanaKerjaAccess,
 } from "@/constants/access-control";
 import { AuthorizeRoute } from "@/components/AuthorizeRoute";
+import { auditLogService } from "@/services/auditLogService";
 
 const queryClient = new QueryClient();
+
+const ActivityTracker = () => {
+  const location = useLocation();
+  const { session, profile } = useAuth();
+  const lastPath = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!session?.user || !profile || location.pathname === '/login') return;
+    const path = `${location.pathname}${location.search}`;
+    if (lastPath.current === path) return;
+    lastPath.current = path;
+    void auditLogService.logAction({
+      action: 'VIEW',
+      entityType: 'PAGE',
+      details: {
+        path,
+        title: document.title || path,
+        referrer: document.referrer || null,
+      },
+      userId: session.user.id,
+      username: profile.username || session.user.email,
+      userEmail: session.user.email,
+      role: profile.role,
+    });
+  }, [location.pathname, location.search, profile, session]);
+
+  return null;
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, profile, loading } = useAuth();
@@ -203,6 +233,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ActivityTracker />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Index />} />

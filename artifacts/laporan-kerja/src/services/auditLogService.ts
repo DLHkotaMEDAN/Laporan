@@ -1,7 +1,20 @@
 import { supabase } from '@/lib/supabase';
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
-export type EntityType = 'REPORT' | 'WORK_PLAN';
+export type AuditAction = 'LOGIN' | 'LOGOUT' | 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'PRINT';
+export type EntityType = 'AUTH' | 'PAGE' | 'REPORT' | 'WORK_PLAN' | 'FUEL_REPORT' | 'FUEL_SPJ_REPORT' | 'OVERTIME' | 'SPJ_OLI' | 'PROFILE' | 'SETTINGS' | 'STORAGE' | string;
+
+export type AuditLog = {
+  id: string;
+  user_id: string | null;
+  username: string | null;
+  user_email: string | null;
+  role: string | null;
+  action: AuditAction;
+  entity_type: EntityType;
+  entity_id: string | null;
+  details: Record<string, unknown>;
+  created_at: string;
+};
 
 export const auditLogService = {
   async logAction(params: {
@@ -10,7 +23,9 @@ export const auditLogService = {
     entityId?: string;
     details: any;
     userId: string;
-    username: string;
+    username?: string | null;
+    userEmail?: string | null;
+    role?: string | null;
   }) {
     try {
       const { error } = await supabase
@@ -21,7 +36,9 @@ export const auditLogService = {
           entity_id: params.entityId,
           details: params.details,
           user_id: params.userId,
-          username: params.username
+          username: params.username || params.userEmail || 'User',
+          user_email: params.userEmail || null,
+          role: params.role || null,
         }]);
       
       if (error) console.error("Gagal mencatat log:", error);
@@ -30,12 +47,44 @@ export const auditLogService = {
     }
   },
 
-  async getLogs() {
-    const { data, error } = await supabase
+  async logCurrentUser(params: {
+    action: AuditAction;
+    entityType: EntityType;
+    entityId?: string;
+    details?: Record<string, unknown>;
+  }) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    return auditLogService.logAction({
+      ...params,
+      details: params.details || {},
+      userId: user.id,
+      username: profile?.username || user.email || 'User',
+      userEmail: user.email,
+      role: profile?.role,
+    });
+  },
+
+  async getLogs(filters?: { action?: string; entityType?: string; userId?: string; search?: string }) {
+    let query = supabase
       .from('audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(500);
+
+    if (filters?.action && filters.action !== 'ALL') query = query.eq('action', filters.action);
+    if (filters?.entityType && filters.entityType !== 'ALL') query = query.eq('entity_type', filters.entityType);
+    if (filters?.userId && filters.userId !== 'ALL') query = query.eq('user_id', filters.userId);
+    if (filters?.search?.trim()) query = query.ilike('username', `%${filters.search.trim()}%`);
+
+    const { data, error } = await query;
     
     if (error) throw error;
     return data;
