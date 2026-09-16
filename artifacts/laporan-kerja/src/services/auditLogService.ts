@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-export type AuditAction = 'LOGIN' | 'LOGOUT' | 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'PRINT';
+export type AuditAction = 'LOGIN' | 'LOGOUT' | 'VIEW' | 'INTERACT' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'PRINT';
 export type EntityType = 'AUTH' | 'PAGE' | 'REPORT' | 'WORK_PLAN' | 'FUEL_REPORT' | 'FUEL_SPJ_REPORT' | 'OVERTIME' | 'SPJ_OLI' | 'PROFILE' | 'SETTINGS' | 'STORAGE' | string;
 
 export type AuditLog = {

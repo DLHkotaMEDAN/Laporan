@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { auditLogService } from '@/services/auditLogService';
 
 export const SIGNATORY_POSITIONS = [
   'kabid_tata_lingkungan',
@@ -56,6 +57,12 @@ export const signatoryService = {
     const cached = readCache().filter((item) => item.id !== saved.id);
     writeCache([...cached, saved]);
     window.dispatchEvent(new Event('signatories-updated'));
+    void auditLogService.logCurrentUser({
+      action: signatory.id ? 'UPDATE' : 'CREATE',
+      entityType: 'SIGNATORY_SETTINGS',
+      entityId: saved.id,
+      details: { position: saved.position, name: saved.name, all_regions: saved.all_regions, region_count: saved.region_ids.length },
+    });
     return saved;
   },
 
@@ -64,6 +71,7 @@ export const signatoryService = {
     if (error) throw new Error(error.message);
     writeCache(readCache().filter((item) => item.id !== id));
     window.dispatchEvent(new Event('signatories-updated'));
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'SIGNATORY_SETTINGS', entityId: id, details: { mode: 'hard_delete' } });
   },
 };
 

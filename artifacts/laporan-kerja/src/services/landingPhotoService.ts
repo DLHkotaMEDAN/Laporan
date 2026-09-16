@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { auditLogService } from '@/services/auditLogService';
 
 export const landingPhotoSlots = ["hero", "mayor", "deputyMayor", "environmentHead"] as const;
 export type LandingPhotoSlot = typeof landingPhotoSlots[number];
@@ -33,10 +34,12 @@ export const uploadLandingPhoto = async (slot: LandingPhotoSlot, base64: string)
     upsert: true,
   });
   if (error) throw error;
+  void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'LANDING_PHOTO', entityId: slot, details: { slot, mode: 'upload' } });
   return `${getLandingPhotoPublicUrl(slot)}?v=${Date.now()}`;
 };
 
 export const removeLandingPhoto = async (slot: LandingPhotoSlot) => {
   const { error } = await supabase.storage.from(bucket).remove([pathFor(slot)]);
   if (error) throw error;
+  void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'LANDING_PHOTO', entityId: slot, details: { slot, mode: 'remove' } });
 };

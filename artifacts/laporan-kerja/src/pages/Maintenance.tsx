@@ -335,6 +335,7 @@ const Maintenance = () => {
       const fileNamesToDelete = orphanedFiles.map(f => f.name);
       const { error } = await supabase.storage.from('report-photos').remove(fileNamesToDelete);
       if (error) throw error;
+      void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'STORAGE', details: { bucket: 'report-photos', file_count: fileNamesToDelete.length, files: fileNamesToDelete.slice(0, 20) } });
       showSuccess(`${fileNamesToDelete.length} file berhasil dibersihkan.`);
       await analyzeSystem();
     } catch (error: any) {
@@ -575,7 +576,7 @@ const Maintenance = () => {
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                     <label className="space-y-1.5 xl:col-span-2"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cari pengguna/detail</span><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input className="pl-9" placeholder="Nama, email, modul..." value={logSearch} onChange={(event) => setLogSearch(event.target.value)} /></div></label>
                     <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Aksi</span><select className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={logAction} onChange={(event) => setLogAction(event.target.value)}>
-                    <option value="ALL">Semua aksi</option><option value="LOGIN">Login</option><option value="LOGOUT">Logout</option><option value="VIEW">Buka halaman</option><option value="CREATE">Tambah</option><option value="UPDATE">Ubah</option><option value="DELETE">Hapus</option><option value="EXPORT">Ekspor</option><option value="PRINT">Cetak</option>
+                    <option value="ALL">Semua aksi</option><option value="LOGIN">Login</option><option value="LOGOUT">Logout</option><option value="VIEW">Buka halaman</option><option value="INTERACT">Interaksi</option><option value="CREATE">Tambah</option><option value="UPDATE">Ubah</option><option value="DELETE">Hapus</option><option value="EXPORT">Ekspor</option><option value="PRINT">Cetak</option>
                     </select></label>
                     <label className="space-y-1.5"><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Modul</span><select className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={logEntity} onChange={(event) => setLogEntity(event.target.value)}>
                     <option value="ALL">Semua modul</option>{Array.from(new Set(logs.map((log) => log.entity_type))).map((entity) => <option key={entity} value={entity}>{entity}</option>)}
@@ -614,6 +615,7 @@ const Maintenance = () => {
                               log.action === 'UPDATE' ? "border-amber-200 bg-amber-50 text-amber-700" :
                               log.action === 'LOGIN' || log.action === 'LOGOUT' ? "border-violet-200 bg-violet-50 text-violet-700" :
                               log.action === 'VIEW' ? "border-sky-200 bg-sky-50 text-sky-700" :
+                              log.action === 'INTERACT' ? "border-slate-200 bg-slate-50 text-slate-600" :
                               "border-emerald-200 bg-emerald-50 text-emerald-700"
                             )}>
                               {log.action === 'LOGIN' ? 'LOGIN' : log.action === 'LOGOUT' ? 'LOGOUT' : log.action === 'VIEW' ? 'BUKA HALAMAN' : log.action}

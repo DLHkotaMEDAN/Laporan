@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { FuelPrice } from '@/types/fuelSpjReport';
+import { auditLogService } from '@/services/auditLogService';
 
 export const fuelPriceService = {
   async getPrices() {
@@ -23,5 +24,6 @@ export const fuelPriceService = {
       .upsert({ type, price, updated_at: new Date().toISOString() }, { onConflict: 'type' });
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'FUEL_PRICE_SETTINGS', details: { type, price } });
   }
 };
