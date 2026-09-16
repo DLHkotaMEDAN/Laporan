@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { auditLogService } from '@/services/auditLogService';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
@@ -151,6 +152,7 @@ const UserManagement = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'PROFILE', entityId: data.id, details: { username: newUser.username.trim(), email: data.email || newUser.email.trim().toLowerCase(), role: newUser.role } });
       showSuccess('Akun aktif berhasil dibuat tanpa konfirmasi email');
       setProfiles(currentProfiles => [
         {
@@ -225,6 +227,7 @@ const UserManagement = () => {
         .eq('id', id);
 
       if (error) throw error;
+      void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: id, details: { fields: Object.keys(updates) } });
       
       setProfiles(profiles.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
       showSuccess("Profil berhasil diperbarui");
@@ -246,6 +249,7 @@ const UserManagement = () => {
         .eq('id', id);
 
       if (error) throw error;
+      void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'PROFILE', entityId: id, details: { username } });
       
       setProfiles(profiles.filter(p => p.id !== id));
       showSuccess("Profil dihapus");
@@ -278,6 +282,7 @@ const UserManagement = () => {
         ? { ...item, is_active: nextIsActive, updated_at: new Date().toISOString() }
         : item));
       showSuccess(nextIsActive ? 'Akun berhasil diaktifkan.' : 'Akun berhasil dinonaktifkan.');
+      void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: profile.id, details: { username: profile.username, field: 'is_active', value: nextIsActive } });
     } catch (error: any) {
       const message = error?.message || 'Kolom status akun belum tersedia di database.';
       showError('Gagal mengubah status akun: ' + message);
@@ -302,6 +307,7 @@ const UserManagement = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: profile.id, details: { username: profile.username, field: 'password' } });
       showSuccess(`Password ${profile.username || 'pengguna'} berhasil diubah.`);
       await fetchProfiles();
     } catch (error: any) {
@@ -353,6 +359,7 @@ const UserManagement = () => {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', editingProfile.id);
       if (error) throw error;
+      void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: editingProfile.id, details: { username: updates.username, role: updates.role, fields: Object.keys(updates) } });
 
       setProfiles(currentProfiles => currentProfiles.map(profile =>
         profile.id === editingProfile.id

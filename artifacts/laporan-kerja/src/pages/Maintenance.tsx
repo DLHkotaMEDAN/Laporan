@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -65,6 +66,12 @@ const Maintenance = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [orphanedFiles, setOrphanedFiles] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
+  const [logSearch, setLogSearch] = useState('');
+  const [logAction, setLogAction] = useState('ALL');
+  const [logEntity, setLogEntity] = useState('ALL');
+  const [logUser, setLogUser] = useState('ALL');
+  const [logFrom, setLogFrom] = useState('');
+  const [logUntil, setLogUntil] = useState('');
   const [deletedReports, setDeletedReports] = useState<any[]>([]);
   const [deletedWorkPlans, setDeletedWorkPlans] = useState<any[]>([]);
   
@@ -92,6 +99,19 @@ const Maintenance = () => {
   const AUTH_LIMIT = 50000;
 
   const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+
+  const logUsers = useMemo(() => Array.from(new Map(logs.map((log) => [log.user_id, log.username || log.user_email || 'System'])).entries()), [logs]);
+  const visibleLogs = useMemo(() => logs.filter((log) => {
+    const createdAt = new Date(log.created_at);
+    const query = logSearch.trim().toLowerCase();
+    const detail = JSON.stringify(log.details || {}).toLowerCase();
+    return (logAction === 'ALL' || log.action === logAction)
+      && (logEntity === 'ALL' || log.entity_type === logEntity)
+      && (logUser === 'ALL' || log.user_id === logUser)
+      && (!query || `${log.username || ''} ${log.user_email || ''} ${log.entity_type || ''} ${detail}`.toLowerCase().includes(query))
+      && (!logFrom || createdAt >= new Date(`${logFrom}T00:00:00`))
+      && (!logUntil || createdAt <= new Date(`${logUntil}T23:59:59.999`));
+  }), [logs, logAction, logEntity, logUser, logSearch, logFrom, logUntil]);
 
   const loadLandingPhotos = useCallback(async () => {
     const stored = await Promise.all([landingHeroProfile, ...landingProfiles].map(async (profile) => ({
@@ -512,27 +532,43 @@ const Maintenance = () => {
                 </div>
               </CardHeader>
               <CardContent>
+                <div className="mb-4 grid gap-2 rounded-lg border bg-slate-50 p-3 md:grid-cols-6">
+                  <Input className="md:col-span-2" placeholder="Cari pengguna atau detail..." value={logSearch} onChange={(event) => setLogSearch(event.target.value)} />
+                  <select className="h-10 rounded-md border bg-white px-3 text-sm" value={logAction} onChange={(event) => setLogAction(event.target.value)}>
+                    <option value="ALL">Semua aksi</option><option value="LOGIN">Login</option><option value="LOGOUT">Logout</option><option value="VIEW">Buka halaman</option><option value="CREATE">Tambah</option><option value="UPDATE">Ubah</option><option value="DELETE">Hapus</option><option value="EXPORT">Ekspor</option><option value="PRINT">Cetak</option>
+                  </select>
+                  <select className="h-10 rounded-md border bg-white px-3 text-sm" value={logEntity} onChange={(event) => setLogEntity(event.target.value)}>
+                    <option value="ALL">Semua modul</option>{Array.from(new Set(logs.map((log) => log.entity_type))).map((entity) => <option key={entity} value={entity}>{entity}</option>)}
+                  </select>
+                  <select className="h-10 rounded-md border bg-white px-3 text-sm" value={logUser} onChange={(event) => setLogUser(event.target.value)}>
+                    <option value="ALL">Semua pengguna</option>{logUsers.filter(([id]) => id).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  </select>
+                  <div className="flex gap-2"><Input type="date" title="Dari tanggal" value={logFrom} onChange={(event) => setLogFrom(event.target.value)} /><Input type="date" title="Sampai tanggal" value={logUntil} onChange={(event) => setLogUntil(event.target.value)} /></div>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500">
                       <tr>
-                        <th className="px-4 py-3">Waktu</th>
+                        <th className="px-4 py-3">Tanggal & Waktu</th>
                         <th className="px-4 py-3">Pengguna</th>
+                        <th className="px-4 py-3">Role</th>
                         <th className="px-4 py-3">Aksi</th>
                         <th className="px-4 py-3">Entitas</th>
                         <th className="px-4 py-3">Keterangan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {logs.length > 0 ? logs.map((log) => (
+                      {visibleLogs.length > 0 ? visibleLogs.map((log) => (
                         <tr key={log.id} className="hover:bg-slate-50/50">
-                          <td className="px-4 py-3 text-[11px] text-slate-500 whitespace-nowrap">{format(new Date(log.created_at), 'dd MMM, HH:mm', { locale: localeId })}</td>
-                          <td className="px-4 py-3 font-medium">{log.username || "System"}</td>
+                          <td className="px-4 py-3 text-[11px] text-slate-500 whitespace-nowrap">{format(new Date(log.created_at), 'dd MMM yyyy, HH:mm:ss', { locale: localeId })}</td>
+                          <td className="px-4 py-3 font-medium"><div>{log.username || "System"}</div><div className="text-[10px] font-normal text-slate-400">{log.user_email || '-'}</div></td>
+                          <td className="px-4 py-3 text-[10px] text-slate-500">{log.role || '-'}</td>
                           <td className="px-4 py-3">
                             <Badge className={cn(
                               "text-[9px] font-bold",
                               log.action === 'DELETE' ? "bg-red-100 text-red-700" : 
-                              log.action === 'UPDATE' ? "bg-amber-100 text-amber-700" : 
+                              log.action === 'UPDATE' ? "bg-amber-100 text-amber-700" :
+                              log.action === 'LOGIN' || log.action === 'LOGOUT' ? "bg-purple-100 text-purple-700" :
                               "bg-green-100 text-green-700"
                             )}>
                               {log.action}
@@ -544,10 +580,10 @@ const Maintenance = () => {
                               {log.entity_type}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-[11px] text-slate-600 italic">{log.details?.title || log.details?.description || "-"}</td>
+                          <td className="max-w-[420px] px-4 py-3 text-[11px] text-slate-600"><div className="font-medium">{String(log.details?.title || log.details?.description || log.details?.path || log.details?.mode || '-')}</div><div className="mt-1 break-words text-[10px] text-slate-400">{JSON.stringify(log.details || {})}</div></td>
                         </tr>
                       )) : (
-                        <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400 italic">Belum ada riwayat aktivitas</td></tr>
+                        <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400 italic">Belum ada riwayat aktivitas yang sesuai filter</td></tr>
                       )}
                     </tbody>
                   </table>
