@@ -28,7 +28,7 @@ export async function exportSpjOliExcel(
     'No', 'No. SPJ', 'Tanggal',
     ...(showRegionColumn ? ['Wilayah'] : []),
     'Tim', 'Alat Operasional/\nKendaraan', 'Nama Operator/\nSupir/Penerima',
-    'Jenis Oli', 'Jumlah', 'Lokasi', 'Keterangan',
+    'Jenis Oli / Minyak Rem', 'Jumlah', 'Lokasi', 'Keterangan',
   ];
   const lastColumn = showRegionColumn ? 'K' : 'J';
 

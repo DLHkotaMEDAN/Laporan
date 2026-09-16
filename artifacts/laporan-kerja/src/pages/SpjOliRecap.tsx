@@ -241,7 +241,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
                 <th className="border-2 border-black p-1">Tim</th>
                 <th className="border-2 border-black p-1 leading-tight">Alat Operasional/<br />Kendaraan</th>
                 <th className="border-2 border-black p-1 leading-tight">Nama Operator/<br />Supir/Penerima</th>
-                <th className="border-2 border-black p-1">Jenis Oli</th>
+                <th className="border-2 border-black p-1">Jenis Oli / Minyak Rem</th>
                 <th className="border-2 border-black p-1">Jumlah</th>
                 <th className="border-2 border-black p-1">Lokasi</th>
                 <th className="border-2 border-black p-1">Keterangan</th>
