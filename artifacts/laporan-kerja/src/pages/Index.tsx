@@ -82,6 +82,25 @@ type ReportSortKey = "date" | "category" | "description" | "location" | "volume"
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
 const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj', 'spj_oli'] as const;
 type MainTab = typeof validMainTabs[number];
+
+const systemTabBaseClass =
+  "flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-slate-950 hover:shadow-md focus-visible:ring-2 sm:text-sm lg:w-auto lg:min-w-[9rem] lg:px-4 data-[state=active]:hover:text-white [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
+
+const systemTabToneClass: Record<MainTab, string> = {
+  reports:
+    "hover:border-blue-200 hover:text-blue-700 focus-visible:ring-blue-400 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(37,99,235,0.22)]",
+  workplans:
+    "hover:border-emerald-200 hover:text-emerald-700 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-600 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(5,150,105,0.22)]",
+  overtime:
+    "hover:border-amber-200 hover:text-amber-700 focus-visible:ring-amber-400 data-[state=active]:border-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(217,119,6,0.22)]",
+  fuel_reports:
+    "hover:border-orange-200 hover:text-orange-700 focus-visible:ring-orange-400 data-[state=active]:border-orange-600 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(234,88,12,0.22)]",
+  fuel_spj:
+    "hover:border-blue-200 hover:text-blue-800 focus-visible:ring-blue-400 data-[state=active]:border-blue-800 data-[state=active]:bg-blue-800 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(30,64,175,0.22)]",
+  spj_oli:
+    "hover:border-emerald-200 hover:text-emerald-800 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-700 data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(4,120,87,0.22)]",
+};
+
 type IndexViewState = {
   activeTab?: MainTab;
   searchQuery?: string;
@@ -759,40 +778,40 @@ const Index = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-gradient-to-r from-white via-slate-50 to-blue-50/70 p-2.5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] ring-1 ring-white">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1.5 bg-transparent p-0 md:flex md:w-auto">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm ring-1 ring-slate-100/80 xl:flex-row xl:items-center xl:justify-between">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 overflow-visible bg-transparent p-0 text-slate-600 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-start xl:flex-1">
               {canViewReportsTab && !isOvertimeOnly && <TabsTrigger
-                value="reports" 
-                className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-400 md:text-sm data-[state=active]:border-blue-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(37,99,235,0.32)]"
+                value="reports"
+                className={cn(systemTabBaseClass, systemTabToneClass.reports)}
               >
                 <FileText size={16} /> Laporan Harian
               </TabsTrigger>}
               {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
-                value="workplans" 
-                className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 md:text-sm data-[state=active]:border-emerald-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(5,150,105,0.28)]"
+                value="workplans"
+                className={cn(systemTabBaseClass, systemTabToneClass.workplans)}
               >
                 <ClipboardList size={16} /> Rencana Kerja
               </TabsTrigger>}
               {canViewOvertime && !isAdminHarian && <TabsTrigger
                 value="overtime"
-                className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-amber-400 md:text-sm data-[state=active]:border-amber-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(217,119,6,0.28)]"
+                className={cn(systemTabBaseClass, systemTabToneClass.overtime)}
               >
                 <FileText size={16} /> Rekap Lembur
               </TabsTrigger>}
               {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj || isAdminSpjOli) && !isAdminHarian && (
                 <>
                   {(isAdmin || isAdminBbm) && (
-                    <TabsTrigger value="fuel_reports" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-orange-400 md:text-sm data-[state=active]:border-orange-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(234,88,12,0.28)]">
+                    <TabsTrigger value="fuel_reports" className={cn(systemTabBaseClass, systemTabToneClass.fuel_reports)}>
                       <Fuel size={16} /> Admin BBM
                     </TabsTrigger>
                   )}
                   {(isAdmin || isPimpinan || isAdminSpj) && (
-                    <TabsTrigger value="fuel_spj" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-400 md:text-sm data-[state=active]:border-blue-700 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-800 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(30,64,175,0.28)]">
+                    <TabsTrigger value="fuel_spj" className={cn(systemTabBaseClass, systemTabToneClass.fuel_spj)}>
                       <Table size={16} /> Laporan SPJ
                     </TabsTrigger>
                   )}
                   {(isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
-                    <TabsTrigger value="spj_oli" className="flex items-center justify-center gap-2 rounded-xl border border-transparent px-6 py-2.5 text-xs font-bold text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 md:text-sm data-[state=active]:border-emerald-600 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-700 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-[0_6px_14px_rgba(4,120,87,0.28)]">
+                    <TabsTrigger value="spj_oli" className={cn(systemTabBaseClass, systemTabToneClass.spj_oli)}>
                       <Fuel size={16} /> SPJ Oli
                     </TabsTrigger>
                   )}
@@ -800,10 +819,11 @@ const Index = () => {
               )}
             </TabsList>
 
-            <div className="flex items-center gap-2 border-t border-slate-200/80 px-2 pt-2 md:border-l md:border-t-0 md:pl-4 md:pt-0">
-              {(activeTab !== 'reports' || canPrintAnyReportRecap) && <DropdownMenu>
+            {(activeTab !== 'reports' || canPrintAnyReportRecap) && (
+              <div className="flex w-full items-center justify-end border-t border-slate-200/80 pt-3 xl:w-auto xl:shrink-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 bg-white px-4 font-bold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md">
+                  <Button variant="outline" size="sm" className="h-11 w-full justify-center rounded-xl border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md sm:w-auto">
                     <Printer className="h-4 w-4 mr-2 text-blue-600" /> Cetak Rekap <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -898,8 +918,9 @@ const Index = () => {
                     </>
                   )}
                 </DropdownMenuContent>
-              </DropdownMenu>}
-            </div>
+                </DropdownMenu>
+              </div>
+            )}
           </div>
 
           {activeTab === 'reports' && (
