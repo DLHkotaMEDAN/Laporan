@@ -11,7 +11,6 @@ export const spjOliService = {
   async getById(id: string) {
     const { data, error } = await supabase.from('spj_oli_records').select('*').eq('id', id).single();
     if (error) throw error;
-    void auditLogService.logCurrentUser({ action: id ? 'UPDATE' : 'CREATE', entityType: 'SPJ_OLI', entityId: data.id, details: { date: data.date, mode: id ? 'update' : 'create' } });
     return data as SpjOliRecord;
   },
   async save(record: Omit<SpjOliRecord, 'id' | 'created_at' | 'updated_at'>, id?: string) {
@@ -20,11 +19,12 @@ export const spjOliService = {
       : supabase.from('spj_oli_records').insert(record);
     const { data, error } = await query.select().single();
     if (error) throw error;
-    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'SPJ_OLI', entityId: id, details: { mode: 'hard_delete' } });
+    void auditLogService.logCurrentUser({ action: id ? 'UPDATE' : 'CREATE', entityType: 'SPJ_OLI', entityId: data.id, details: { date: data.date, mode: id ? 'update' : 'create' } });
     return data as SpjOliRecord;
   },
   async remove(id: string) {
     const { error } = await supabase.from('spj_oli_records').delete().eq('id', id);
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'SPJ_OLI', entityId: id, details: { mode: 'hard_delete' } });
   },
 };

@@ -28,6 +28,20 @@ export const auditLogService = {
     role?: string | null;
   }) {
     try {
+      let userEmail = params.userEmail || null;
+      let role = params.role || null;
+      if (!userEmail || !role) {
+        const { data: { user } } = await supabase.auth.getUser();
+        userEmail ||= user?.email || null;
+        if (!role && user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+          role = profile?.role || null;
+        }
+      }
       const { error } = await supabase
         .from('audit_logs')
         .insert([{
@@ -37,8 +51,8 @@ export const auditLogService = {
           details: params.details,
           user_id: params.userId,
           username: params.username || params.userEmail || 'User',
-          user_email: params.userEmail || null,
-          role: params.role || null,
+          user_email: userEmail,
+          role,
         }]);
       
       if (error) console.error("Gagal mencatat log:", error);
