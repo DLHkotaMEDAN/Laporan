@@ -784,7 +784,7 @@ const Index = () => {
                 value="reports"
                 className={cn(systemTabBaseClass, systemTabToneClass.reports)}
               >
-                <FileText size={16} /> Laporan Harian
+                <FileText size={16} /> Laporan Kerja
               </TabsTrigger>}
               {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
                 value="workplans"

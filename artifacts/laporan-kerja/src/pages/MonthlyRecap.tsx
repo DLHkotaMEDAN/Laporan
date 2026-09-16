@@ -37,6 +37,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -526,7 +527,7 @@ const MonthlyRecap = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1400px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
+      <div className="recap-sticky-toolbar max-w-[1400px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => navigate('/?tab=reports')} className="px-2 md:px-4 h-9">
@@ -580,76 +581,44 @@ const MonthlyRecap = () => {
               </Popover>
               {isUserRestricted && <div className="absolute -top-2 -right-2 bg-amber-100 text-amber-700 p-1 rounded-full border border-amber-200 shadow-sm"><Lock size={10} /></div>}
             </div>
-            <Select value={photoMode} onValueChange={(v) => setPhotoMode(v as PhotoMode)}>
-              <SelectTrigger className="w-[40px] md:w-[160px] bg-slate-50 border-slate-200 h-10 text-slate-700 font-medium p-0 md:px-3 flex justify-center">
-                <div className="flex items-center gap-2">
-                  <ImageIcon size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Mode Foto" /></span>
-                </div>
-              </SelectTrigger>
-              <SelectContent><SelectItem value="with-photo"><div className="flex items-center gap-2"><ImageIcon size={14} /> Dengan Foto</div></SelectItem><SelectItem value="without-photo"><div className="flex items-center gap-2"><ImageOff size={14} /> Tanpa Foto</div></SelectItem></SelectContent>
-            </Select>
-            <Select value={recapMode} onValueChange={(v) => setRecapMode(v as RecapMode)}>
-              <SelectTrigger className="w-[40px] md:w-[180px] bg-blue-50 border-blue-200 h-10 text-blue-700 font-medium p-0 md:px-3 flex justify-center">
-                <div className="flex items-center gap-2">
-                  <Fuel size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Mode Rekap" /></span>
-                </div>
-              </SelectTrigger>
-              <SelectContent><SelectItem value="with-fuel"><div className="flex items-center gap-2"><Fuel size={14} /> Rekap Dengan BBM</div></SelectItem><SelectItem value="without-fuel"><div className="flex items-center gap-2"><FileText size={14} /> Rekap Tanpa BBM</div></SelectItem></SelectContent>
-            </Select>
-            <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
-              <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
-                <div className="flex items-center gap-2">
-                  <PenTool size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Tanda Tangan" /></span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="with-signature"><div className="flex items-center gap-2"><PenTool size={14} /> Ada Tanda Tangan</div></SelectItem>
-                <SelectItem value="without-signature"><div className="flex items-center gap-2"><PenTool size={14} className="opacity-40" /> Tanpa Tanda Tangan</div></SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <div className="flex items-center gap-2">
-            {isLoggedIn && (
-              <Button onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0 || !canPrintMonthlyRecap()} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-10 px-2 md:px-4">
-                <CloudUpload className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Simpan ke Drive</span>
-              </Button>
-            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4 disabled:bg-slate-300 disabled:cursor-not-allowed"
-                        disabled={!canPrintMonthlyRecap()}
-                      >
-                        <Printer className="h-4 w-4 md:mr-2" /> 
-                        <span className="hidden md:inline">Cetak Rekap</span>
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    {!canPrintMonthlyRecap() && (
-                      <TooltipContent side="left" className="bg-red-600 text-white border-red-700">
-                        <p className="max-w-xs">{printAccessDeniedMessage()}</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-3 md:px-4">
+                  <FileText className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">Menu Rekap</span>
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={handlePrint} className="cursor-pointer py-2">
+              <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-72">
+                <DropdownMenuItem onClick={() => setPhotoMode(photoMode === 'with-photo' ? 'without-photo' : 'with-photo')} className="cursor-pointer py-2">
+                  {photoMode === 'with-photo' ? <ImageOff className="mr-2 h-4 w-4 text-slate-500" /> : <ImageIcon className="mr-2 h-4 w-4 text-slate-600" />}
+                  Foto: {photoMode === 'with-photo' ? 'Dengan Foto' : 'Tanpa Foto'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRecapMode(recapMode === 'with-fuel' ? 'without-fuel' : 'with-fuel')} className="cursor-pointer py-2">
+                  {recapMode === 'with-fuel' ? <FileText className="mr-2 h-4 w-4 text-blue-600" /> : <Fuel className="mr-2 h-4 w-4 text-blue-600" />}
+                  Mode Rekap: {recapMode === 'with-fuel' ? 'Dengan BBM' : 'Tanpa BBM'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSignatureMode(signatureMode === 'with-signature' ? 'without-signature' : 'with-signature')} className="cursor-pointer py-2">
+                  <PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {isLoggedIn && (
+                  <DropdownMenuItem onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0 || !canPrintMonthlyRecap()} className="cursor-pointer py-2">
+                    <CloudUpload className="mr-2 h-4 w-4 text-blue-600" /> Simpan ke Drive
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={handlePrint} disabled={!canPrintMonthlyRecap()} className="cursor-pointer py-2">
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2">
+                <DropdownMenuItem onClick={handleSharePdf} disabled={!canPrintMonthlyRecap()} className="cursor-pointer py-2">
                   <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Simpan PDF untuk Dibagikan
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
-                  <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel
+                <DropdownMenuItem onClick={handleExportExcel} disabled={!canPrintMonthlyRecap()} className="cursor-pointer py-2">
+                  <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
                 </DropdownMenuItem>
-                <div className="h-px bg-slate-100 my-1" />
+                <DropdownMenuSeparator />
                 {canPrintReportRecap(profile?.role, 'daily', session?.user?.email) && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
                 </DropdownMenuItem>}

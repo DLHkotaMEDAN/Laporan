@@ -98,7 +98,7 @@ const PrintWorkPlan = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1200px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-lg shadow-sm border">
+      <div className="recap-sticky-toolbar max-w-[1200px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-lg shadow-sm border">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => navigate('/work-plans')} className="px-2 md:px-4 h-9">

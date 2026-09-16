@@ -5,11 +5,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Report, Task, Equipment, HeavyEquipment } from '@/types/report';
 import { reportService } from '@/services/reportService';
 import { getReportTasks, getUnitByCategory, sortByCategory } from '@/utils/report-helpers';
-import { 
-  ArrowLeft, Printer, Fuel, FileText, ChevronsUpDown, 
-  Table, LogOut, LogIn, CloudUpload, 
+import {
+  ArrowLeft, Printer, FileText, ChevronsUpDown,
+  Table, LogOut, LogIn, CloudUpload,
   Loader2, Lock, ChevronDown,
-  Image as ImageIcon, ImageOff, PenTool, Calendar, Settings2, Share2
+  PenTool, Calendar, Settings2, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -40,8 +39,13 @@ import {
 } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -553,7 +557,7 @@ const WeeklyRecap = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1400px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
+      <div className="recap-sticky-toolbar max-w-[1400px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => navigate('/?tab=reports')} className="px-2 md:px-4 h-9">
@@ -603,16 +607,22 @@ const WeeklyRecap = () => {
               {isUserRestricted && <div className="absolute -top-2 -right-2 bg-amber-100 text-amber-700 p-1 rounded-full border border-amber-200 shadow-sm"><Lock size={10} /></div>}
             </div>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50 h-10">
-                  <Settings2 className="mr-2 h-4 w-4" /> Pilih Kolom
+          </div>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-3 md:px-4">
+                  <FileText className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">Menu Rekap</span>
+                  <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-3" align="end">
-                <div className="space-y-3">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tampilkan Kolom:</p>
-                  <div className="space-y-2">
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-72">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Settings2 className="mr-2 h-4 w-4 text-blue-600" /> Pilih Kolom
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-60">
                     {Object.entries({
                       date: "Hari / Tgl",
                       category: "Tim/Kec.",
@@ -627,72 +637,36 @@ const WeeklyRecap = () => {
                       members: "Anggota",
                       remarks: "Keterangan"
                     }).map(([key, label]) => (
-                      <div key={key} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`col-${key}`} 
-                          checked={visibleColumns[key as keyof typeof visibleColumns]} 
-                          onCheckedChange={() => toggleColumn(key as keyof typeof visibleColumns)}
-                        />
-                        <Label htmlFor={`col-${key}`} className="text-sm cursor-pointer">{label}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Select value={signatureMode} onValueChange={(v) => setSignatureMode(v as SignatureMode)}>
-              <SelectTrigger className="w-[40px] md:w-[180px] bg-amber-50 border-amber-200 h-10 text-amber-700 font-medium p-0 md:px-3 flex justify-center">
-                <div className="flex items-center gap-2">
-                  <PenTool size={16} />
-                  <span className="hidden md:inline"><SelectValue placeholder="Tanda Tangan" /></span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="with-signature"><div className="flex items-center gap-2"><PenTool size={14} /> Ada Tanda Tangan</div></SelectItem>
-                <SelectItem value="without-signature"><div className="flex items-center gap-2"><PenTool size={14} className="opacity-40" /> Tanpa Tanda Tangan</div></SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            {isLoggedIn && (
-              <Button onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0 || !canPrintWeeklyRecap()} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-10 px-2 md:px-4">
-                <CloudUpload className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Simpan ke Drive</span>
-              </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        className="bg-blue-600 hover:bg-blue-700 h-10 px-2 md:px-4 disabled:bg-slate-300 disabled:cursor-not-allowed"
-                        disabled={!canPrintWeeklyRecap()}
+                      <DropdownMenuCheckboxItem
+                        key={key}
+                        checked={visibleColumns[key as keyof typeof visibleColumns]}
+                        onCheckedChange={() => toggleColumn(key as keyof typeof visibleColumns)}
+                        onSelect={(event) => event.preventDefault()}
                       >
-                        <Printer className="h-4 w-4 md:mr-2" /> 
-                        <span className="hidden md:inline">Cetak Rekap</span>
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    {!canPrintWeeklyRecap() && (
-                      <TooltipContent side="left" className="bg-red-600 text-white border-red-700">
-                        <p className="max-w-xs">{printAccessDeniedMessage()}</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={handlePrint} className="cursor-pointer py-2">
+                        {label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuItem onClick={() => setSignatureMode(signatureMode === 'with-signature' ? 'without-signature' : 'with-signature')} className="cursor-pointer py-2">
+                  <PenTool className="mr-2 h-4 w-4 text-amber-600" /> Tanda Tangan: {signatureMode === 'with-signature' ? 'Ada' : 'Tanpa'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {isLoggedIn && (
+                  <DropdownMenuItem onClick={() => setIsDriveDialogOpen(true)} disabled={reports.length === 0 || !canPrintWeeklyRecap()} className="cursor-pointer py-2">
+                    <CloudUpload className="mr-2 h-4 w-4 text-blue-600" /> Simpan ke Drive
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={handlePrint} disabled={!canPrintWeeklyRecap()} className="cursor-pointer py-2">
                   <Printer className="mr-2 h-4 w-4 text-blue-600" /> Cetak Halaman Ini
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSharePdf} className="cursor-pointer py-2">
+                <DropdownMenuItem onClick={handleSharePdf} disabled={!canPrintWeeklyRecap()} className="cursor-pointer py-2">
                   <Share2 className="mr-2 h-4 w-4 text-indigo-600" /> Simpan PDF untuk Dibagikan
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer py-2">
-                  <Table className="mr-2 h-4 w-4 text-green-600" /> Rekap Excel
+                <DropdownMenuItem onClick={handleExportExcel} disabled={!canPrintWeeklyRecap()} className="cursor-pointer py-2">
+                  <Table className="mr-2 h-4 w-4 text-green-600" /> Simpan ke Excel
                 </DropdownMenuItem>
-                <div className="h-px bg-slate-100 my-1" />
+                <DropdownMenuSeparator />
                 {canPrintReportRecap(profile?.role, 'daily', session?.user?.email) && <DropdownMenuItem onClick={() => navigate('/daily-rekap')} className="cursor-pointer py-2">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" /> Rekap Harian
                 </DropdownMenuItem>}

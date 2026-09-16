@@ -229,7 +229,7 @@ const FuelWeeklyRecap = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
+      <div className="recap-sticky-toolbar max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
             <Button variant="ghost" onClick={() => navigate('/?tab=fuel_reports')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3">

@@ -2,6 +2,26 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+/* Panel kendali rekap tetap terlihat saat isi laporan digulir. Ini hanya
+   mengatur posisi panel, tidak memengaruhi ukuran maupun isi tabel. */
+.recap-sticky-toolbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 40;
+}
+
+@media (max-width: 767px) {
+  .recap-sticky-toolbar {
+    top: 0.5rem;
+  }
+}
+
+@media print {
+  .recap-sticky-toolbar {
+    position: static !important;
+  }
+}
+
 /* Rekap lebar tetap dapat dijelajahi pada layar ponsel tanpa mengubah ukuran cetak. */
 @media (max-width: 767px) {
   /* Prevent control bars from extending beyond the phone viewport. Tables keep

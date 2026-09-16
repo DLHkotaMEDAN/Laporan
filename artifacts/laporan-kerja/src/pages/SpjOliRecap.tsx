@@ -201,6 +201,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   return (
     <main className="spj-oli-a3-print min-h-screen bg-slate-50 p-4 md:p-8 print:bg-white print:p-0">
       <div className="mx-auto max-w-[1400px] space-y-4">
+        <div className="recap-sticky-toolbar space-y-4 print:hidden">
         <header className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm xl:flex-row xl:items-center xl:justify-between print:hidden">
           <div className="flex items-center gap-3">
             <Button variant="outline" size="icon" onClick={() => navigate('/')}><ArrowLeft className="h-4 w-4" /></Button>
@@ -219,6 +220,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
           <div><label className="mb-1 block text-xs font-bold text-slate-500">Tim</label><Select value={selectedTeam} onValueChange={setSelectedTeam}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Tim</SelectItem>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></div>
           <div className="flex items-end"><Button variant="outline" onClick={reset} className="w-full"><FilterX className="mr-2 h-4 w-4" /> Reset Filter</Button></div>
         </section>
+        </div>
 
         <section className="print-area recap-print-area mx-auto min-h-[297mm] w-full max-w-[420mm] overflow-hidden rounded-2xl border bg-white p-8 shadow-lg print:rounded-none print:border-0 print:p-0 print:shadow-none">
           <div className="mb-4 flex items-center justify-center gap-8 border-b-4 border-double border-black pb-3">

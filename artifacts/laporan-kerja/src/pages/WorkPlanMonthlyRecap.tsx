@@ -395,7 +395,7 @@ const WorkPlanMonthlyRecap = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
-      <div className="max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
+      <div className="recap-sticky-toolbar max-w-[1200px] mx-auto space-y-4 no-print mb-8 p-4 bg-white rounded-xl shadow-sm border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <Button variant="ghost" onClick={() => navigate('/?tab=workplans')} className="px-2 md:px-4 h-9">
