@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Report } from '@/types/report';
+import { auditLogService } from '@/services/auditLogService';
 
 const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
   const rows: T[] = [];
@@ -9,6 +10,7 @@ const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
     const { data, error } = await buildQuery().range(from, to);
 
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'REPORT', entityId: id, details: { mode: 'soft_delete' } });
 
     const page = (data || []) as T[];
     rows.push(...page);
@@ -71,6 +73,7 @@ export const reportService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'REPORT', entityId: id, details: { mode: 'restore' } });
     return data as Report;
   },
 
@@ -82,6 +85,7 @@ export const reportService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'REPORT', entityId: id, details: { mode: 'hard_delete' } });
     return data;
   },
 

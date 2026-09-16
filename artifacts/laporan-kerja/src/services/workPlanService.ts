@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { WorkPlan } from '@/types/workPlan';
+import { auditLogService } from '@/services/auditLogService';
 
 const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
   const rows: T[] = [];
@@ -9,6 +10,7 @@ const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
     const { data, error } = await buildQuery().range(from, to);
 
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'WORK_PLAN', entityId: id, details: { mode: 'soft_delete' } });
 
     const page = (data || []) as T[];
     rows.push(...page);
@@ -54,6 +56,7 @@ export const workPlanService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'WORK_PLAN', entityId: id, details: { mode: 'restore' } });
     return data as WorkPlan;
   },
 
@@ -65,6 +68,7 @@ export const workPlanService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'WORK_PLAN', entityId: id, details: { mode: 'hard_delete' } });
     return data;
   },
 
