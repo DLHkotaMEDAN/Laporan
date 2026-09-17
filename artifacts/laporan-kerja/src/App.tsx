@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Index from "./pages/Index";
 import CreateReport from "./pages/CreateReport";
@@ -61,6 +61,21 @@ import { AuthorizeRoute } from "@/components/AuthorizeRoute";
 import { auditLogService } from "@/services/auditLogService";
 
 const queryClient = new QueryClient();
+
+/**
+ * React Router keeps the current document scroll position during client-side
+ * navigation. Reset it when opening another page so a long dashboard or
+ * recap cannot make the new recap content appear to be missing.
+ */
+const RouteScrollReset = () => {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+
+  return null;
+};
 
 const ActivityTracker = () => {
   const location = useLocation();
@@ -279,6 +294,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <RouteScrollReset />
           <ActivityTracker />
           <Routes>
             <Route path="/login" element={<Login />} />
