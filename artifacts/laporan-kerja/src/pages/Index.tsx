@@ -59,6 +59,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import PublicLanding from "./PublicLanding";
+import NotaDinasTab from '@/components/NotaDinasTab';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -80,7 +81,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj', 'spj_oli'] as const;
+const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj', 'spj_oli', 'nota_dinas'] as const;
 type MainTab = typeof validMainTabs[number];
 
 const systemTabBaseClass =
@@ -99,6 +100,8 @@ const systemTabToneClass: Record<MainTab, string> = {
     "hover:border-blue-200 hover:text-blue-800 focus-visible:ring-blue-400 data-[state=active]:border-blue-800 data-[state=active]:bg-blue-800 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(30,64,175,0.22)]",
   spj_oli:
     "hover:border-emerald-200 hover:text-emerald-800 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-700 data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(4,120,87,0.22)]",
+  nota_dinas:
+    "hover:border-indigo-200 hover:text-indigo-800 focus-visible:ring-indigo-400 data-[state=active]:border-indigo-700 data-[state=active]:bg-indigo-700 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(67,56,202,0.22)]",
 };
 
 type IndexViewState = {
@@ -286,7 +289,7 @@ const Index = () => {
 
     if (isOvertimeOnly) {
       setActiveTab("overtime");
-    } else if (isMainTab(requestedTab)) {
+    } else if (isMainTab(requestedTab) && (requestedTab !== "nota_dinas" || isAdmin)) {
       setActiveTab(requestedTab);
     } else if (isAdminBbm && !isCombinedWorkspace) {
       setActiveTab("fuel_reports");
@@ -295,11 +298,12 @@ const Index = () => {
     } else if (isAdminSpjOli) {
       setActiveTab("spj_oli");
     } else if (savedTab) {
-      setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && savedTab === "reports" ? "workplans" : savedTab);
+      const safeSavedTab = savedTab === "nota_dinas" && !isAdmin ? "reports" : savedTab;
+      setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && safeSavedTab === "reports" ? "workplans" : safeSavedTab);
     } else {
       setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdminBbm, isAdminSpj, isAdminSpjOli, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
+  }, [isAdmin, isAdminBbm, isAdminSpj, isAdminSpjOli, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
@@ -589,7 +593,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f7f2]">
-      <header className="sticky top-0 z-30 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl print:hidden">
         <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex shrink-0 items-center gap-1 rounded-2xl bg-white px-2 py-1 shadow-sm ring-1 ring-slate-200 sm:gap-2">
@@ -657,7 +661,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={cn("max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8", activeTab === "nota_dinas" && "nota-dinas-main")}>
         {showExecutiveHero ? (
         <section className="relative mb-8 overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-2xl shadow-emerald-950/20">
           <img
@@ -777,8 +781,8 @@ const Index = () => {
           />
         )}
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm ring-1 ring-slate-100/80 xl:flex-row xl:items-center xl:justify-between">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className={cn("w-full space-y-6", activeTab === "nota_dinas" && "nota-dinas-tabs")}>
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm ring-1 ring-slate-100/80 print:hidden xl:flex-row xl:items-center xl:justify-between">
             <TabsList className="grid h-auto w-full grid-cols-2 gap-2 overflow-visible bg-transparent p-0 text-slate-600 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-start xl:flex-1">
               {canViewReportsTab && !isOvertimeOnly && <TabsTrigger
                 value="reports"
@@ -813,6 +817,11 @@ const Index = () => {
                   {(isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
                     <TabsTrigger value="spj_oli" className={cn(systemTabBaseClass, systemTabToneClass.spj_oli)}>
                       <Fuel size={16} /> SPJ Oli
+                    </TabsTrigger>
+                  )}
+                  {isAdmin && (
+                    <TabsTrigger value="nota_dinas" className={cn(systemTabBaseClass, systemTabToneClass.nota_dinas)}>
+                      <FileText size={16} /> Nota Dinas
                     </TabsTrigger>
                   )}
                 </>
@@ -965,7 +974,6 @@ const Index = () => {
               onAction={() => navigate('/fuel-reports/spj/create')}
             />
           )}
-
           {/* Filter Section */}
           {(activeTab === "reports" || activeTab === "workplans") && !isOvertimeOnly && (
             <div className="bg-white p-5 rounded-2xl shadow-sm border ring-1 ring-slate-100 space-y-4">
@@ -1275,6 +1283,7 @@ const Index = () => {
               )}
             </>
           )}
+          {isAdmin && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab /></TabsContent>}
         </Tabs>
         {activeTab === 'spj_oli' && (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
           <div className="mt-6">
