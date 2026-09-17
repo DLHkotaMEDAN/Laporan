@@ -25,6 +25,7 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
 import { WorkPlanColumnPicker } from '@/components/WorkPlanColumnPicker';
+import WorkPlanRecapMenu from '@/components/WorkPlanRecapMenu';
 import WorkPlanCompactTable, { workPlanCompactColumnLabels } from '@/components/WorkPlanCompactTable';
 import { dismissToast, showError, showLoading, showSuccess } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
@@ -460,6 +461,20 @@ const WorkPlanMonthlyRecap = () => {
               <SelectTrigger className="w-[80px] md:w-[100px] h-10 text-xs md:text-sm"><SelectValue placeholder="Tahun" /></SelectTrigger>
               <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
             </Select>
+            <WorkPlanRecapMenu
+              navigate={navigate}
+              isCompactViewport={isCompactViewport}
+              isLoggedIn={isLoggedIn}
+              plans={plans}
+              logoMode={logoMode}
+              setLogoMode={setLogoMode}
+              signatureMode={signatureMode}
+              setSignatureMode={setSignatureMode}
+              tableMode={tableMode}
+              setTableMode={setTableMode}
+              handleSharePdf={handleSharePdf}
+              handleExportExcel={handleExportExcel}
+            />
           </div>
 
           <div className="hidden">
@@ -526,7 +541,7 @@ const WorkPlanMonthlyRecap = () => {
         </div>
       </div>
 
-      <div className="no-print mx-auto mb-4 flex max-w-[1200px] justify-end px-4 md:px-0">
+      <div className="hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className="h-10 bg-blue-600 px-4 shadow-md hover:bg-blue-700">
