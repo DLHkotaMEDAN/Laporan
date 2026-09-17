@@ -1,64 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { FilePlus2, FileText, Pencil, Plus, Printer, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
+import { FilePlus2, FileText, Loader2, Pencil, Plus, Printer, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { showSuccess } from "@/utils/toast";
-
-type NotaDinasItem = {
-  jenis: string;
-  jumlah: string;
-  keterangan: string;
-};
-
-type NotaDinasKind = "permintaan" | "lanjutan";
-
-type NotaDinasForm = {
-  jenisDokumen: NotaDinasKind;
-  kepada: string;
-  dari: string;
-  nomorUrut: string;
-  nomorLanjutanUrut: string;
-  kodeSurat: string;
-  kodeWilayah: string;
-  gunakanNomorOtomatis: boolean;
-  nomorManual: string;
-  gunakanNomorOtomatisPertama: boolean;
-  nomorManualPertama: string;
-  gunakanNomorOtomatisLanjutan: boolean;
-  nomorManualLanjutan: string;
-  tanggal: string;
-  hal: string;
-  wilayah: string;
-  jumlahKecamatan: string;
-  kecamatan: string;
-  penerima: string;
-  lanjutanKepada: string;
-  lanjutanDari: string;
-  lanjutanHal: string;
-  lanjutanPenutup: string;
-  lanjutanJabatanPenandatangan: string;
-  lanjutanKantorPenandatangan: string;
-  lanjutanNamaPenandatangan: string;
-  lanjutanNipPenandatangan: string;
-  koordinatorRujukan: string;
-  gunakanRujukanOtomatis: boolean;
-  nomorRujukan: string;
-  penutup: string;
-  jabatanPenandatangan: string;
-  kantorPenandatangan: string;
-  namaPenandatangan: string;
-  nipPenandatangan: string;
-  items: NotaDinasItem[];
-};
-
-type NotaDinasRecord = {
-  id: string;
-  form: NotaDinasForm;
-  createdAt: string;
-  updatedAt: string;
-};
+import { showError, showSuccess } from "@/utils/toast";
+import { notaDinasService } from "@/services/notaDinasService";
+import type { NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord } from "@/types/notaDinas";
 
 const SAMPLE_FORM: NotaDinasForm = {
   jenisDokumen: "permintaan",
@@ -282,7 +230,10 @@ const NotaDinasSheet = ({
 const NotaDinasTab = () => {
   const [form, setForm] = useState<NotaDinasForm>(readDraft);
   const [itemCatalog, setItemCatalog] = useState<string[]>(readItemCatalog);
-  const [records, setRecords] = useState<NotaDinasRecord[]>(readRecords);
+  const [records, setRecords] = useState<NotaDinasRecord[]>([]);
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  const [recordsError, setRecordsError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
   const isLanjutan = form.jenisDokumen === "lanjutan";
@@ -301,6 +252,56 @@ const NotaDinasTab = () => {
       window.localStorage.setItem(ITEM_CATALOG_KEY, JSON.stringify(nextItems));
     }
   }, [form.items, itemCatalog]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRecords = async () => {
+      setRecordsLoading(true);
+      setRecordsError(null);
+
+      try {
+        let remoteRecords = await notaDinasService.getAll();
+
+        // Migrate data created by the previous localStorage-only version once
+        // the Supabase table is empty. Keep the local copy as a backup.
+        if (remoteRecords.length === 0) {
+          const localRecords = readRecords();
+          if (localRecords.length > 0) {
+            const migratedRecords: NotaDinasRecord[] = [];
+            for (const localRecord of localRecords) {
+              try {
+                migratedRecords.push(await notaDinasService.create(
+                  localRecord.form,
+                  localRecord.id,
+                  localRecord.createdAt,
+                  localRecord.updatedAt,
+                ));
+              } catch (migrationError) {
+                console.error("Gagal memigrasikan Nota Dinas lokal:", migrationError);
+              }
+            }
+            remoteRecords = migratedRecords.length > 0 ? migratedRecords : await notaDinasService.getAll();
+          }
+        }
+
+        if (!cancelled) setRecords(remoteRecords);
+      } catch (error) {
+        console.error("Gagal memuat Nota Dinas dari Supabase:", error);
+        if (!cancelled) {
+          setRecords(readRecords());
+          setRecordsError("Data Supabase belum dapat dimuat. Data lokal ditampilkan sementara.");
+        }
+      } finally {
+        if (!cancelled) setRecordsLoading(false);
+      }
+    };
+
+    void loadRecords();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const displayDate = useMemo(() => formatLongDate(form.tanggal), [form.tanggal]);
   const letterMonth = useMemo(() => getLetterMonth(form.tanggal), [form.tanggal]);
@@ -355,11 +356,6 @@ const NotaDinasTab = () => {
     showSuccess("Form Nota Dinas dikembalikan ke contoh");
   };
 
-  const persistRecords = (nextRecords: NotaDinasRecord[]) => {
-    setRecords(nextRecords);
-    window.localStorage.setItem(RECORDS_KEY, JSON.stringify(nextRecords));
-  };
-
   const createNew = () => {
     setForm(SAMPLE_FORM);
     setActiveRecordId(null);
@@ -372,21 +368,23 @@ const NotaDinasTab = () => {
     setView("form");
   };
 
-  const saveRecord = () => {
-    const now = new Date().toISOString();
-    const record: NotaDinasRecord = {
-      id: activeRecordId || crypto.randomUUID(),
-      form,
-      createdAt: records.find((item) => item.id === activeRecordId)?.createdAt || now,
-      updatedAt: now,
-    };
-    const nextRecords = activeRecordId
-      ? records.map((item) => item.id === activeRecordId ? record : item)
-      : [record, ...records];
-    persistRecords(nextRecords);
-    setActiveRecordId(record.id);
-    setView("list");
-    showSuccess(activeRecordId ? "Nota Dinas diperbarui" : "Nota Dinas disimpan");
+  const saveRecord = async () => {
+    setSaving(true);
+    try {
+      const existingRecord = records.find((item) => item.id === activeRecordId);
+      const savedRecord = await notaDinasService.save(form, activeRecordId || undefined, existingRecord?.createdAt);
+      setRecords((currentRecords) => activeRecordId
+        ? currentRecords.map((item) => item.id === savedRecord.id ? savedRecord : item)
+        : [savedRecord, ...currentRecords]);
+      setActiveRecordId(savedRecord.id);
+      setView("list");
+      showSuccess(activeRecordId ? "Nota Dinas diperbarui" : "Nota Dinas disimpan ke Supabase");
+    } catch (error) {
+      console.error("Gagal menyimpan Nota Dinas ke Supabase:", error);
+      showError("Nota Dinas gagal disimpan ke Supabase. Periksa koneksi dan sesi login.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (view === "list") {
@@ -415,7 +413,14 @@ const NotaDinasTab = () => {
             <span className="text-xs font-bold text-slate-500">{sortedRecords.length} dokumen</span>
           </div>
 
-          {sortedRecords.length === 0 ? (
+          {recordsError && <p className="border-b border-amber-100 bg-amber-50 px-5 py-3 text-sm text-amber-800">{recordsError}</p>}
+
+          {recordsLoading ? (
+            <div className="flex flex-col items-center px-6 py-16 text-center text-slate-500">
+              <Loader2 className="mb-3 h-8 w-8 animate-spin text-indigo-500" />
+              <p className="text-sm font-semibold">Memuat data dari Supabase...</p>
+            </div>
+          ) : sortedRecords.length === 0 ? (
             <div className="flex flex-col items-center px-6 py-16 text-center">
               <FileText className="mb-3 h-10 w-10 text-slate-300" />
               <p className="font-bold text-slate-700">Belum ada Nota Dinas tersimpan</p>
@@ -484,8 +489,8 @@ const NotaDinasTab = () => {
           <Button type="button" variant="outline" onClick={resetForm} className="h-10 rounded-xl border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-100">
             <RotateCcw className="mr-2 h-4 w-4" /> Reset Contoh
           </Button>
-          <Button type="button" onClick={saveRecord} className="h-10 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-700">
-            <FileText className="mr-2 h-4 w-4" /> Simpan Nota Dinas
+          <Button type="button" onClick={saveRecord} disabled={saving} className="h-10 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-700">
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} {saving ? "Menyimpan..." : "Simpan Nota Dinas"}
           </Button>
           <Button type="button" onClick={() => window.print()} className="h-10 rounded-xl bg-indigo-600 font-bold hover:bg-indigo-700">
             <Printer className="mr-2 h-4 w-4" /> Cetak / Simpan PDF
