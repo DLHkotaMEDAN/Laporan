@@ -28,7 +28,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, roleRequiresRegion } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isNotaDinasAdmin, roleRequiresRegion } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -231,6 +231,7 @@ const Index = () => {
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isAdminSpjOli = profile?.role === 'admin_spj_oli';
+  const isNotaDinasOnly = isNotaDinasAdmin(profile?.role);
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
@@ -238,7 +239,7 @@ const Index = () => {
   const accountRegionId = !isAdmin && (roleRequiresRegion(profile?.role) || isAdminSpjOli) ? profile?.region_id || "__unassigned__" : null;
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
   const isFuelSpecialist = (isAdminBbm || isAdminSpj || isAdminSpjOli) && !isCombinedWorkspace;
-  const canViewReportsTab = !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
+  const canViewReportsTab = !isNotaDinasOnly && !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
   const isOvertimeOnly = profile?.role === 'admin_rekap_lembur';
   const canViewOvertime = isAdmin || isOvertimeOnly;
   const isLaporanOnly = profile?.role === 'laporan';
@@ -270,7 +271,7 @@ const Index = () => {
     if (authLoading || !isLoggedIn) return;
     // Admin SPJ Oli hanya memerlukan data SPJ Oli. Jangan memuat laporan
     // harian/rencana kerja yang memang tidak diberi akses oleh RLS.
-    if (isAdminSpjOli) {
+    if (isAdminSpjOli || isNotaDinasOnly) {
       setLoading(false);
       return;
     }
@@ -287,9 +288,11 @@ const Index = () => {
     const requestedTab = searchParams.get('tab');
     const savedTab = savedViewStateRef.current.activeTab;
 
-    if (isOvertimeOnly) {
+    if (isNotaDinasOnly) {
+      setActiveTab("nota_dinas");
+    } else if (isOvertimeOnly) {
       setActiveTab("overtime");
-    } else if (isMainTab(requestedTab) && (requestedTab !== "nota_dinas" || isAdmin)) {
+    } else if (isMainTab(requestedTab) && (requestedTab !== "nota_dinas" || isAdmin || isNotaDinasOnly)) {
       setActiveTab(requestedTab);
     } else if (isAdminBbm && !isCombinedWorkspace) {
       setActiveTab("fuel_reports");
@@ -298,12 +301,12 @@ const Index = () => {
     } else if (isAdminSpjOli) {
       setActiveTab("spj_oli");
     } else if (savedTab) {
-      const safeSavedTab = savedTab === "nota_dinas" && !isAdmin ? "reports" : savedTab;
+      const safeSavedTab = savedTab === "nota_dinas" && !isAdmin && !isNotaDinasOnly ? "reports" : savedTab;
       setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && safeSavedTab === "reports" ? "workplans" : safeSavedTab);
     } else {
       setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdmin, isAdminBbm, isAdminSpj, isAdminSpjOli, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
+  }, [isAdmin, isAdminBbm, isAdminSpj, isAdminSpjOli, isNotaDinasOnly, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
@@ -790,7 +793,7 @@ const Index = () => {
               >
                 <FileText size={16} /> Laporan Kerja
               </TabsTrigger>}
-              {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
+              {!isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
                 value="workplans"
                 className={cn(systemTabBaseClass, systemTabToneClass.workplans)}
               >
@@ -802,7 +805,7 @@ const Index = () => {
               >
                 <FileText size={16} /> Rekap Lembur
               </TabsTrigger>}
-              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj || isAdminSpjOli) && !isAdminHarian && (
+              {(isAdmin || isPimpinan || isAdminBbm || isAdminSpj || isAdminSpjOli || isNotaDinasOnly) && !isAdminHarian && (
                 <>
                   {(isAdmin || isAdminBbm) && (
                     <TabsTrigger value="fuel_reports" className={cn(systemTabBaseClass, systemTabToneClass.fuel_reports)}>
@@ -819,7 +822,7 @@ const Index = () => {
                       <Fuel size={16} /> SPJ Oli
                     </TabsTrigger>
                   )}
-                  {isAdmin && (
+                  {(isAdmin || isNotaDinasOnly) && (
                     <TabsTrigger value="nota_dinas" className={cn(systemTabBaseClass, systemTabToneClass.nota_dinas)}>
                       <FileText size={16} /> Nota Dinas
                     </TabsTrigger>
@@ -1162,7 +1165,7 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {!isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsContent value="workplans" className="mt-0">
+          {!isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsContent value="workplans" className="mt-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />
@@ -1283,7 +1286,7 @@ const Index = () => {
               )}
             </>
           )}
-          {isAdmin && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab /></TabsContent>}
+          {(isAdmin || isNotaDinasOnly) && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab /></TabsContent>}
         </Tabs>
         {activeTab === 'spj_oli' && (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
           <div className="mt-6">

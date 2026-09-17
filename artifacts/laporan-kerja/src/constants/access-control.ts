@@ -18,6 +18,7 @@ export const USER_ROLES = {
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   ADMIN_SPJ_OLI: 'admin_spj_oli',
+  ADMIN_NOTA_DINAS: 'admin_nota_dinas',
   PIMPINAN: 'pimpinan',
   USER: 'user',
 } as const;
@@ -46,6 +47,7 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN_REKAP_LEMBUR, label: 'Rekap Lembur' },
   { value: USER_ROLES.ADMIN_BBM, label: 'Admin BBM' },
   { value: USER_ROLES.ADMIN_SPJ_BBM, label: 'Admin SPJ BBM' },
+  { value: USER_ROLES.ADMIN_NOTA_DINAS, label: 'Admin Nota Dinas' },
   { value: USER_ROLES.PIMPINAN, label: 'Pimpinan (Lihat Rekap)' },
   { value: USER_ROLES.USER, label: 'Pengguna Tim' },
 ];
@@ -138,6 +140,9 @@ export const isGlobalFuelAdmin = (role: string | null | undefined) =>
 export const isSpjOliAdmin = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_SPJ_OLI;
 
+export const isNotaDinasAdmin = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_NOTA_DINAS;
+
 export const roleCanSelectRegion = (role: string | null | undefined) =>
   roleRequiresRegion(role) || isSpjOliAdmin(role);
 
@@ -189,6 +194,7 @@ export const getRoleLandingPath = (role: string | null | undefined) => {
   if (role === USER_ROLES.ADMIN_BBM) return '/';
   if (role === USER_ROLES.ADMIN_SPJ_BBM) return '/fuel-reports/spj';
   if (role === USER_ROLES.ADMIN_SPJ_OLI) return '/?tab=spj_oli';
+  if (role === USER_ROLES.ADMIN_NOTA_DINAS) return '/?tab=nota_dinas';
   if (role === USER_ROLES.ADMIN_RENCANA_KERJA) return '/work-plans/daily-rekap';
   return '/';
 };
@@ -228,6 +234,8 @@ export const getRoleBadgeClass = (role: string | null | undefined) => {
       return 'text-blue-800 border-blue-300 bg-blue-100';
     case USER_ROLES.ADMIN_SPJ_OLI:
       return 'text-emerald-800 border-emerald-300 bg-emerald-100';
+    case USER_ROLES.ADMIN_NOTA_DINAS:
+      return 'text-indigo-700 border-indigo-200 bg-indigo-50';
     default:
       return 'text-blue-600 border-blue-200 bg-blue-50';
   }

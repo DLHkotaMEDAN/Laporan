@@ -10,6 +10,7 @@ export type Resource =
   | 'fuel_prices'
   | 'spj_bbm'
   | 'spj_oli'
+  | 'nota_dinas'
   | 'audit_logs'
   | 'profiles'
   | 'settings'
@@ -66,6 +67,10 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'spj_oli', action: 'read' },
     { resource: 'spj_oli', action: 'update' },
     { resource: 'spj_oli', action: 'delete' },
+    { resource: 'nota_dinas', action: 'create' },
+    { resource: 'nota_dinas', action: 'read' },
+    { resource: 'nota_dinas', action: 'update' },
+    { resource: 'nota_dinas', action: 'print' },
     { resource: 'audit_logs', action: 'read' },
     { resource: 'profiles', action: 'read' },
     { resource: 'profiles', action: 'update' },
@@ -73,6 +78,13 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'settings', action: 'update' },
     { resource: 'regions', action: 'read' },
     { resource: 'teams', action: 'read' },
+  ],
+
+  [USER_ROLES.ADMIN_NOTA_DINAS]: [
+    { resource: 'nota_dinas', action: 'create' },
+    { resource: 'nota_dinas', action: 'read' },
+    { resource: 'nota_dinas', action: 'update' },
+    { resource: 'nota_dinas', action: 'print' },
   ],
 
   // Admin Wilayah – can manage reports, work plans, fuel, etc. only within own region
