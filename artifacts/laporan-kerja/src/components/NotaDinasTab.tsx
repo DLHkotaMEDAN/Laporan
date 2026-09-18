@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { showError, showSuccess } from "@/utils/toast";
 import { notaDinasService } from "@/services/notaDinasService";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { isNotaDinasAdmin } from "@/constants/access-control";
+import { useValueDraft } from "@/hooks/useFormDraft";
 import type { NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord } from "@/types/notaDinas";
 
 const SAMPLE_FORM: NotaDinasForm = {
@@ -63,6 +66,14 @@ const REGION_CODES = [
   { code: "MT", label: "Wilayah 3 Medan Timur" },
   { code: "MS", label: "Wilayah 5 Medan Selatan" },
 ] as const;
+const NOTA_CODE_BY_REGION_CODE: Record<string, string> = {
+  pusat: "PST",
+  "wilayah-1": "MU",
+  "wilayah-2": "MB",
+  "wilayah-3": "MT",
+  "wilayah-4": "MK",
+  "wilayah-5": "MS",
+};
 const LETTER_TYPES = [
   { code: "SPB", label: "Surat Permintaan Barang" },
   { code: "SPm-PM", label: "Nota Perbaikan" },
@@ -246,6 +257,7 @@ const NotaDinasSheet = ({
 );
 
 const NotaDinasTab = () => {
+  const { profile, session } = useAuth();
   const [form, setForm] = useState<NotaDinasForm>(readDraft);
   const [itemCatalog, setItemCatalog] = useState<string[]>(readItemCatalog);
   const [records, setRecords] = useState<NotaDinasRecord[]>([]);
@@ -254,11 +266,66 @@ const NotaDinasTab = () => {
   const [saving, setSaving] = useState(false);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
+  const [accountRegion, setAccountRegion] = useState<{ id: string; name: string; notaCode: string } | null>(null);
+  const [accountRegionReady, setAccountRegionReady] = useState(false);
   const isLanjutan = form.jenisDokumen === "lanjutan";
+  const isRegionalNotaAdmin = isNotaDinasAdmin(profile?.role) && Boolean(profile?.region_id);
+
+  const applyAccountRegion = (value: NotaDinasForm): NotaDinasForm => accountRegion
+    ? { ...value, kodeWilayah: accountRegion.notaCode, wilayah: accountRegion.name }
+    : value;
+
+  const draftKey = session?.user?.id
+    ? `nota-dinas:${session.user.id}:${activeRecordId ?? "new"}`
+    : undefined;
+  const { clearDraft, lastSavedAt, restoredAt } = useValueDraft(
+    form,
+    (values) => {
+      setForm(applyAccountRegion(values));
+      setView("form");
+    },
+    draftKey,
+  );
 
   useEffect(() => {
-    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
-  }, [form]);
+    if (restoredAt) showSuccess("Draft Nota Dinas sebelumnya dipulihkan.");
+  }, [restoredAt]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!isRegionalNotaAdmin || !profile?.region_id) {
+      setAccountRegion(null);
+      setAccountRegionReady(true);
+      return () => { active = false; };
+    }
+
+    setAccountRegionReady(false);
+    void supabase
+      .from("regions")
+      .select("id, code, name")
+      .eq("id", profile.region_id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || !data || !NOTA_CODE_BY_REGION_CODE[data.code]) {
+          console.error("Wilayah akun Admin Nota Dinas tidak dapat dimuat:", error);
+          setAccountRegion(null);
+        } else {
+          setAccountRegion({ id: data.id, name: data.name, notaCode: NOTA_CODE_BY_REGION_CODE[data.code] });
+        }
+        setAccountRegionReady(true);
+      });
+
+    return () => { active = false; };
+  }, [isRegionalNotaAdmin, profile?.region_id]);
+
+  useEffect(() => {
+    if (!accountRegion) return;
+    setForm((current) => current.kodeWilayah === accountRegion.notaCode && current.wilayah === accountRegion.name
+      ? current
+      : applyAccountRegion(current));
+  }, [accountRegion]);
 
   useEffect(() => {
     const nextItems = Array.from(new Set([
@@ -272,6 +339,7 @@ const NotaDinasTab = () => {
   }, [form.items, itemCatalog]);
 
   useEffect(() => {
+    if (isRegionalNotaAdmin && !accountRegionReady) return;
     let cancelled = false;
 
     const loadRecords = async () => {
@@ -289,20 +357,23 @@ const NotaDinasTab = () => {
         // localStorage data. The newest saved version wins on an id conflict.
         for (const localRecord of readRecords()) {
           const remoteRecord = recordsById.get(localRecord.id);
+          const localForm = applyAccountRegion(localRecord.form);
           try {
             if (!remoteRecord) {
               const createdRecord = await notaDinasService.create(
-                localRecord.form,
+                localForm,
                 localRecord.id,
                 localRecord.createdAt,
                 localRecord.updatedAt,
+                accountRegion?.id,
               );
               recordsById.set(createdRecord.id, createdRecord);
             } else if (isNewerRecord(localRecord, remoteRecord)) {
               const updatedRecord = await notaDinasService.update(
                 remoteRecord.id,
-                localRecord.form,
+                localForm,
                 localRecord.updatedAt,
+                accountRegion?.id,
               );
               recordsById.set(updatedRecord.id, updatedRecord);
             }
@@ -345,7 +416,7 @@ const NotaDinasTab = () => {
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [accountRegion, accountRegionReady, isRegionalNotaAdmin]);
 
   const displayDate = useMemo(() => formatLongDate(form.tanggal), [form.tanggal]);
   const letterMonth = useMemo(() => getLetterMonth(form.tanggal), [form.tanggal]);
@@ -395,19 +466,20 @@ const NotaDinasTab = () => {
     setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }));
   };
   const resetForm = () => {
-    setForm(SAMPLE_FORM);
+    setForm(applyAccountRegion(SAMPLE_FORM));
     setActiveRecordId(null);
+    void clearDraft();
     showSuccess("Form Nota Dinas dikembalikan ke contoh");
   };
 
   const createNew = () => {
-    setForm(SAMPLE_FORM);
+    setForm(applyAccountRegion(SAMPLE_FORM));
     setActiveRecordId(null);
     setView("form");
   };
 
   const openRecord = (record: NotaDinasRecord) => {
-    setForm(record.form);
+    setForm(applyAccountRegion(record.form));
     setActiveRecordId(record.id);
     setView("form");
   };
@@ -416,12 +488,15 @@ const NotaDinasTab = () => {
     setSaving(true);
     try {
       const existingRecord = records.find((item) => item.id === activeRecordId);
-      const savedRecord = await notaDinasService.save(form, activeRecordId || undefined, existingRecord?.createdAt);
+      const formToSave = applyAccountRegion(form);
+      const savedRecord = await notaDinasService.save(formToSave, activeRecordId || undefined, existingRecord?.createdAt, accountRegion?.id);
+      setForm(formToSave);
       setRecords((currentRecords) => activeRecordId
         ? currentRecords.map((item) => item.id === savedRecord.id ? savedRecord : item)
         : [savedRecord, ...currentRecords]);
       setActiveRecordId(savedRecord.id);
       setView("list");
+      await clearDraft();
       showSuccess(activeRecordId ? "Nota Dinas diperbarui" : "Nota Dinas disimpan ke Supabase");
     } catch (error) {
       console.error("Gagal menyimpan Nota Dinas ke Supabase:", error);
@@ -522,7 +597,7 @@ const NotaDinasTab = () => {
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
           <div>
-            <p className="font-black">Nota Dinas untuk Super Admin</p>
+            <p className="font-black">{isRegionalNotaAdmin ? `Nota Dinas ${accountRegion?.name || "Wilayah Akun"}` : "Nota Dinas untuk Super Admin"}</p>
             <p className="mt-0.5 text-sm text-indigo-800/80">Pratinjau dan tombol cetak selalu menghasilkan satu PDF berisi Nota pertama dan Nota lanjutan (2 halaman). Pilih jenis dokumen untuk mengedit halaman terkait.</p>
           </div>
         </div>
@@ -546,7 +621,7 @@ const NotaDinasTab = () => {
         <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
           <div>
             <h3 className="text-lg font-black text-slate-950">Input Nota Dinas</h3>
-            <p className="mt-1 text-sm text-slate-500">Isi atau ubah data yang dicetak tebal pada pratinjau.</p>
+            <p className="mt-1 text-sm text-slate-500">Isi atau ubah data yang dicetak tebal pada pratinjau. <span className="text-xs text-slate-400">{lastSavedAt ? "Draft tersimpan" : "Draft akan tersimpan otomatis"}</span></p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
@@ -567,10 +642,11 @@ const NotaDinasTab = () => {
               </Select>
             </Field>}
             {!isLanjutan && <Field label="Kode Wilayah">
-              <Select value={form.kodeWilayah} onValueChange={(value) => setField("kodeWilayah", value)}>
+              <Select value={form.kodeWilayah} onValueChange={(value) => setField("kodeWilayah", value)} disabled={isRegionalNotaAdmin}>
                 <SelectTrigger><SelectValue placeholder="Pilih kode wilayah" /></SelectTrigger>
                 <SelectContent>{REGION_CODES.map((region) => <SelectItem key={region.code} value={region.code}>{region.code} - {region.label}</SelectItem>)}</SelectContent>
               </Select>
+              {isRegionalNotaAdmin && <span className="block text-[11px] text-indigo-600">Otomatis dari wilayah akun login.</span>}
             </Field>}
             <Field label="Tanggal Surat"><Input type="date" value={form.tanggal} onChange={(event) => setField("tanggal", event.target.value)} /><span className="block text-[11px] text-slate-400">Kode bulan dan tahun nomor dibuat otomatis: {letterMonth} / {letterYear}</span></Field>
             {isLanjutan && <>
@@ -606,7 +682,7 @@ const NotaDinasTab = () => {
               </> : <p><span className="font-bold text-slate-800">Katim / PL</span> = nilai tetap pada Nota Dinas Lanjutan</p>}
             </div>
             <Field label="Hal" className="sm:col-span-2 xl:col-span-1"><Textarea rows={2} value={activeHal} onChange={(event) => setActiveField("hal", event.target.value)} /></Field>
-            <Field label="Wilayah"><Input value={form.wilayah} onChange={(event) => setField("wilayah", event.target.value)} /></Field>
+            <Field label="Wilayah"><Input value={form.wilayah} onChange={(event) => setField("wilayah", event.target.value)} disabled={isRegionalNotaAdmin} /></Field>
             <Field label="Jumlah Kecamatan"><Input value={form.jumlahKecamatan} onChange={(event) => setField("jumlahKecamatan", event.target.value)} /></Field>
             <Field label="Nama Kecamatan" className="sm:col-span-2 xl:col-span-1"><Textarea rows={2} value={form.kecamatan} onChange={(event) => setField("kecamatan", event.target.value)} /></Field>
             {!isLanjutan && <Field label="Penerima Permintaan" className="sm:col-span-2 xl:col-span-1"><Input value={form.penerima} onChange={(event) => setField("penerima", event.target.value)} /></Field>}

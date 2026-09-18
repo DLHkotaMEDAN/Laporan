@@ -55,6 +55,7 @@ const USER_ROLES = {
   ADMIN_BBM: 'admin_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   ADMIN_SPJ_OLI: 'admin_spj_oli',
+  ADMIN_NOTA_DINAS: 'admin_nota_dinas',
   PIMPINAN: 'pimpinan',
   USER: 'user',
 } as const;
@@ -71,6 +72,7 @@ const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_REKAP_LEMBUR,
+  USER_ROLES.ADMIN_NOTA_DINAS,
   USER_ROLES.USER,
 ]);
 

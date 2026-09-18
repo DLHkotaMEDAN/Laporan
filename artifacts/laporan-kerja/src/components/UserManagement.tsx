@@ -21,6 +21,7 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
+import { useValueDraft } from '@/hooks/useFormDraft';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import {
@@ -111,6 +112,17 @@ const UserManagement = () => {
   const [accountDetails, setAccountDetails] = useState<{ email?: string; createdAt?: string; lastSignInAt?: string | null; emailConfirmedAt?: string | null } | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  const newUserDraftKey = session?.user?.id ? `user-management:${session.user.id}:new` : undefined;
+  const { clearDraft: clearNewUserDraft, lastSavedAt: newUserLastSavedAt, restoredAt: newUserRestoredAt } = useValueDraft(newUser, setNewUser, newUserDraftKey);
+  const editUserDraftKey = session?.user?.id && editingProfile
+    ? `user-management:${session.user.id}:edit:${editingProfile.id}`
+    : undefined;
+  const { clearDraft: clearEditUserDraft, lastSavedAt: editUserLastSavedAt, restoredAt: editUserRestoredAt } = useValueDraft(editUser, setEditUser, editUserDraftKey);
+
+  useEffect(() => {
+    if (newUserRestoredAt || editUserRestoredAt) showSuccess('Draft data pengguna sebelumnya dipulihkan.');
+  }, [newUserRestoredAt, editUserRestoredAt]);
+
   useEffect(() => {
     fetchProfiles();
     fetchRegions();
@@ -154,6 +166,7 @@ const UserManagement = () => {
       if (data?.error) throw new Error(data.error);
       void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'PROFILE', entityId: data.id, details: { username: newUser.username.trim(), email: data.email || newUser.email.trim().toLowerCase(), role: newUser.role } });
       showSuccess('Akun aktif berhasil dibuat tanpa konfirmasi email');
+      await clearNewUserDraft();
       setProfiles(currentProfiles => [
         {
           id: data.id,
@@ -366,6 +379,7 @@ const UserManagement = () => {
           ? { ...profile, ...updates, updated_at: new Date().toISOString() }
           : profile,
       ));
+      await clearEditUserDraft();
       setEditingProfile(null);
       showSuccess('Data pengguna berhasil diperbarui.');
     } catch (error: any) {
@@ -413,7 +427,7 @@ const UserManagement = () => {
     <div className="space-y-6">
       <form onSubmit={handleCreateUser} className={cn("rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3", !canMutateUsers && "opacity-60")}>
         <div>
-          <h3 className="font-bold text-blue-950">Buat Akun Baru</h3>
+          <h3 className="font-bold text-blue-950">Buat Akun Baru <span className="ml-2 text-[10px] font-normal text-blue-700">{newUserLastSavedAt ? 'Draft tersimpan' : 'Draft akan tersimpan otomatis'}</span></h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
         <div className={cn("grid items-end gap-3", roleRequiresTeam(newUser.role) ? "md:grid-cols-6" : "md:grid-cols-5")}>
@@ -671,7 +685,7 @@ const UserManagement = () => {
       <Dialog open={!!editingProfile} onOpenChange={open => !open && setEditingProfile(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Pengguna</DialogTitle>
+            <DialogTitle>Edit Pengguna <span className="ml-2 text-[10px] font-normal text-slate-500">{editUserLastSavedAt ? 'Draft tersimpan' : 'Draft akan tersimpan otomatis'}</span></DialogTitle>
             <DialogDescription>Perbarui nama, hak akses, kategori, dan wilayah akun.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

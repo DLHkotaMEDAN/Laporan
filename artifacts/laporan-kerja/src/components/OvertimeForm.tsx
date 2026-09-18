@@ -36,14 +36,14 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   const { teams, loading: teamsLoading } = useAvailableTeams(form.region_id);
   const [personLookup, setPersonLookup] = useState(false);
   const draftKey = session?.user?.id ? `overtime:${session.user.id}:${initialData?.id ?? 'new'}` : undefined;
-  const { clearDraft, restoredAt } = useValueDraft(form, values => setForm(current => ({ ...current, ...values })), draftKey);
+  const { clearDraft, lastSavedAt, restoredAt } = useValueDraft(form, values => setForm(current => ({ ...current, ...values })), draftKey);
 
   useEffect(() => {
     if (restoredAt) showSuccess('Draf Rekap Lembur sebelumnya dipulihkan.');
   }, [restoredAt]);
 
   useEffect(() => {
-    if (!isSuperAdmin && profile?.region_id) setForm(current => ({ ...current, region_id: profile.region_id || '' }));
+    if (!isSuperAdmin && profile?.region_id && !form.region_id) setForm(current => ({ ...current, region_id: profile.region_id || '' }));
   }, [isSuperAdmin, profile?.region_id]);
 
   const setField = (key: string, value: string) => setForm(current => ({ ...current, [key]: value }));
@@ -92,7 +92,7 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
   };
 
   return <div className="mx-auto max-w-5xl space-y-5">
-    <div className="flex items-center justify-between"><Button type="button" variant="ghost" onClick={() => navigate('/overtime')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button><div className="text-center"><h1 className="text-xl font-bold">{initialData ? 'Edit Rekap Lembur' : 'Tambah Rekap Lembur'}</h1><p className="text-[10px] text-slate-500">Draf tersimpan sementara di perangkat ini</p></div><span /></div>
+    <div className="flex items-center justify-between"><Button type="button" variant="ghost" onClick={() => navigate('/overtime')}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button><div className="text-center"><h1 className="text-xl font-bold">{initialData ? 'Edit Rekap Lembur' : 'Tambah Rekap Lembur'}</h1><p className="text-[10px] text-slate-500">{lastSavedAt ? 'Draft tersimpan' : 'Draft akan tersimpan otomatis'}</p></div><span /></div>
     <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-5 shadow-sm">
       <div className="grid gap-4 md:grid-cols-2">
         <div><Label htmlFor="overtime-date">Tanggal</Label><Input id="overtime-date" type="date" value={form.date} onChange={e => setField('date', e.target.value)} required /></div>

@@ -48,6 +48,7 @@ export type NotaDinasForm = {
 export type NotaDinasRecord = {
   id: string;
   form: NotaDinasForm;
+  regionId: string | null;
   createdAt: string;
   updatedAt: string;
 };

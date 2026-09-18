@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { FuelType } from '@/types/fuelReport';
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { useFormDraft } from '@/hooks/useFormDraft';
 
 const pusatTeams = ['Tim Babat 1', 'Tim Babat 2', 'Tim Babat 3', 'Tim Babat 4', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
 
@@ -92,6 +93,11 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
     },
   });
 
+  const draftKey = session?.user?.id
+    ? `fuel-spj-report:${session.user.id}:${initialData?.id ?? 'new'}`
+    : undefined;
+  const { clearDraft, lastSavedAt } = useFormDraft(form, draftKey);
+
   const { fields: entryFields, append: appendEntry, remove: removeEntry } = useFieldArray({
     control: form.control,
     name: "entries"
@@ -105,7 +111,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
 
   useEffect(() => {
-    if (!isEditing && isSpjBbmAdmin) {
+    if (!isEditing && isSpjBbmAdmin && !form.getValues('region')) {
       form.setValue('region', 'Pusat');
       form.setValue('team', 'Tim Babat');
     }
@@ -144,8 +150,8 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
       const data = await fuelPriceService.getPrices();
       const p = data.find(x => x.type === 'Pertamax')?.price || 13500;
       const d = data.find(x => x.type === 'Dexlite')?.price || 14500;
-      form.setValue("price_pertamax", p);
-      form.setValue("price_dexlite", d);
+      if (form.getValues("price_pertamax") === 13500) form.setValue("price_pertamax", p);
+      if (form.getValues("price_dexlite") === 14500) form.setValue("price_dexlite", d);
     } catch (e) { console.error(e); }
   };
 
@@ -204,6 +210,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
         await fuelSpjService.createReport(finalData);
         showSuccess("Laporan SPJ disimpan");
       }
+      await clearDraft();
       navigate('/fuel-reports/spj');
     } catch (error: any) {
       showError("Gagal simpan: " + error.message);
@@ -222,7 +229,7 @@ const FuelSpjReportForm = ({ initialData, isEditing = false }: { initialData?: a
 
         <div className="flex items-center justify-between mb-6">
           <Button type="button" variant="ghost" onClick={() => navigate(-1)}><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Button>
-          <h1 className="text-2xl font-bold text-blue-700">{isEditing ? "Edit SPJ BBM" : "Input SPJ BBM Baru"}</h1>
+          <div className="text-center"><h1 className="text-2xl font-bold text-blue-700">{isEditing ? "Edit SPJ BBM" : "Input SPJ BBM Baru"}</h1><p className="mt-1 text-[10px] text-slate-500">{lastSavedAt ? "Draft tersimpan" : "Draft akan tersimpan otomatis"}</p></div>
           <Button type="submit" disabled={isSubmitting} className="bg-blue-600">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} Simpan
           </Button>

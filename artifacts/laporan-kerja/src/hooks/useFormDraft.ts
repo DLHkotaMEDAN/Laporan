@@ -8,6 +8,74 @@ const EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
 type StoredDraft<T> = {
   savedAt: number;
   values: T;
+  view?: DraftViewState;
+};
+
+type DraftViewState = {
+  selector?: string;
+  selectionStart?: number | null;
+  selectionEnd?: number | null;
+  scrollX: number;
+  scrollY: number;
+};
+
+const getActiveSelector = (element: Element | null) => {
+  if (!(element instanceof HTMLElement)) return undefined;
+  if (element.id) return `#${CSS.escape(element.id)}`;
+  const name = element.getAttribute("name");
+  if (name) return `[name="${CSS.escape(name)}"]`;
+  const ariaLabel = element.getAttribute("aria-label");
+  if (ariaLabel) return `[aria-label="${CSS.escape(ariaLabel)}"]`;
+  const path: string[] = [];
+  let current: Element | null = element;
+  while (current && current !== document.body) {
+    const parent = current.parentElement;
+    if (!parent) break;
+    const siblingIndex = Array.from(parent.children).indexOf(current) + 1;
+    path.unshift(`${current.tagName.toLowerCase()}:nth-child(${siblingIndex})`);
+    current = parent;
+  }
+  return path.length ? `body > ${path.join(" > ")}` : undefined;
+};
+
+const captureViewState = (): DraftViewState => {
+  const activeElement = document.activeElement;
+  const selectionElement = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement
+    ? activeElement
+    : null;
+  return {
+    selector: getActiveSelector(activeElement),
+    selectionStart: selectionElement?.selectionStart ?? null,
+    selectionEnd: selectionElement?.selectionEnd ?? null,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
+  };
+};
+
+const restoreViewState = (state?: DraftViewState) => {
+  if (!state) return;
+  const restore = () => {
+    window.scrollTo(state.scrollX, state.scrollY);
+    if (!state.selector) return;
+    const element = document.querySelector(state.selector);
+    if (!(element instanceof HTMLElement)) return;
+    element.focus({ preventScroll: true });
+    if (
+      (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) &&
+      state.selectionStart !== null && state.selectionStart !== undefined &&
+      state.selectionEnd !== null && state.selectionEnd !== undefined
+    ) {
+      element.setSelectionRange(state.selectionStart, state.selectionEnd);
+    }
+    window.scrollTo(state.scrollX, state.scrollY);
+  };
+
+  // Form arrays and conditional fields may need one extra render before the
+  // saved field exists in the DOM.
+  window.requestAnimationFrame(() => {
+    restore();
+    window.requestAnimationFrame(restore);
+  });
 };
 
 const openDatabase = () => new Promise<IDBDatabase>((resolve, reject) => {
@@ -49,7 +117,11 @@ const deleteDraft = async (key: string) => {
 };
 
 /** Menyimpan isian form hanya di perangkat, termasuk saat browser menjadi tidak aktif. */
-export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?: string) {
+// RHF's resolver output can be narrower than its FieldValues constraint for
+// deeply nested Zod schemas. The hook only reads/resets values, so accepting
+// the form instance at runtime avoids coupling draft persistence to resolver
+// variance while preserving the stored value type.
+export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, key?: string) {
   const [isReady, setIsReady] = useState(!key);
   const [restoredAt, setRestoredAt] = useState<number | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -57,6 +129,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
   const savingRef = useRef(false);
   const pendingSaveRef = useRef(false);
   const shouldPersistRef = useRef(Boolean(key));
+  const saveTimerRef = useRef<number | null>(null);
 
   const save = useCallback(async () => {
     if (!key || !readyRef.current || !shouldPersistRef.current) return;
@@ -68,7 +141,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
     pendingSaveRef.current = false;
     const savedAt = Date.now();
     try {
-      await writeDraft(key, { savedAt, values: form.getValues() });
+      await writeDraft(key, { savedAt, values: form.getValues(), view: captureViewState() });
       if (!shouldPersistRef.current) {
         await deleteDraft(key);
         return;
@@ -102,6 +175,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
           form.reset(draft.values);
           setRestoredAt(draft.savedAt);
           setLastSavedAt(draft.savedAt);
+          restoreViewState(draft.view);
         } else if (draft) {
           await deleteDraft(key);
         }
@@ -122,13 +196,15 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<T>, key?
     if (!key) return;
     const subscription = form.watch(() => {
       if (!readyRef.current) return;
-      window.setTimeout(() => { void save(); }, 350);
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = window.setTimeout(() => { void save(); }, 350);
     });
     const saveImmediately = () => { void save(); };
     document.addEventListener("visibilitychange", saveImmediately);
     window.addEventListener("pagehide", saveImmediately);
     return () => {
       subscription.unsubscribe();
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       document.removeEventListener("visibilitychange", saveImmediately);
       window.removeEventListener("pagehide", saveImmediately);
       void save();
@@ -160,6 +236,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
   const shouldPersistRef = useRef(Boolean(key));
   const savingRef = useRef(false);
   const pendingSaveRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
 
   valuesRef.current = values;
   restoreRef.current = restore;
@@ -174,7 +251,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
     pendingSaveRef.current = false;
     const savedAt = Date.now();
     try {
-      await writeDraft(key, { savedAt, values: valuesRef.current });
+      await writeDraft(key, { savedAt, values: valuesRef.current, view: captureViewState() });
       setLastSavedAt(savedAt);
     } catch (error) {
       console.warn("Tidak dapat menyimpan draf formulir", error);
@@ -200,6 +277,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
           restoreRef.current(draft.values);
           setRestoredAt(draft.savedAt);
           setLastSavedAt(draft.savedAt);
+          restoreViewState(draft.view);
         } else {
           await deleteDraft(key);
         }
@@ -217,8 +295,11 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
 
   useEffect(() => {
     if (!key || !readyRef.current) return;
-    const timer = window.setTimeout(() => { void save(); }, 350);
-    return () => window.clearTimeout(timer);
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => { void save(); }, 350);
+    return () => {
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    };
   }, [key, save, values]);
 
   useEffect(() => {
@@ -229,6 +310,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
     return () => {
       document.removeEventListener("visibilitychange", saveImmediately);
       window.removeEventListener("pagehide", saveImmediately);
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       void save();
     };
   }, [key, save]);

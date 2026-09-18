@@ -343,7 +343,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   useEffect(() => {
     if (!isEditing && !isDuplicateMode && selectedCategory) {
       const autoCoord = categoryCoordinatorMapping[selectedCategory];
-      if (autoCoord && isGlobalStyle) form.setValue("globalCoordinator", autoCoord);
+      if (autoCoord && isGlobalStyle && !form.getValues("globalCoordinator")) form.setValue("globalCoordinator", autoCoord);
       
       const defaultDesc = defaultActivityMapping[selectedCategory];
       if (defaultDesc) {
@@ -358,7 +358,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   }, [selectedCategory, isGlobalStyle, isEditing, isDuplicateMode, form]);
 
   useEffect(() => {
-    if (isFuelPlanningCategory) return;
+    if (isFuelPlanningCategory || restoredAt) return;
     const currentItems = form.getValues("items");
     const clearedItems = currentItems.map(item => ({
       ...item,
@@ -648,7 +648,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           <div className="flex flex-col items-center">
             <h1 className="text-lg md:text-2xl font-bold text-primary">{isEditing && !isDuplicateMode ? "Edit Rencana Kerja" : "Buat Rencana Kerja Baru"}</h1>
             {isDuplicateMode && <Badge className="bg-amber-100 text-amber-700 border-amber-200 mt-1 animate-pulse"><Copy size={10} className="mr-1" /> Mode Duplikat: Belum Tersimpan</Badge>}
-            <p className="text-[10px] text-slate-500 mt-1">{lastSavedAt ? "Draf tersimpan sementara di perangkat ini" : "Draf akan tersimpan sementara di perangkat ini"}</p>
+            <p className="text-[10px] text-slate-500 mt-1">{lastSavedAt ? "Draft tersimpan" : "Draft akan tersimpan otomatis"}</p>
           </div>
           <div className="flex gap-2">
             {isEditing && !isDuplicateMode && <Button type="button" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 md:px-4" onClick={() => { setDuplicateDate(getTomorrowDate()); setShowDuplicateDialog(true); }}><Copy className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Duplikat</span></Button>}

@@ -176,7 +176,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   const draftKey = session?.user?.id
     ? `fuel-report:${session.user.id}:${initialData?.id ?? 'new'}`
     : undefined;
-  const { clearDraft } = useFormDraft(form, draftKey);
+  const { clearDraft, lastSavedAt } = useFormDraft(form, draftKey);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -211,8 +211,8 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       const data = await fuelPriceService.getPrices();
       const p = data.find(x => x.type === 'Pertamax')?.price || 13500;
       const d = data.find(x => x.type === 'Dexlite')?.price || 14500;
-      form.setValue("price_pertamax", p);
-      form.setValue("price_dexlite", d);
+      if (form.getValues("price_pertamax") === 13500) form.setValue("price_pertamax", p);
+      if (form.getValues("price_dexlite") === 14500) form.setValue("price_dexlite", d);
     } catch (e) { console.error(e); }
   };
 
@@ -238,7 +238,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   const selectedTeamId = teams.find(team => team.name === form.getValues('team'))?.id ?? null;
 
   useEffect(() => {
-    if (!isEditing && isRegionalFuelAdmin && profileRegion && form.getValues("region") !== profileRegion.name) {
+    if (!isEditing && isRegionalFuelAdmin && profileRegion && !form.getValues("region")) {
       form.setValue("region", profileRegion.name);
       form.setValue("team", "");
     }
@@ -369,7 +369,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
             <h1 className="text-2xl font-bold text-primary">
               {isEditing ? "Edit Laporan BBM & Oli" : "Input Laporan BBM & Oli"}
             </h1>
-            <p className="text-[10px] text-slate-500">Draf tersimpan sementara di perangkat ini</p>
+            <p className="text-[10px] text-slate-500">{lastSavedAt ? "Draft tersimpan" : "Draft akan tersimpan otomatis"}</p>
           </div>
           <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
             {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Simpan...</> : <><Save className="h-4 w-4 mr-2" /> Simpan</>}

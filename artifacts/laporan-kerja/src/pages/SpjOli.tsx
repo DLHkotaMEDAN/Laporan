@@ -28,7 +28,7 @@ const getNextSpjNumber = (value: string) => value.replace(/^(\d+)/, (_, number: 
 
 type SpjOliFormValues = typeof emptyRecord;
 
-const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spjNumberRecords, vehicleOptions, editable, editing, regionLocked, onChange, onSubmit, onCancel }: {
+const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spjNumberRecords, vehicleOptions, editable, editing, regionLocked, lastSavedAt, onChange, onSubmit, onCancel }: {
   form: SpjOliFormValues;
   regions: { id: string; name: string }[];
   teams: { id: string; region_id: string; name: string }[];
@@ -39,6 +39,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spj
   editable: boolean;
   editing: boolean;
   regionLocked: boolean;
+  lastSavedAt: number | null;
   onChange: (key: keyof SpjOliFormValues, value: string | number) => void;
   onSubmit: (event: React.FormEvent) => void;
   onCancel: () => void;
@@ -50,7 +51,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spj
       <datalist id="spj-oli-operator-options">{Array.from(new Set(savedRecords.map(record => record.operator_name).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-oil-options">{Array.from(new Set([...defaultOilOptions, ...savedRecords.map(record => record.oil_name).filter(Boolean)])).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-location-options">{Array.from(new Set(savedRecords.map(record => record.location).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
-      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia. Draf tersimpan sementara di perangkat ini.</p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia. <span className="text-xs text-slate-400">{lastSavedAt ? 'Draft tersimpan' : 'Draft akan tersimpan otomatis'}</span></p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
       <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-2">
         <label className="space-y-1 text-sm font-semibold">Tanggal<Input type="date" value={form.date} onChange={e => onChange('date', e.target.value)} /></label>
         <label className="space-y-1 text-sm font-semibold">Nomor SPJ<Input list="spj-oli-number-options" value={form.spj_number} onChange={e => onChange('spj_number', e.target.value)} />{(() => { const lastSpjNumber = [...spjNumberRecords].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())[0]?.spj_number?.trim(); return lastSpjNumber ? <span className="block rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-800">Nomor SPJ terakhir: <b>{lastSpjNumber}</b>. Nomor lanjutan: <b>{getNextSpjNumber(lastSpjNumber)}</b></span> : null; })()}</label>
@@ -88,7 +89,7 @@ export default function SpjOli() {
   const nextSpjNumberInitialized = useRef(false);
   const isForm = window.location.pathname.endsWith('/create') || Boolean(id);
   const draftKey = isForm && session?.user?.id ? `spj-oli:${session.user.id}:${id ?? 'new'}` : undefined;
-  const { clearDraft, isReady: isDraftReady, restoredAt } = useValueDraft(
+  const { clearDraft, isReady: isDraftReady, lastSavedAt, restoredAt } = useValueDraft(
     form,
     values => setForm({ ...emptyRecord, ...values }),
     draftKey,
@@ -164,7 +165,7 @@ export default function SpjOli() {
       .filter(plan => plan.region_id === form.region_id && plan.team_id === form.team_id)
       .filter(plan => !plan.category.toLowerCase().includes('taman'))
       .flatMap(plan => plan.items.flatMap(item => item.tools.map(tool => tool.name?.trim()).filter((value): value is string => Boolean(value))));
-    const vehiclesFromSpjOli = savedRecordsForForm.map(record => record.vehicle_name?.trim()).filter(Boolean);
+    const vehiclesFromSpjOli = savedRecordsForForm.map(record => record.vehicle_name?.trim()).filter((value): value is string => Boolean(value));
     return Array.from(new Set([...vehiclesFromWorkPlans, ...vehiclesFromSpjOli])).sort();
   }, [workPlans, savedRecordsForForm, form.region_id, form.team_id]);
   const filtered = useMemo(() => records.filter(record => {
@@ -201,7 +202,7 @@ export default function SpjOli() {
   const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
 
   if (!canAccess(profile?.role, session?.user?.email)) return null;
-  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} spjNumberRecords={records} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
+  if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} spjNumberRecords={records} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} lastSavedAt={lastSavedAt} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
 
   return (
     <div className="space-y-5">
