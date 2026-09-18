@@ -166,8 +166,8 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const recapMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="h-10 bg-blue-600 px-4 shadow-md hover:bg-blue-700">
-          <FileText className="mr-2 h-4 w-4" /> Menu Rekap <ChevronDown className="ml-2 h-4 w-4 opacity-70" />
+        <Button aria-label="Menu Rekap" title="Menu Rekap" className="h-10 w-10 justify-center bg-blue-600 px-0 shadow-md hover:bg-blue-700 sm:w-auto sm:px-4">
+          <FileText className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Menu Rekap</span> <ChevronDown className="hidden h-4 w-4 opacity-70 sm:ml-2 sm:inline" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-80">

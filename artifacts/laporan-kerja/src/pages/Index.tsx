@@ -190,8 +190,7 @@ const TabPageHeader = ({
       <div className="w-full">
         <Button
           onClick={onAction}
-          style={{ width: '100%', minWidth: '180px' }}
-          className="inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap bg-emerald-600 px-5 font-bold hover:bg-emerald-700"
+          className="inline-flex h-11 w-full min-w-0 items-center justify-center bg-emerald-600 px-4 font-bold hover:bg-emerald-700 sm:h-12 sm:w-auto sm:min-w-[180px] sm:px-5"
         >
           <Plus className="mr-2 h-4 w-4 shrink-0" />
           {actionLabel}
@@ -786,7 +785,7 @@ const Index = () => {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className={cn("w-full space-y-6", activeTab === "nota_dinas" && "nota-dinas-tabs")}>
           <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm ring-1 ring-slate-100/80 print:hidden xl:flex-row xl:items-center xl:justify-between">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 overflow-visible bg-transparent p-0 text-slate-600 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-start xl:flex-1">
+            <TabsList className="grid h-auto w-full min-w-0 grid-cols-2 gap-2 overflow-visible bg-transparent p-0 text-slate-600 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-start xl:flex-1">
               {canViewReportsTab && !isOvertimeOnly && <TabsTrigger
                 value="reports"
                 className={cn(systemTabBaseClass, systemTabToneClass.reports)}
@@ -835,7 +834,7 @@ const Index = () => {
               <div className="flex w-full items-center justify-end border-t border-slate-200/80 pt-3 xl:w-auto xl:shrink-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-11 w-full justify-center rounded-xl border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md sm:w-auto">
+                    <Button variant="outline" size="sm" className="h-10 w-full min-w-0 justify-center rounded-xl border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md sm:h-11 sm:w-auto sm:px-4">
                     <Printer className="h-4 w-4 mr-2 text-blue-600" /> Cetak Rekap <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -979,11 +978,11 @@ const Index = () => {
           )}
           {/* Filter Section */}
           {(activeTab === "reports" || activeTab === "workplans") && !isOvertimeOnly && (
-            <div className="bg-white p-5 rounded-2xl shadow-sm border ring-1 ring-slate-100 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                <div className="md:col-span-4 space-y-1.5">
+            <div className="min-w-0 rounded-2xl border bg-white p-4 shadow-sm ring-1 ring-slate-100 sm:p-5">
+              <div className="grid min-w-0 grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12">
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Pencarian Cepat</label>
-                  <div className="relative">
+                  <div className="relative min-w-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input 
                       placeholder="Cari uraian kegiatan atau lokasi..." 
@@ -994,7 +993,7 @@ const Index = () => {
                   </div>
                 </div>
                 {isAdmin && (
-                  <div className="md:col-span-2 space-y-1.5">
+                  <div className="space-y-1.5 lg:col-span-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Wilayah</label>
                     <Select value={selectedRegion} onValueChange={handleRegionChange}>
                       <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
@@ -1007,7 +1006,7 @@ const Index = () => {
                     </Select>
                   </div>
                 )}
-                <div className="md:col-span-3 space-y-1.5">
+                <div className="space-y-1.5 lg:col-span-3">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Kategori Tim</label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isUserRestricted}>
                     <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl font-medium">
@@ -1018,14 +1017,14 @@ const Index = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="md:col-span-2 space-y-1.5">
+                <div className="space-y-1.5 lg:col-span-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Tanggal</label>
                   <div className="relative">
                     <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input type="date" className="pl-10 bg-slate-50 border-slate-200 h-11 rounded-xl" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-1.5">
+                <div className="space-y-1.5 lg:col-span-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Bulan</label>
                   <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!!selectedDate}>
                     <SelectTrigger className={cn("bg-slate-50 border-slate-200 h-11 rounded-xl font-medium", selectedDate && "opacity-50")}>
@@ -1037,11 +1036,11 @@ const Index = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="md:col-span-1 flex justify-end">
+                <div className="flex justify-end sm:col-span-2 lg:col-span-1">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={resetFilters} className="h-11 w-11 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl border border-dashed border-slate-200">
+                        <Button aria-label="Reset filter" title="Reset filter" variant="ghost" size="icon" onClick={resetFilters} className="h-10 w-10 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-xl border border-dashed border-slate-200 sm:h-11 sm:w-11">
                           <FilterX className="h-5 w-5" />
                         </Button>
                       </TooltipTrigger>

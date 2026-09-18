@@ -35,9 +35,12 @@
   [data-slot="button"] {
     height: auto !important;
     min-height: 2.5rem;
+    max-width: 100%;
+    flex-shrink: 1;
     white-space: nowrap;
     overflow-wrap: normal;
     word-break: normal;
+    text-overflow: ellipsis;
   }
 
   [data-slot="button"]:has(> svg:only-child) {
@@ -101,6 +104,66 @@
   .recap-print-area .recap-table-scroll {
     overflow-x: visible;
     padding-bottom: 0;
+  }
+}
+
+/* Shared responsive rules for all report toolbars. Controls may keep their
+   useful desktop widths, but never force a tablet or phone viewport wider. */
+@media (max-width: 1023px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .recap-sticky-toolbar {
+    min-width: 0;
+    margin-inline: 0.5rem;
+  }
+
+  .recap-sticky-toolbar .flex,
+  .recap-sticky-toolbar .grid {
+    min-width: 0;
+  }
+
+  .recap-sticky-toolbar .flex.flex-wrap > *,
+  .recap-sticky-toolbar [data-slot="select-trigger"],
+  .recap-sticky-toolbar input,
+  .recap-sticky-toolbar [data-slot="button"] {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .recap-sticky-toolbar [data-slot="select-trigger"] {
+    width: min(100%, 16rem);
+  }
+
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"] {
+    max-width: calc(100vw - 1rem);
+  }
+
+  [data-slot="dropdown-menu-content"] [role^="menuitem"],
+  [data-slot="dropdown-menu-sub-content"] [role^="menuitem"] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 639px) {
+  .recap-sticky-toolbar {
+    margin-inline: 0.25rem;
+    padding: 0.75rem;
+  }
+
+  .recap-sticky-toolbar .flex.flex-wrap {
+    align-items: stretch;
+  }
+
+  .recap-sticky-toolbar .flex.flex-wrap > * {
+    flex: 1 1 auto;
   }
 }
 
