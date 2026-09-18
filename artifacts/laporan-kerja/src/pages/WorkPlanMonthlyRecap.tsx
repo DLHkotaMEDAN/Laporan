@@ -587,7 +587,7 @@ const WorkPlanMonthlyRecap = () => {
         </div>
 
         <div className="text-center mb-8">
-          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
           <p className="text-lg font-bold">Bulan: {months[parseInt(selectedMonth)-1]} {selectedYear}</p>
         </div>
 

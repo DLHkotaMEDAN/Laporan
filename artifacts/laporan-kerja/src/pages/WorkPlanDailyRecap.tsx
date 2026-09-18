@@ -881,7 +881,7 @@ const WorkPlanDailyRecap = () => {
         </div>
 
         <div className="text-center mb-5">
-          <h3 className="text-xl font-bold underline uppercase">{recapTitle} {regionName}</h3>
+          <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
           <p className="text-lg font-bold">
             Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
           </p>
