@@ -127,6 +127,11 @@ const UserManagement = () => {
     : undefined;
   const { clearDraft: clearEditUserDraft, lastSavedAt: editUserLastSavedAt, restoredAt: editUserRestoredAt } = useValueDraft(editUser, setEditUser, editUserDraftKey);
   const workPlanCategories = Array.from(new Set(teams.map((team) => team.name))).sort((first, second) => first.localeCompare(second));
+  // Draf yang dibuat sebelum fitur kategori ditambahkan tidak memiliki field
+  // ini. Selalu gunakan array aman agar pemulihan draf lama tidak membuat
+  // seluruh tab Pengguna gagal dirender.
+  const newUserWorkPlanCategories = Array.isArray(newUser.workPlanCategories) ? newUser.workPlanCategories : [];
+  const editUserWorkPlanCategories = Array.isArray(editUser.workPlanCategories) ? editUser.workPlanCategories : [];
 
   useEffect(() => {
     if (newUserRestoredAt || editUserRestoredAt) showSuccess('Draft data pengguna sebelumnya dipulihkan.');
@@ -169,7 +174,7 @@ const UserManagement = () => {
           role: newUser.role,
           regionId: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
           teamId: roleRequiresTeam(newUser.role) ? newUser.teamId : null,
-          workPlanCategories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUser.workPlanCategories : [],
+          workPlanCategories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUserWorkPlanCategories : [],
         },
       });
       if (error) throw error;
@@ -184,7 +189,7 @@ const UserManagement = () => {
           email: data.email || newUser.email.trim().toLowerCase(),
           role: newUser.role,
           category: null,
-          work_plan_categories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUser.workPlanCategories : [],
+          work_plan_categories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUserWorkPlanCategories : [],
           region_id: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
           team_id: roleRequiresTeam(newUser.role) ? newUser.teamId || null : null,
           is_active: true,
@@ -369,7 +374,7 @@ const UserManagement = () => {
       showError('Pengguna tim wajib memilih tim.');
       return;
     }
-    if (isCategoryScopedWorkPlanAdmin(editUser.role) && editUser.workPlanCategories.length === 0) {
+    if (isCategoryScopedWorkPlanAdmin(editUser.role) && editUserWorkPlanCategories.length === 0) {
       showError('Pilih minimal satu kategori untuk Admin Rencana Kerja.');
       return;
     }
@@ -379,7 +384,7 @@ const UserManagement = () => {
       role: editUser.role,
       region_id: canSelectRegion ? editUser.regionId || null : null,
       team_id: roleRequiresTeam(editUser.role) ? editUser.teamId : null,
-      work_plan_categories: isCategoryScopedWorkPlanAdmin(editUser.role) ? editUser.workPlanCategories : [],
+      work_plan_categories: isCategoryScopedWorkPlanAdmin(editUser.role) ? editUserWorkPlanCategories : [],
     };
 
     setUpdatingId(editingProfile.id);
@@ -467,7 +472,7 @@ const UserManagement = () => {
               role: role as UserRole,
               regionId: roleCanSelectRegion(role) ? newUser.regionId : '',
               teamId: '',
-              workPlanCategories: isCategoryScopedWorkPlanAdmin(role) ? newUser.workPlanCategories : [],
+              workPlanCategories: isCategoryScopedWorkPlanAdmin(role) ? newUserWorkPlanCategories : [],
             })} disabled={!canMutateUsers}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
@@ -487,7 +492,7 @@ const UserManagement = () => {
             <div className="min-w-0 space-y-2 md:col-span-2">
               <label className="text-xs font-semibold text-blue-900">Kategori rencana kerja yang dapat dikerjakan</label>
               <div className="grid grid-cols-2 gap-2 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-3">
-                {workPlanCategories.map((category) => <label key={category} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={newUser.workPlanCategories.includes(category)} onChange={() => setNewUser({ ...newUser, workPlanCategories: toggleWorkPlanCategory(newUser.workPlanCategories, category) })} disabled={!canMutateUsers} />{category}</label>)}
+                {workPlanCategories.map((category) => <label key={category} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={newUserWorkPlanCategories.includes(category)} onChange={() => setNewUser({ ...newUser, workPlanCategories: toggleWorkPlanCategory(newUserWorkPlanCategories, category) })} disabled={!canMutateUsers} />{category}</label>)}
               </div>
               <p className="text-[11px] text-blue-700">Pilih satu atau lebih kategori. Akun ini tetap dapat mengakses semua wilayah.</p>
             </div>
@@ -502,7 +507,7 @@ const UserManagement = () => {
             </div>
           )}
         </div>
-        <Button type="submit" disabled={!canMutateUsers || creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId) || (isCategoryScopedWorkPlanAdmin(newUser.role) && newUser.workPlanCategories.length === 0)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+        <Button type="submit" disabled={!canMutateUsers || creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId) || (isCategoryScopedWorkPlanAdmin(newUser.role) && newUserWorkPlanCategories.length === 0)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -732,7 +737,7 @@ const UserManagement = () => {
                 role: role as UserRole,
                 regionId: roleCanSelectRegion(role) ? editUser.regionId : '',
                 teamId: roleRequiresTeam(role) ? editUser.teamId : '',
-                workPlanCategories: isCategoryScopedWorkPlanAdmin(role) ? editUser.workPlanCategories : [],
+                workPlanCategories: isCategoryScopedWorkPlanAdmin(role) ? editUserWorkPlanCategories : [],
               })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
@@ -764,7 +769,7 @@ const UserManagement = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Kategori rencana kerja yang dapat dikerjakan</label>
                 <div className="grid grid-cols-2 gap-2 rounded-md border bg-slate-50 p-3 sm:grid-cols-3">
-                  {workPlanCategories.map((category) => <label key={category} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={editUser.workPlanCategories.includes(category)} onChange={() => setEditUser({ ...editUser, workPlanCategories: toggleWorkPlanCategory(editUser.workPlanCategories, category) })} />{category}</label>)}
+                  {workPlanCategories.map((category) => <label key={category} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={editUserWorkPlanCategories.includes(category)} onChange={() => setEditUser({ ...editUser, workPlanCategories: toggleWorkPlanCategory(editUserWorkPlanCategories, category) })} />{category}</label>)}
                 </div>
                 <p className="text-xs text-slate-500">Pilih satu atau lebih kategori. Wilayah tetap bersifat global.</p>
               </div>
