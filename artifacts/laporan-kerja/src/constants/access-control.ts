@@ -127,6 +127,9 @@ export const isAdminHarianAccess = (role: string | null | undefined, email?: str
 export const isGlobalWorkPlanAdmin = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email) || role === USER_ROLES.ADMIN_RENCANA_KERJA;
 
+export const isCategoryScopedWorkPlanAdmin = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_RENCANA_KERJA;
+
 export const isAdminRencanaKerjaAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_RENCANA_KERJA
   || role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM

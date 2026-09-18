@@ -12,6 +12,7 @@ type CreateUserInput = {
   role: string;
   regionId?: string | null;
   teamId?: string | null;
+  workPlanCategories?: string[];
 };
 
 type ResetPasswordInput = {
@@ -157,10 +158,27 @@ Deno.serve(async (request) => {
     if (!validRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
     const assignedRegionId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.regionId;
     const assignedTeamId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.teamId;
+    const workPlanCategories = input.role === USER_ROLES.ADMIN_RENCANA_KERJA
+      ? Array.from(new Set((input.workPlanCategories || []).map(category => category.trim()).filter(Boolean)))
+      : [];
     if (regionRequiredRoles.has(input.role) && !assignedRegionId) {
       throw new Error('Admin berbasis wilayah wajib memiliki wilayah.');
     }
     if (input.role === USER_ROLES.USER && !assignedTeamId) throw new Error('Pengguna tim wajib memiliki tim.');
+    if (input.role === USER_ROLES.ADMIN_RENCANA_KERJA && workPlanCategories.length === 0) {
+      throw new Error('Pilih minimal satu kategori untuk Admin Rencana Kerja.');
+    }
+
+    if (workPlanCategories.length > 0) {
+      const { data: categoryTeams } = await adminClient
+        .from('teams')
+        .select('name')
+        .eq('is_active', true)
+        .in('name', workPlanCategories);
+      if (new Set((categoryTeams || []).map(team => team.name)).size !== workPlanCategories.length) {
+        throw new Error('Kategori rencana kerja tidak valid.');
+      }
+    }
 
     if (assignedRegionId) {
       const { data: region } = await adminClient.from('regions').select('id').eq('id', assignedRegionId).eq('is_active', true).maybeSingle();
@@ -184,6 +202,7 @@ Deno.serve(async (request) => {
       role: input.role,
       region_id: assignedRegionId ?? null,
       team_id: assignedTeamId ?? null,
+      work_plan_categories: workPlanCategories,
       is_active: true,
       updated_at: new Date().toISOString(),
     });

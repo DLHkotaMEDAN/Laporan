@@ -25,7 +25,7 @@ import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { isGlobalWorkPlanAdmin } from '@/constants/access-control';
+import { isCategoryScopedWorkPlanAdmin, isGlobalWorkPlanAdmin } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -180,12 +180,18 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const canManageAllWorkPlanRegions = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
+  const allowedWorkPlanCategories = isCategoryScopedWorkPlanAdmin(profile?.role)
+    ? profile?.work_plan_categories ?? []
+    : null;
   const [selectedRegion, setSelectedRegion] = useState(initialData?.region_id ?? '');
   const { regions: selectableRegions } = useRegionFilterOptions(canManageAllWorkPlanRegions, 'semua');
   const activeRegionId = canManageAllWorkPlanRegions
     ? selectedRegion || null
     : profile?.region_id ?? initialData?.region_id ?? null;
   const { teams } = useAvailableTeams(activeRegionId);
+  const availableTeams = allowedWorkPlanCategories
+    ? teams.filter((team) => allowedWorkPlanCategories.includes(team.name))
+    : teams;
 
   const getTomorrowDate = () => {
     const tomorrow = new Date();
@@ -231,7 +237,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 
   const { fields: itemFields, append: appendItem, remove: removeItem, replace: replaceItems } = useFieldArray({ control: form.control, name: "items" });
   const selectedCategory = form.watch("category");
-  const selectedTeamId = teams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
+  const selectedTeamId = availableTeams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
   const draftKey = session?.user?.id ? `work-plan:${session.user.id}:${initialData?.id ?? "new"}` : undefined;
   const { clearDraft, lastSavedAt, restoredAt } = useFormDraft(form, draftKey);
   const hasNoActivity = form.watch("has_no_activity");
@@ -444,6 +450,10 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     if (isPimpinan) { showError("Akses ditolak"); return; }
     if (!activeRegionId) {
       showError("Wilayah wajib dipilih sebelum menyimpan rencana kerja.");
+      return;
+    }
+    if (allowedWorkPlanCategories && !allowedWorkPlanCategories.includes(values.category)) {
+      showError("Kategori rencana kerja ini tidak termasuk dalam akses akun Anda.");
       return;
     }
     setIsSubmitting(true);
@@ -692,7 +702,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
             ) : profile?.region_id && <p className="rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">Wilayah Login: otomatis sesuai akun Anda</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Tanggal Rencana</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Kategori / Tim</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={profile?.role === 'user' || !activeRegionId}><FormControl><SelectTrigger><SelectValue placeholder={activeRegionId ? "Pilih tim..." : "Pilih wilayah terlebih dahulu"} /></SelectTrigger></FormControl><SelectContent>{teams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+              <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Kategori / Tim</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={profile?.role === 'user' || !activeRegionId}><FormControl><SelectTrigger><SelectValue placeholder={activeRegionId ? "Pilih tim..." : "Pilih wilayah terlebih dahulu"} /></SelectTrigger></FormControl><SelectContent>{availableTeams.map(team => <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>)}</SelectContent></Select></FormItem>)} />
             </div>
 
             {selectedCategory === "Tim Pohon" && (

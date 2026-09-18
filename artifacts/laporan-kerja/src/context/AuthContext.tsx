@@ -10,6 +10,7 @@ interface Profile {
   id: string;
   role: UserRole;
   category: string | null;
+  work_plan_categories?: string[] | null;
   username: string | null;
   region_id?: string | null;
   team_id?: string | null;
