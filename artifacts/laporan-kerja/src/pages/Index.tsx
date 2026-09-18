@@ -9,7 +9,7 @@ import {
   LogOut, LogIn, FilterX, Database, ChevronDown,
   Table, ClipboardList, CalendarDays, Fuel, Trash2, Loader2, UserCircle, Bell,
   ArrowUpDown, ChevronUp, Edit, Eye, EyeOff, Leaf, MapPin, ShieldCheck,
-  Activity, Clock3, Plus
+  Activity, Clock3, Plus, KeyRound
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Report } from '@/types/report';
@@ -20,6 +20,7 @@ import { workPlanService } from '@/services/workPlanService';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
+import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 import FuelReportTab from '@/components/FuelReportTab';
 import FuelSpjTab from '@/components/FuelSpjTab';
 import SpjOli from '@/pages/SpjOli';
@@ -214,6 +215,7 @@ const Index = () => {
   const hasRestoredScrollRef = useRef(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(savedViewStateRef.current.searchQuery || "");
   const [activeTab, setActiveTab] = useState<MainTab>(savedViewStateRef.current.activeTab || "reports");
@@ -646,6 +648,9 @@ const Index = () => {
                     )}
                     <DropdownMenuItem onClick={() => setIsTrashOpen(true)} className="cursor-pointer py-2.5">
                       <Trash2 className="mr-2 h-4 w-4 text-red-500" /> Tempat Sampah
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsChangePasswordOpen(true)} className="cursor-pointer py-2.5">
+                      <KeyRound className="mr-2 h-4 w-4 text-emerald-600" /> Ubah Password
                     </DropdownMenuItem>
                     <div className="h-px bg-slate-100 my-1" />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer py-2.5 text-red-600 font-bold">
@@ -1321,6 +1326,7 @@ const Index = () => {
         onClose={() => setIsTrashOpen(false)} 
         onRefresh={loadData} 
       />
+      <ChangePasswordDialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
 
       <Dialog open={isDailyRecapDateOpen} onOpenChange={setIsDailyRecapDateOpen}>
         <DialogContent className="rounded-2xl p-5 sm:max-w-[460px] sm:p-6">
