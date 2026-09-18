@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
 import { notaDinasService } from "@/services/notaDinasService";
+import { supabase } from "@/lib/supabase";
 import type { NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord } from "@/types/notaDinas";
 
 const SAMPLE_FORM: NotaDinasForm = {
@@ -129,6 +130,23 @@ const readRecords = (): NotaDinasRecord[] => {
   } catch {
     return [];
   }
+};
+
+const removeSyncedLocalRecords = (recordIds: Set<string>) => {
+  if (typeof window === "undefined" || recordIds.size === 0) return;
+
+  const pendingRecords = readRecords().filter((record) => !recordIds.has(record.id));
+  if (pendingRecords.length > 0) {
+    window.localStorage.setItem(RECORDS_KEY, JSON.stringify(pendingRecords));
+  } else {
+    window.localStorage.removeItem(RECORDS_KEY);
+  }
+};
+
+const isNewerRecord = (candidate: NotaDinasRecord, current: NotaDinasRecord) => {
+  const candidateTime = Date.parse(candidate.updatedAt);
+  const currentTime = Date.parse(current.updatedAt);
+  return Number.isFinite(candidateTime) && (!Number.isFinite(currentTime) || candidateTime > currentTime);
 };
 
 const formatRecordDate = (value: string) => {
@@ -261,31 +279,47 @@ const NotaDinasTab = () => {
       setRecordsError(null);
 
       try {
-        let remoteRecords = await notaDinasService.getAll();
+        const remoteRecords = await notaDinasService.getAll();
+        const recordsById = new Map(remoteRecords.map((record) => [record.id, record]));
+        const syncedLocalRecordIds = new Set<string>();
+        let hasPendingLocalRecords = false;
 
-        // Migrate data created by the previous localStorage-only version once
-        // the Supabase table is empty. Keep the local copy as a backup.
-        if (remoteRecords.length === 0) {
-          const localRecords = readRecords();
-          if (localRecords.length > 0) {
-            const migratedRecords: NotaDinasRecord[] = [];
-            for (const localRecord of localRecords) {
-              try {
-                migratedRecords.push(await notaDinasService.create(
-                  localRecord.form,
-                  localRecord.id,
-                  localRecord.createdAt,
-                  localRecord.updatedAt,
-                ));
-              } catch (migrationError) {
-                console.error("Gagal memigrasikan Nota Dinas lokal:", migrationError);
-              }
+        // Reconcile every legacy local record, even when Supabase already has
+        // documents. This is important when each device still has its own old
+        // localStorage data. The newest saved version wins on an id conflict.
+        for (const localRecord of readRecords()) {
+          const remoteRecord = recordsById.get(localRecord.id);
+          try {
+            if (!remoteRecord) {
+              const createdRecord = await notaDinasService.create(
+                localRecord.form,
+                localRecord.id,
+                localRecord.createdAt,
+                localRecord.updatedAt,
+              );
+              recordsById.set(createdRecord.id, createdRecord);
+            } else if (isNewerRecord(localRecord, remoteRecord)) {
+              const updatedRecord = await notaDinasService.update(
+                remoteRecord.id,
+                localRecord.form,
+                localRecord.updatedAt,
+              );
+              recordsById.set(updatedRecord.id, updatedRecord);
             }
-            remoteRecords = migratedRecords.length > 0 ? migratedRecords : await notaDinasService.getAll();
+            syncedLocalRecordIds.add(localRecord.id);
+          } catch (migrationError) {
+            hasPendingLocalRecords = true;
+            console.error("Gagal menyinkronkan Nota Dinas lokal:", migrationError);
           }
         }
 
-        if (!cancelled) setRecords(remoteRecords);
+        removeSyncedLocalRecords(syncedLocalRecordIds);
+        if (!cancelled) {
+          setRecords([...recordsById.values()]);
+          if (hasPendingLocalRecords) {
+            setRecordsError("Sebagian data lokal belum tersinkron. Periksa koneksi dan coba muat ulang.");
+          }
+        }
       } catch (error) {
         console.error("Gagal memuat Nota Dinas dari Supabase:", error);
         if (!cancelled) {
@@ -298,8 +332,18 @@ const NotaDinasTab = () => {
     };
 
     void loadRecords();
+    const channel = supabase
+      .channel("nota-dinas-records-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "nota_dinas_records" },
+        () => void loadRecords(),
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      void supabase.removeChannel(channel);
     };
   }, []);
 
