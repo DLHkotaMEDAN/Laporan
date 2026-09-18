@@ -69,7 +69,6 @@ const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
-  USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_REKAP_LEMBUR,
   USER_ROLES.ADMIN_NOTA_DINAS,
@@ -156,18 +155,20 @@ Deno.serve(async (request) => {
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
     if (!validRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
-    if (regionRequiredRoles.has(input.role) && !input.regionId) {
+    const assignedRegionId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.regionId;
+    const assignedTeamId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.teamId;
+    if (regionRequiredRoles.has(input.role) && !assignedRegionId) {
       throw new Error('Admin berbasis wilayah wajib memiliki wilayah.');
     }
-    if (input.role === USER_ROLES.USER && !input.teamId) throw new Error('Pengguna tim wajib memiliki tim.');
+    if (input.role === USER_ROLES.USER && !assignedTeamId) throw new Error('Pengguna tim wajib memiliki tim.');
 
-    if (input.regionId) {
-      const { data: region } = await adminClient.from('regions').select('id').eq('id', input.regionId).eq('is_active', true).maybeSingle();
+    if (assignedRegionId) {
+      const { data: region } = await adminClient.from('regions').select('id').eq('id', assignedRegionId).eq('is_active', true).maybeSingle();
       if (!region) throw new Error('Wilayah tidak valid.');
     }
-    if (input.teamId) {
-      const { data: team } = await adminClient.from('teams').select('id, region_id').eq('id', input.teamId).eq('is_active', true).maybeSingle();
-      if (!team || (input.regionId && team.region_id !== input.regionId)) throw new Error('Tim tidak sesuai dengan wilayah.');
+    if (assignedTeamId) {
+      const { data: team } = await adminClient.from('teams').select('id, region_id').eq('id', assignedTeamId).eq('is_active', true).maybeSingle();
+      if (!team || (assignedRegionId && team.region_id !== assignedRegionId)) throw new Error('Tim tidak sesuai dengan wilayah.');
     }
 
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
@@ -181,8 +182,8 @@ Deno.serve(async (request) => {
       id: created.user.id,
       username: input.username.trim(),
       role: input.role,
-      region_id: input.regionId ?? null,
-      team_id: input.teamId ?? null,
+      region_id: assignedRegionId ?? null,
+      team_id: assignedTeamId ?? null,
       is_active: true,
       updated_at: new Date().toISOString(),
     });

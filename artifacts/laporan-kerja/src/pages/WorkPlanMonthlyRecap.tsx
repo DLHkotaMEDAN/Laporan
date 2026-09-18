@@ -21,6 +21,7 @@ import {
   getWorkPlanRemarkKey,
 } from '@/utils/work-plan-display';
 import { useAuth } from '@/context/AuthContext';
+import { isGlobalWorkPlanAdmin } from '@/constants/access-control';
 import { useRegionName } from '@/hooks/useRegionName';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { exportWorkPlanExcel } from '@/utils/work-plan-excel';
@@ -85,7 +86,7 @@ const WorkPlanMonthlyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { session, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isAdmin = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
   const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
   const { regions } = useRegionFilterOptions(isAdmin, selectedRegion);
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;

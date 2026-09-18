@@ -42,7 +42,7 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA, label: 'Admin Laporan Harian dan Rencana Kerja' },
   { value: USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA, label: 'Admin Laporan Mingguan dan Rencana Kerja' },
   { value: USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA, label: 'Admin Laporan Bulanan dan Rencana Kerja' },
-  { value: USER_ROLES.ADMIN_RENCANA_KERJA, label: 'Admin Rencana Kerja' },
+  { value: USER_ROLES.ADMIN_RENCANA_KERJA, label: 'Admin Rencana Kerja (Semua Wilayah)' },
   { value: USER_ROLES.ADMIN_RENCANA_KERJA_BBM, label: 'Admin Rencana Kerja + Admin BBM' },
   { value: USER_ROLES.ADMIN_REKAP_LEMBUR, label: 'Rekap Lembur' },
   { value: USER_ROLES.ADMIN_BBM, label: 'Admin BBM' },
@@ -68,7 +68,6 @@ const REGION_REQUIRED_ROLES = [
   USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
-  USER_ROLES.ADMIN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_REKAP_LEMBUR,
   USER_ROLES.ADMIN_NOTA_DINAS,
@@ -124,6 +123,9 @@ export const isPimpinanAccess = (role: string | null | undefined, email?: string
 
 export const isAdminHarianAccess = (role: string | null | undefined, email?: string | null) =>
   role === USER_ROLES.ADMIN_HARIAN || Boolean(email && (SYSTEM_EMAILS.adminHarian as readonly string[]).includes(email));
+
+export const isGlobalWorkPlanAdmin = (role: string | null | undefined, email?: string | null) =>
+  isSuperAdminAccess(role, email) || role === USER_ROLES.ADMIN_RENCANA_KERJA;
 
 export const isAdminRencanaKerjaAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_RENCANA_KERJA

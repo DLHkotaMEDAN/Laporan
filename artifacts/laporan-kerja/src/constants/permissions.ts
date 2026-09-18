@@ -154,7 +154,7 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles', action: 'read' },
   ],
 
-  // Admin Rencana Kerja – manage work plans only
+  // Admin Rencana Kerja – manage work plans in all regions
   [USER_ROLES.ADMIN_RENCANA_KERJA]: [
     { resource: 'work_plans', action: 'create' },
     { resource: 'work_plans', action: 'read' },

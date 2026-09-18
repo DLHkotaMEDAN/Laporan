@@ -28,7 +28,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isNotaDinasAdmin, roleRequiresRegion } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isGlobalWorkPlanAdmin, isNotaDinasAdmin, roleRequiresRegion } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -233,6 +233,7 @@ const Index = () => {
 
   const isLoggedIn = !!session;
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
+  const canFilterWorkPlanRegions = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isAdminSpjOli = profile?.role === 'admin_spj_oli';
@@ -257,10 +258,10 @@ const Index = () => {
   const canPrintMonthlyRecap = canPrintReportRecap(profile?.role, 'monthly', session?.user?.email);
   const canPrintAnyReportRecap = canPrintDailyRecap || canPrintWeeklyRecap || canPrintMonthlyRecap;
   const showExecutiveHero = isAdmin;
-  const { regions, teams: regionTeams } = useRegionFilterOptions(isAdmin, selectedRegion);
+  const { regions, teams: regionTeams } = useRegionFilterOptions(canFilterWorkPlanRegions, selectedRegion);
   const categories = useMemo(
-    () => isAdmin ? ["semua", ...Array.from(new Set(regionTeams.map(team => team.name)))] : defaultCategories,
-    [isAdmin, regionTeams],
+    () => canFilterWorkPlanRegions ? ["semua", ...Array.from(new Set(regionTeams.map(team => team.name)))] : defaultCategories,
+    [canFilterWorkPlanRegions, regionTeams],
   );
   const loginScopeLabel = isPimpinan
     ? "Pimpinan"
@@ -486,12 +487,12 @@ const Index = () => {
       const matchYear = selectedYear === "semua" || new Date(plan.date).getFullYear().toString() === selectedYear;
       const matchCategory = selectedCategory === "semua" || plan.category === selectedCategory;
       const restrictionMatch = !isUserRestricted || plan.category === profile?.category;
-      const regionMatch = !accountRegionId && (!isAdmin || selectedRegion === "semua" || plan.region_id === selectedRegion)
+      const regionMatch = !accountRegionId && (!canFilterWorkPlanRegions || selectedRegion === "semua" || plan.region_id === selectedRegion)
         || (!!accountRegionId && plan.region_id === accountRegionId);
       
       return matchSearch && matchSpecificDate && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
     });
-  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion, accountRegionId]);
+  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, canFilterWorkPlanRegions, selectedRegion, accountRegionId]);
 
   const formatReportLocation = (report: Report) => {
     return formatLocation(report.location);
@@ -865,13 +866,13 @@ const Index = () => {
                   )}
                   {activeTab === 'workplans' && (
                     <>
-                      <DropdownMenuItem onClick={() => navigate(`/work-plans/daily-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate(`/work-plans/daily-rekap${canFilterWorkPlanRegions && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
                         <Printer className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Rencana
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/work-plans/weekly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate(`/work-plans/weekly-rekap${canFilterWorkPlanRegions && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
                         <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Rencana
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/work-plans/monthly-rekap${isAdmin && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate(`/work-plans/monthly-rekap${canFilterWorkPlanRegions && selectedRegion !== 'semua' ? `?region=${selectedRegion}` : ''}`)} className="py-3 cursor-pointer">
                         <FileText className="mr-3 h-4 w-4 text-purple-600" /> Rekap Bulanan Rencana
                       </DropdownMenuItem>
                     </>
@@ -1013,7 +1014,7 @@ const Index = () => {
                     />
                   </div>
                 </div>
-                {isAdmin && (
+                {canFilterWorkPlanRegions && (
                   <div className="space-y-1.5 lg:col-span-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Wilayah</label>
                     <Select value={selectedRegion} onValueChange={handleRegionChange}>

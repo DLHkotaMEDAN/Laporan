@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
+import { isGlobalWorkPlanAdmin } from '@/constants/access-control';
 import { useRegionName } from '@/hooks/useRegionName';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -34,10 +35,13 @@ const PrintWorkPlan = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
-  const regionName = useRegionName(profile?.region_id, profile?.role === 'admin' ? 'SEMUA WILAYAH' : undefined);
   const [plan, setPlan] = useState<WorkPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const regionName = useRegionName(
+    plan?.region_id ?? profile?.region_id,
+    isGlobalWorkPlanAdmin(profile?.role, session?.user?.email) ? 'SEMUA WILAYAH' : undefined,
+  );
 
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
