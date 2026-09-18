@@ -85,23 +85,23 @@ const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel
 type MainTab = typeof validMainTabs[number];
 
 const systemTabBaseClass =
-  "flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-slate-950 hover:shadow-md focus-visible:ring-2 sm:text-sm lg:w-auto lg:min-w-[9rem] lg:px-4 data-[state=active]:hover:text-white [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
+  "flex h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 sm:text-sm lg:w-auto lg:px-3 xl:px-4 data-[state=active]:hover:text-white [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
 
 const systemTabToneClass: Record<MainTab, string> = {
   reports:
-    "hover:border-blue-200 hover:text-blue-700 focus-visible:ring-blue-400 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(37,99,235,0.22)]",
+    "hover:border-blue-200 hover:text-blue-700 focus-visible:ring-blue-400 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   workplans:
-    "hover:border-emerald-200 hover:text-emerald-700 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-600 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(5,150,105,0.22)]",
+    "hover:border-emerald-200 hover:text-emerald-700 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-600 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   overtime:
-    "hover:border-amber-200 hover:text-amber-700 focus-visible:ring-amber-400 data-[state=active]:border-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(217,119,6,0.22)]",
+    "hover:border-amber-200 hover:text-amber-700 focus-visible:ring-amber-400 data-[state=active]:border-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   fuel_reports:
-    "hover:border-orange-200 hover:text-orange-700 focus-visible:ring-orange-400 data-[state=active]:border-orange-600 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(234,88,12,0.22)]",
+    "hover:border-orange-200 hover:text-orange-700 focus-visible:ring-orange-400 data-[state=active]:border-orange-600 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   fuel_spj:
-    "hover:border-blue-200 hover:text-blue-800 focus-visible:ring-blue-400 data-[state=active]:border-blue-800 data-[state=active]:bg-blue-800 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(30,64,175,0.22)]",
+    "hover:border-blue-200 hover:text-blue-800 focus-visible:ring-blue-400 data-[state=active]:border-blue-800 data-[state=active]:bg-blue-800 data-[state=active]:text-white data-[state=active]:shadow-sm",
   spj_oli:
-    "hover:border-emerald-200 hover:text-emerald-800 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-700 data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(4,120,87,0.22)]",
+    "hover:border-emerald-200 hover:text-emerald-800 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-700 data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-sm",
   nota_dinas:
-    "hover:border-indigo-200 hover:text-indigo-800 focus-visible:ring-indigo-400 data-[state=active]:border-indigo-700 data-[state=active]:bg-indigo-700 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_20px_rgba(67,56,202,0.22)]",
+    "hover:border-indigo-200 hover:text-indigo-800 focus-visible:ring-indigo-400 data-[state=active]:border-indigo-700 data-[state=active]:bg-indigo-700 data-[state=active]:text-white data-[state=active]:shadow-sm",
 };
 
 type IndexViewState = {
@@ -174,30 +174,36 @@ const TabPageHeader = ({
   actionLabel,
   onAction,
   showAction = true,
+  actionIcon: ActionIcon = Plus,
+  actionClassName = "bg-emerald-600 hover:bg-emerald-700",
+  iconClassName = "bg-emerald-50 text-emerald-600",
 }: {
   title: string;
   description: string;
   actionLabel: string;
   onAction: () => void;
   showAction?: boolean;
+  actionIcon?: React.ElementType;
+  actionClassName?: string;
+  iconClassName?: string;
 }) => (
-  <div className="flex flex-col gap-3">
-    <div>
+  <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <div className="flex min-w-0 items-start gap-3">
+      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", iconClassName)}>
+        <ActionIcon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
       <h2 className="text-xl font-black text-slate-950">{title}</h2>
       <p className="text-sm text-slate-500">{description}</p>
+      </div>
     </div>
     {showAction && (
-      <div className="w-full">
-        <Button
-          onClick={onAction}
-          className="inline-flex h-11 w-full min-w-0 items-center justify-center bg-emerald-600 px-4 font-bold hover:bg-emerald-700 sm:h-12 sm:w-auto sm:min-w-[180px] sm:px-5"
-        >
-          <Plus className="mr-2 h-4 w-4 shrink-0" />
+        <Button onClick={onAction} className={cn("h-10 w-full rounded-xl px-4 font-bold shadow-sm sm:w-auto", actionClassName)}>
+          <ActionIcon className="mr-2 h-4 w-4 shrink-0" />
           {actionLabel}
         </Button>
-      </div>
     )}
-  </div>
+  </section>
 );
 
 const Index = () => {
@@ -834,8 +840,8 @@ const Index = () => {
               <div className="flex w-full items-center justify-end border-t border-slate-200/80 pt-3 xl:w-auto xl:shrink-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 w-full min-w-0 justify-center rounded-xl border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md sm:h-11 sm:w-auto sm:px-4">
-                    <Printer className="h-4 w-4 mr-2 text-blue-600" /> Cetak Rekap <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
+                    <Button aria-label="Cetak rekap" title="Cetak rekap" variant="outline" size="sm" className="h-10 w-10 justify-center rounded-xl border-slate-200 bg-white p-0 text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md sm:w-auto sm:px-4">
+                    <Printer className="h-4 w-4 text-blue-600 sm:mr-2" /> <span className="hidden sm:inline">Cetak Rekap</span> <ChevronDown className="hidden h-3 w-3 opacity-50 sm:ml-2 sm:inline" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
@@ -941,6 +947,9 @@ const Index = () => {
               actionLabel="Input Laporan"
               onAction={() => navigate('/create')}
               showAction={canManageReports}
+              actionIcon={FileText}
+              actionClassName="bg-blue-600 hover:bg-blue-700"
+              iconClassName="bg-blue-50 text-blue-600"
             />
           )}
           {activeTab === 'workplans' && (
@@ -950,6 +959,9 @@ const Index = () => {
               actionLabel="Input Rencana Kerja"
               onAction={() => navigate('/work-plans/create')}
               showAction={canManageWorkPlans}
+              actionIcon={ClipboardList}
+              actionClassName="bg-emerald-600 hover:bg-emerald-700"
+              iconClassName="bg-emerald-50 text-emerald-600"
             />
           )}
           {activeTab === 'overtime' && (
@@ -958,6 +970,9 @@ const Index = () => {
               description="Pencatatan kehadiran dan aktivitas lembur."
               actionLabel="Input Rekap Lembur"
               onAction={() => navigate('/overtime/create')}
+              actionIcon={Clock3}
+              actionClassName="bg-amber-600 hover:bg-amber-700"
+              iconClassName="bg-amber-50 text-amber-600"
             />
           )}
           {activeTab === 'fuel_reports' && (
@@ -966,6 +981,9 @@ const Index = () => {
               description="Pencatatan penggunaan bahan bakar minyak."
               actionLabel="Input BBM"
               onAction={() => navigate('/fuel-reports/create')}
+              actionIcon={Fuel}
+              actionClassName="bg-orange-600 hover:bg-orange-700"
+              iconClassName="bg-orange-50 text-orange-600"
             />
           )}
           {activeTab === 'fuel_spj' && (
@@ -974,6 +992,9 @@ const Index = () => {
               description="Pencatatan laporan pertanggungjawaban BBM."
               actionLabel="Input Laporan SPJ"
               onAction={() => navigate('/fuel-reports/spj/create')}
+              actionIcon={FileText}
+              actionClassName="bg-blue-700 hover:bg-blue-800"
+              iconClassName="bg-blue-50 text-blue-700"
             />
           )}
           {/* Filter Section */}
