@@ -125,12 +125,12 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const regionName = (id: string) => regions.find((region) => region.id === id)?.name || '-';
   const teamName = (id: string) => teams.find((team) => team.id === id)?.name || '-';
   const showRegionColumn = canAccessAllSpjOliRegions(profile?.role, profile?.region_id);
-  const columnCount = showRegionColumn ? 11 : 10;
+  const columnCount = showRegionColumn ? 12 : 11;
   // Total selalu 100% supaya kolom terakhir (Keterangan) tidak keluar dari
   // batas A3 saat browser membuka dialog cetak.
   const columnWidths = showRegionColumn
-    ? ['3%', '9%', '6%', '10%', '9%', '13%', '10%', '8%', '5%', '17%', '10%']
-    : ['3%', '10%', '7%', '10%', '14%', '11%', '9%', '5%', '19%', '12%'];
+    ? ['3%', '8%', '6%', '9%', '8%', '11%', '10%', '9%', '7%', '5%', '15%', '9%']
+    : ['3%', '9%', '7%', '9%', '12%', '11%', '10%', '8%', '5%', '17%', '9%'];
   const periodLabel = formatPeriod(period, selectedDate);
   const recapFileName = `Rekap SPJ OLI ${labels[period]} - ${selectedDate} - ${selectedRegion === 'semua' ? 'Semua Wilayah' : regionName(selectedRegion)}`
     .replace(/[\\/:*?"<>|]/g, '-')
@@ -242,7 +242,8 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
                 {showRegionColumn && <th className="border-2 border-black p-1">Wilayah</th>}
                 <th className="border-2 border-black p-1">Tim</th>
                 <th className="border-2 border-black p-1 leading-tight">Alat Operasional/<br />Kendaraan</th>
-                <th className="border-2 border-black p-1 leading-tight">Nama Operator/<br />Supir/Penerima</th>
+                <th className="border-2 border-black p-1 leading-tight">Nama Operator/<br />Pengemudi</th>
+                <th className="border-2 border-black p-1">Nama Penerima</th>
                 <th className="border-2 border-black p-1">Jenis Oli / Minyak Rem</th>
                 <th className="border-2 border-black p-1">Jumlah</th>
                 <th className="border-2 border-black p-1">Lokasi</th>
@@ -257,7 +258,8 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
                     {showRegionColumn && regionRowSpans.has(index) && <td rowSpan={regionRowSpans.get(index)} className="break-words whitespace-normal align-middle border-2 border-black p-1">{regionName(record.region_id)}</td>}
                     <td className="break-words border-2 border-black p-1">{teamName(record.team_id)}</td>
                     <td className="break-words border-2 border-black p-1">{record.vehicle_name || '-'}</td>
-                    <td className="break-words whitespace-normal border-2 border-black p-1">{record.operator_name || record.receiver_name || '-'}</td>
+                    <td className="break-words whitespace-normal border-2 border-black p-1">{record.operator_name || '-'}</td>
+                    <td className="break-words whitespace-normal border-2 border-black p-1">{record.receiver_name || '-'}</td>
                     <td className="break-words border-2 border-black p-1">{record.oil_name}</td>
                     <td className="whitespace-nowrap border-2 border-black p-1 text-right">{record.quantity} {record.unit}</td>
                     <td className="break-words border-2 border-black p-1">{record.location || '-'}</td>

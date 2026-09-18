@@ -27,10 +27,10 @@ export async function exportSpjOliExcel(
   const headers = [
     'No', 'No. SPJ', 'Tanggal',
     ...(showRegionColumn ? ['Wilayah'] : []),
-    'Tim', 'Alat Operasional/\nKendaraan', 'Nama Operator/\nSupir/Penerima',
+    'Tim', 'Alat Operasional/\nKendaraan', 'Nama Operator/\nPengemudi', 'Nama Penerima',
     'Jenis Oli / Minyak Rem', 'Jumlah', 'Lokasi', 'Keterangan',
   ];
-  const lastColumn = showRegionColumn ? 'K' : 'J';
+  const lastColumn = showRegionColumn ? 'L' : 'K';
 
   sheet.mergeCells(`A1:${lastColumn}1`);
   sheet.getCell('A1').value = 'REKAP SPJ OLI';
@@ -60,7 +60,8 @@ export async function exportSpjOliExcel(
       ...(showRegionColumn ? [regionName(record.region_id)] : []),
       teamName(record.team_id),
       record.vehicle_name || '-',
-      record.operator_name || record.receiver_name || '-',
+      record.operator_name || '-',
+      record.receiver_name || '-',
       record.oil_name,
       `${record.quantity} ${record.unit}`,
       record.location || '-',
@@ -114,8 +115,8 @@ export async function exportSpjOliExcel(
   });
 
   sheet.columns = showRegionColumn
-    ? [{ width: 6 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 20 }, { width: 28 }, { width: 20 }, { width: 20 }, { width: 10 }, { width: 38 }, { width: 28 }]
-    : [{ width: 6 }, { width: 18 }, { width: 10 }, { width: 20 }, { width: 28 }, { width: 20 }, { width: 20 }, { width: 10 }, { width: 38 }, { width: 28 }];
+    ? [{ width: 6 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 18 }, { width: 25 }, { width: 20 }, { width: 20 }, { width: 18 }, { width: 10 }, { width: 34 }, { width: 24 }]
+    : [{ width: 6 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 25 }, { width: 20 }, { width: 20 }, { width: 18 }, { width: 10 }, { width: 34 }, { width: 24 }];
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), `${fileName}.xlsx`);

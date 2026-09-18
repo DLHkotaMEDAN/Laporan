@@ -49,6 +49,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spj
       <datalist id="spj-oli-number-options">{Array.from(new Set(spjNumberRecords.map(record => record.spj_number).filter(Boolean))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-vehicle-options">{vehicleOptions.map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-operator-options">{Array.from(new Set(savedRecords.map(record => record.operator_name).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
+      <datalist id="spj-oli-receiver-options">{Array.from(new Set(savedRecords.map(record => record.receiver_name).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-oil-options">{Array.from(new Set([...defaultOilOptions, ...savedRecords.map(record => record.oil_name).filter(Boolean)])).map(value => <option key={value} value={value} />)}</datalist>
       <datalist id="spj-oli-location-options">{Array.from(new Set(savedRecords.map(record => record.location).filter((value): value is string => Boolean(value)))).map(value => <option key={value} value={value} />)}</datalist>
       <div className="flex items-center justify-between"><div><h1 className="text-2xl font-black">{editing ? 'Edit' : 'Input'} SPJ Oli</h1><p className="text-sm text-slate-500">Wilayah dan Tim menggunakan master yang tersedia. <span className="text-xs text-slate-400">{lastSavedAt ? 'Draft tersimpan' : 'Draft akan tersimpan otomatis'}</span></p></div><Button type="button" variant="outline" onClick={onCancel}>Kembali</Button></div>
@@ -58,7 +59,8 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spj
         <label className="space-y-1 text-sm font-semibold">Wilayah<Select value={form.region_id} onValueChange={value => { onChange('region_id', value); onChange('team_id', ''); }} disabled={regionLocked}><SelectTrigger><SelectValue placeholder="Pilih wilayah" /></SelectTrigger><SelectContent>{regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></label>
         <label className="space-y-1 text-sm font-semibold">Tim / Operator<Select value={form.team_id} onValueChange={value => onChange('team_id', value)} disabled={!form.region_id}><SelectTrigger><SelectValue placeholder="Pilih Tim / Operator" /></SelectTrigger><SelectContent>{[...teams.filter(team => team.region_id === form.region_id), ...(selectedTeam && !teams.some(team => team.id === selectedTeam.id) ? [selectedTeam] : [])].map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></label>
         <label className="space-y-1 text-sm font-semibold">Alat Operasional / Kendaraan<Input list="spj-oli-vehicle-options" value={form.vehicle_name} onChange={e => onChange('vehicle_name', e.target.value)} placeholder="Pilih atau ketik kendaraan" /></label>
-        <label className="space-y-1 text-sm font-semibold">Nama Operator / Pengemudi / Penerima<Input list="spj-oli-operator-options" value={form.operator_name} onChange={e => onChange('operator_name', e.target.value)} placeholder="Nama operator, pengemudi, atau penerima" /></label>
+        <label className="space-y-1 text-sm font-semibold">Nama Operator / Pengemudi<Input list="spj-oli-operator-options" value={form.operator_name} onChange={e => onChange('operator_name', e.target.value)} placeholder="Nama operator atau pengemudi" /></label>
+        <label className="space-y-1 text-sm font-semibold">Nama Penerima<Input list="spj-oli-receiver-options" value={form.receiver_name} onChange={e => onChange('receiver_name', e.target.value)} placeholder="Nama penerima" /></label>
         <label className="space-y-1 text-sm font-semibold">Jenis Oli / Minyak Rem<Input list="spj-oli-oil-options" value={form.oil_name} onChange={e => onChange('oil_name', e.target.value)} placeholder="Pilih atau ketik jenis oli / minyak rem" /></label>
         <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-sm font-semibold">Jumlah<Input type="number" min="0" step="0.01" value={form.quantity} onChange={e => onChange('quantity', e.target.valueAsNumber || 0)} /></label><label className="space-y-1 text-sm font-semibold">Satuan<Select value={form.unit} onValueChange={value => onChange('unit', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Liter">Liter</SelectItem><SelectItem value="Botol">Botol</SelectItem><SelectItem value="Pcs">Pcs</SelectItem></SelectContent></Select></label></div>
         <label className="space-y-1 text-sm font-semibold md:col-span-2">Lokasi Kerja<Input list="spj-oli-location-options" value={form.location} onChange={e => onChange('location', e.target.value)} placeholder="Lokasi kerja penggunaan oli" /></label>
@@ -257,6 +259,7 @@ export default function SpjOli() {
                 <th className="p-3 text-left">Wilayah</th>
                 <th className="p-3 text-left">Tim / Operator</th>
                 <th className="p-3 text-left">No. SPJ</th>
+                <th className="p-3 text-left">Nama Penerima</th>
                 <th className="p-3 text-left">Jenis Oli / Minyak Rem</th>
                 <th className="p-3 text-right">Jumlah</th>
                 <th className="p-3 text-left">Keterangan</th>
@@ -265,7 +268,7 @@ export default function SpjOli() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={editable ? 9 : 8} className="p-10 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr>
+                <tr><td colSpan={editable ? 10 : 9} className="p-10 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr>
               ) : filtered.length ? filtered.map((record, index) => (
                 <tr key={record.id} className={cn('border-t hover:bg-emerald-50/50', index % 2 && 'bg-slate-50/70')}>
                   <td className="p-3 text-center font-bold text-slate-500">{index + 1}</td>
@@ -273,13 +276,14 @@ export default function SpjOli() {
                   <td className="p-3"><Badge variant="outline" className="bg-emerald-50 text-emerald-700">{regionName(record.region_id)}</Badge></td>
                   <td className="p-3">{teamName(record.team_id)}</td>
                   <td className="p-3 font-semibold">{record.spj_number}</td>
+                  <td className="p-3">{record.receiver_name || '-'}</td>
                   <td className="p-3">{record.oil_name}</td>
                   <td className="p-3 text-right font-mono">{record.quantity} {record.unit}</td>
                   <td className="p-3 text-slate-500">{record.remarks || '-'}</td>
                   {editable && <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => navigate(`/spj-oli/edit/${record.id}`)}><Edit className="h-4 w-4 text-blue-600" /></Button><Button variant="ghost" size="icon" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button></td>}
                 </tr>
               )) : (
-                <tr><td colSpan={editable ? 9 : 8} className="p-12 text-center text-slate-500">Tidak ada data SPJ Oli.</td></tr>
+                <tr><td colSpan={editable ? 10 : 9} className="p-12 text-center text-slate-500">Tidak ada data SPJ Oli.</td></tr>
               )}
             </tbody>
           </table>
