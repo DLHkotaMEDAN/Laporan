@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
-import { FuelReport, FuelType } from '@/types/fuelReport';
+import { FuelReport, FuelReportType, FuelType } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { fuelPriceService } from '@/services/fuelPriceService';
 import { medanDistricts } from '@/data/medan-districts';
@@ -45,6 +45,8 @@ const parseRupiahInput = (value: string) => Number(value.replace(/\D/g, '') || 0
 
 const usageItemSchema = z.object({
   vehicle_operator: z.string().min(1, "Wajib diisi"),
+  no_pol: z.string().optional().default(""),
+  recipient_name: z.string().optional().default(""),
   // The form captures all fuel types in one vehicle row. They are expanded
   // back into the existing database item format when saving.
   fuel_type: z.string().optional(),
@@ -71,9 +73,11 @@ const toFormItems = (items: FuelReport['items']) => {
 
   items.forEach(item => {
     const locationKey = JSON.stringify(item.location || {});
-    const key = `${item.vehicle_operator}|${locationKey}`;
+    const key = `${item.vehicle_operator}|${item.no_pol || ''}|${locationKey}`;
     const current = grouped.get(key) || {
       vehicle_operator: item.vehicle_operator || '',
+      no_pol: item.no_pol || '',
+      recipient_name: item.recipient_name || '',
       fuel_type: item.fuel_type,
       amount_rp: 0,
       amount_liter: 0,
@@ -86,7 +90,7 @@ const toFormItems = (items: FuelReport['items']) => {
       activity_detail: item.activity_detail || '',
       is_location_same: item.is_location_same ?? false,
       requires_fuel: true,
-      location: { street: '', subDistrict: '', village: '', ...(item.location || {}) },
+      location: { ...(item.location || {}), street: item.location?.street || '', subDistrict: item.location?.subDistrict || '', village: item.location?.village || '' },
     };
     const amountRp = item.amount_rp || (item.fuel_type !== 'Oli' ? item.amount || 0 : 0);
     const amountLiter = item.amount_liter || (item.fuel_type === 'Oli' ? item.amount || 0 : 0);
@@ -109,7 +113,8 @@ const toFormItems = (items: FuelReport['items']) => {
 const formSchema = z.object({
   date: z.string().min(1, "Tanggal wajib diisi"),
   region: z.string().min(1, "Wilayah wajib dipilih"),
-  team: z.string().min(1, "Tim wajib dipilih"),
+  team: z.string().optional().default(""),
+  no_spj: z.string().optional().default(""),
   price_pertamax: z.coerce.number().min(1, "Harga wajib diisi"),
   price_dexlite: z.coerce.number().min(1, "Harga wajib diisi"),
   items: z.array(usageItemSchema).min(1, "Minimal satu detail pemakaian"),
@@ -119,9 +124,10 @@ const formSchema = z.object({
 interface FuelReportFormProps {
   initialData?: FuelReport;
   isEditing?: boolean;
+  reportType?: FuelReportType;
 }
 
-const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps) => {
+const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bbm' }: FuelReportFormProps) => {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,6 +146,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   // Admin BBM is a cross-region role. Only the combined/regional roles are
   // restricted to the region assigned to their profile.
   const isRegionalFuelAdmin = !isGlobalFuelAdmin(profile?.role) && (profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isSuperAdmin;
+  const isLaporanBbm = reportType === 'laporan_bbm';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -147,15 +154,19 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
       ...initialData,
       price_pertamax: initialData.price_pertamax || 13500,
       price_dexlite: initialData.price_dexlite || 14500,
+      no_spj: initialData.no_spj || '',
       items: toFormItems(initialData.items),
     } : {
       date: new Date().toISOString().split('T')[0],
       region: "",
       team: "",
+      no_spj: "",
       price_pertamax: 13500,
       price_dexlite: 14500,
-      items: [{ 
-        vehicle_operator: "", 
+      items: [{
+        vehicle_operator: "",
+        no_pol: "",
+        recipient_name: "",
         amount_rp: 0,
         amount_liter: 0,
         pertamax_rp: 0,
@@ -174,7 +185,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   });
 
   const draftKey = session?.user?.id
-    ? `fuel-report:${session.user.id}:${initialData?.id ?? 'new'}`
+    ? `fuel-report:${reportType}:${session.user.id}:${initialData?.id ?? 'new'}`
     : undefined;
   const { clearDraft, lastSavedAt } = useFormDraft(form, draftKey);
 
@@ -186,7 +197,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const reports = await fuelService.getAllReports(false, isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null);
+        const reports = await fuelService.getAllReports(false, isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null, reportType);
         const vehicles = new Set<string>();
         const streets = new Set<string>();
         const officers = new Set<string>();
@@ -204,7 +215,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
     };
     fetchHistory();
     if (!isEditing) fetchPrices();
-  }, [isEditing, isRegionalFuelAdmin, profile?.region_id]);
+  }, [isEditing, isRegionalFuelAdmin, profile?.region_id, reportType]);
 
   const fetchPrices = async () => {
     try {
@@ -260,6 +271,8 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
 
     append({
       vehicle_operator: requiresFuel ? "" : lastVehicle || "-",
+      no_pol: "",
+      recipient_name: "",
       fuel_type: undefined,
       amount_rp: 0,
       amount_liter: 0,
@@ -289,6 +302,14 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
 
     setIsSubmitting(true);
     try {
+      if (isLaporanBbm && !values.no_spj.trim()) {
+        showError("No. SPJ wajib diisi untuk Laporan BBM.");
+        return;
+      }
+      if (!values.team?.trim()) {
+        showError("Tim wajib dipilih.");
+        return;
+      }
       if (isRegionalFuelAdmin && !profileRegion) {
         showError("Admin BBM belum memiliki wilayah. Atur wilayah akun di Manajemen Pengguna.");
         return;
@@ -309,11 +330,15 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         team: values.team,
         region_id: selectedRegionId,
         team_id: selectedTeamId,
+        report_type: reportType,
+        no_spj: values.no_spj.trim(),
         price_pertamax: values.price_pertamax,
         price_dexlite: values.price_dexlite,
         items: values.items.flatMap(item => {
           const base = {
             vehicle_operator: item.vehicle_operator || "-",
+            no_pol: item.no_pol?.trim() || "",
+            recipient_name: item.recipient_name?.trim() || "",
             item_remarks: item.item_remarks || "",
             activity_detail: item.activity_detail || "",
             is_location_same: item.is_location_same,
@@ -367,7 +392,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold text-primary">
-              {isEditing ? "Edit Laporan BBM & Oli" : "Input Laporan BBM & Oli"}
+              {isEditing ? (isLaporanBbm ? "Edit Laporan BBM" : "Edit Laporan BBM & Oli") : (isLaporanBbm ? "Input Laporan BBM" : "Input Laporan BBM & Oli")}
             </h1>
             <p className="text-[10px] text-slate-500">{lastSavedAt ? "Draft tersimpan" : "Draft akan tersimpan otomatis"}</p>
           </div>
@@ -377,9 +402,9 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
         </div>
 
         <Card className="border-t-4 border-t-blue-600">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Info className="h-5 w-5 text-blue-500" /> Informasi Wilayah & Tim</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Info className="h-5 w-5 text-blue-500" /> {isLaporanBbm ? 'Informasi Wilayah, Tim & SPJ' : 'Informasi Wilayah & Tim'}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={cn("grid grid-cols-1 gap-4", isLaporanBbm ? "md:grid-cols-3" : "md:grid-cols-2")}>
               <FormField control={form.control} name="date" render={({ field }) => (
                 <FormItem><FormLabel>Tanggal</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -407,6 +432,13 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                   <FormMessage />
                 </FormItem>
               )} />
+              {isLaporanBbm && <FormField control={form.control} name="no_spj" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>No. SPJ</FormLabel>
+                  <FormControl><Input placeholder="Masukkan nomor SPJ" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />}
             </div>
 
             <div className="pt-4 border-t border-slate-100">
@@ -491,12 +523,17 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                   
                   {requiresFuel && (
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                      <div className="md:col-span-3">
+                      <div className={cn(isLaporanBbm ? "md:col-span-2" : "md:col-span-3")}>
                         <FormField control={form.control} name={`items.${index}.vehicle_operator`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs font-bold">Kendaraan / Alat</FormLabel><FormControl><Input placeholder="Plat Nomor" list="fuel-history-vehicles" {...field} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs font-bold">Kendaraan / Alat</FormLabel><FormControl><Input placeholder="Nama kendaraan atau alat" list="fuel-history-vehicles" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
-                      <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {isLaporanBbm && <div className="md:col-span-2">
+                        <FormField control={form.control} name={`items.${index}.no_pol`} render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs font-bold">No. Polisi</FormLabel><FormControl><Input placeholder="Contoh: BK 1234 AB" className="uppercase" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                      </div>}
+                      <div className={cn("grid grid-cols-1 sm:grid-cols-3 gap-2", isLaporanBbm ? "md:col-span-6" : "md:col-span-7")}>
                         <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-2 space-y-2">
                           <p className="text-xs font-bold text-blue-700">PERTAMAX</p>
                           <FormField control={form.control} name={`items.${index}.pertamax_rp`} render={({ field }) => (
@@ -523,7 +560,23 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                           )} />
                         </div>
                       </div>
-                      <div className="md:col-span-2">
+                      {isLaporanBbm && <div className="space-y-3 md:col-span-2">
+                        <FormField control={form.control} name={`items.${index}.recipient_name`} render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-bold">Nama Penerima</FormLabel>
+                            <FormControl><Input placeholder="Nama penerima..." className="h-10" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name={`items.${index}.item_remarks`} render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-bold">Petugas</FormLabel>
+                            <FormControl><Input placeholder="Nama petugas..." className="h-10" list="fuel-history-officers" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>}
+                      {!isLaporanBbm && <div className="md:col-span-2">
                         <FormField control={form.control} name={`items.${index}.item_remarks`} render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs font-bold">Petugas</FormLabel>
@@ -531,7 +584,7 @@ const FuelReportForm = ({ initialData, isEditing = false }: FuelReportFormProps)
                             <FormMessage />
                           </FormItem>
                         )} />
-                      </div>
+                      </div>}
                     </div>
                   )}
 

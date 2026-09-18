@@ -1,9 +1,12 @@
 "use client";
 
 export type FuelType = "Pertamax" | "Dexlite" | "Oli";
+export type FuelReportType = "admin_bbm" | "laporan_bbm";
 
 export interface FuelUsageItem {
   vehicle_operator: string;
+  no_pol?: string;
+  recipient_name?: string;
   fuel_type: FuelType;
   amount: number; // Tetap dipertahankan untuk kompatibilitas data lama
   amount_rp: number; // Kolom baru
@@ -24,6 +27,8 @@ export interface FuelReport {
   date: string;
   region: string;
   team: string;
+  report_type?: FuelReportType;
+  no_spj?: string;
   region_id?: string | null;
   team_id?: string | null;
   items: FuelUsageItem[];

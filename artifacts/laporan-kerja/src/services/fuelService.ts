@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { FuelReport } from '@/types/fuelReport';
+import { FuelReport, FuelReportType } from '@/types/fuelReport';
 import { auditLogService } from '@/services/auditLogService';
 
 const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
@@ -21,7 +21,7 @@ const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
 };
 
 export const fuelService = {
-  async getAllReports(includeDeleted = false, regionId?: string | null) {
+  async getAllReports(includeDeleted = false, regionId?: string | null, reportType: FuelReportType | null = 'admin_bbm') {
     return fetchAllPages<FuelReport>(() => {
       let query = supabase
         .from('fuel_reports')
@@ -30,6 +30,10 @@ export const fuelService = {
 
       if (regionId) {
         query = query.eq('region_id', regionId);
+      }
+
+      if (reportType) {
+        query = query.eq('report_type', reportType);
       }
       
       if (!includeDeleted) {
@@ -42,7 +46,7 @@ export const fuelService = {
     });
   },
 
-  async getReportsBySpecificDate(date: string, regionId?: string | null) {
+  async getReportsBySpecificDate(date: string, regionId?: string | null, reportType: FuelReportType | null = 'admin_bbm') {
     return fetchAllPages<FuelReport>(() => {
       let query = supabase
         .from('fuel_reports')
@@ -55,11 +59,15 @@ export const fuelService = {
         query = query.eq('region_id', regionId);
       }
 
+      if (reportType) {
+        query = query.eq('report_type', reportType);
+      }
+
       return query;
     });
   },
 
-  async getReportsByDateRange(startDate: string, endDate: string, regionId?: string | null) {
+  async getReportsByDateRange(startDate: string, endDate: string, regionId?: string | null, reportType: FuelReportType | null = 'admin_bbm') {
     return fetchAllPages<FuelReport>(() => {
       let query = supabase
         .from('fuel_reports')
@@ -71,6 +79,10 @@ export const fuelService = {
 
       if (regionId) {
         query = query.eq('region_id', regionId);
+      }
+
+      if (reportType) {
+        query = query.eq('report_type', reportType);
       }
 
       return query;

@@ -82,7 +82,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_spj', 'spj_oli', 'nota_dinas'] as const;
+const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'laporan_bbm', 'fuel_spj', 'spj_oli', 'nota_dinas'] as const;
 type MainTab = typeof validMainTabs[number];
 
 const systemTabBaseClass =
@@ -97,6 +97,8 @@ const systemTabToneClass: Record<MainTab, string> = {
     "hover:border-amber-200 hover:text-amber-700 focus-visible:ring-amber-400 data-[state=active]:border-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   fuel_reports:
     "hover:border-orange-200 hover:text-orange-700 focus-visible:ring-orange-400 data-[state=active]:border-orange-600 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
+  laporan_bbm:
+    "hover:border-amber-200 hover:text-amber-800 focus-visible:ring-amber-400 data-[state=active]:border-amber-700 data-[state=active]:bg-amber-700 data-[state=active]:text-white data-[state=active]:shadow-sm",
   fuel_spj:
     "hover:border-blue-200 hover:text-blue-800 focus-visible:ring-blue-400 data-[state=active]:border-blue-800 data-[state=active]:bg-blue-800 data-[state=active]:text-white data-[state=active]:shadow-sm",
   spj_oli:
@@ -823,6 +825,11 @@ const Index = () => {
                       <Fuel size={16} /> Admin BBM
                     </TabsTrigger>
                   )}
+                  {(isAdmin || isAdminBbm) && (
+                    <TabsTrigger value="laporan_bbm" className={cn(systemTabBaseClass, systemTabToneClass.laporan_bbm)}>
+                      <FileText size={16} /> Laporan BBM
+                    </TabsTrigger>
+                  )}
                   {(isAdmin || isPimpinan || isAdminSpj) && (
                     <TabsTrigger value="fuel_spj" className={cn(systemTabBaseClass, systemTabToneClass.fuel_spj)}>
                       <Table size={16} /> Laporan SPJ
@@ -990,6 +997,17 @@ const Index = () => {
               actionIcon={Fuel}
               actionClassName="bg-orange-600 hover:bg-orange-700"
               iconClassName="bg-orange-50 text-orange-600"
+            />
+          )}
+          {activeTab === 'laporan_bbm' && (
+            <TabPageHeader
+              title="Laporan BBM"
+              description="Pencatatan BBM per wilayah dengan No. SPJ dan No. Polisi kendaraan atau alat."
+              actionLabel="Input Laporan BBM"
+              onAction={() => navigate('/laporan-bbm/create')}
+              actionIcon={Fuel}
+              actionClassName="bg-amber-700 hover:bg-amber-800"
+              iconClassName="bg-amber-50 text-amber-700"
             />
           )}
           {activeTab === 'fuel_spj' && (
@@ -1303,6 +1321,11 @@ const Index = () => {
               {(isAdmin || isAdminBbm) && (
                 <TabsContent value="fuel_reports" className="mt-0">
                   <FuelReportTab regionId={accountRegionId} />
+                </TabsContent>
+              )}
+              {(isAdmin || isAdminBbm) && (
+                <TabsContent value="laporan_bbm" className="mt-0">
+                  <FuelReportTab regionId={accountRegionId} reportType="laporan_bbm" />
                 </TabsContent>
               )}
               {(isAdmin || isPimpinan || isAdminSpj) && (

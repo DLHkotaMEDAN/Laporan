@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FuelReport, FuelUsageItem } from '@/types/fuelReport';
+import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ interface FlatRow {
   rowNo: number;
 }
 
-type SortKey = 'no' | 'date' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'remarks';
+type SortKey = 'no' | 'date' | 'spj' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'receiver' | 'remarks';
 type SortDirection = 'asc' | 'desc';
 
 const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
@@ -55,6 +55,7 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
 
   switch (key) {
     case 'date': return report.date || '';
+    case 'spj': return report.no_spj || '';
     case 'region': return report.region || '';
     case 'team': return report.team || '';
     case 'vehicle': return firstItem?.vehicle_operator || '';
@@ -62,6 +63,7 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
     case 'liters': return items.reduce((total, item) => total + Number(item.amount_liter || (item.fuel_type === 'Oli' ? item.amount : 0) || 0), 0);
     case 'value': return items.reduce((total, item) => total + (item.fuel_type === 'Oli' ? 0 : Number(item.amount_rp || item.amount || 0)), 0);
     case 'location': return firstItem?.location?.street || '';
+    case 'receiver': return firstItem?.recipient_name || '';
     case 'remarks': return firstItem?.item_remarks || '';
   }
 };
@@ -69,6 +71,8 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
 const getFuelReportDuplicateKey = (report: FuelReport) => {
   const items = (report.items || []).map((item) => ({
     vehicle_operator: normalizeText(item.vehicle_operator),
+    no_pol: normalizeText(item.no_pol),
+    recipient_name: normalizeText(item.recipient_name),
     fuel_type: item.fuel_type,
     amount: Number(item.amount || 0),
     amount_rp: Number(item.amount_rp || 0),
@@ -81,6 +85,7 @@ const getFuelReportDuplicateKey = (report: FuelReport) => {
 
   return JSON.stringify({
     date: report.date,
+    no_spj: normalizeText(report.no_spj),
     region: normalizeText(report.region),
     team: normalizeText(report.team),
     remarks: normalizeText(report.remarks),
@@ -90,10 +95,17 @@ const getFuelReportDuplicateKey = (report: FuelReport) => {
   });
 };
 
-const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
+interface FuelReportTabProps {
+  regionId?: string | null;
+  reportType?: FuelReportType;
+}
+
+const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReportTabProps) => {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
   const isAccountActive = profile?.is_active !== false;
+  const isLaporanBbm = reportType === 'laporan_bbm';
+  const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,7 +129,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
 
   useEffect(() => {
     loadReports(appliedDate, appliedMonth, appliedYear);
-  }, [appliedDate, appliedMonth, appliedYear, regionId]);
+  }, [appliedDate, appliedMonth, appliedYear, regionId, reportType]);
 
   const loadReports = async (date: string, month: string, year: string) => {
     const id = ++reqIdRef.current;
@@ -126,27 +138,27 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
       let data: FuelReport[];
 
       if (date) {
-        data = await fuelService.getReportsBySpecificDate(date, regionId);
+        data = await fuelService.getReportsBySpecificDate(date, regionId, reportType);
       } else if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
       } else if (year !== "semua") {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
       } else if (month !== "semua") {
         const y = new Date().getFullYear();
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
       } else {
-        data = await fuelService.getAllReports(false, regionId);
+        data = await fuelService.getAllReports(false, regionId, reportType);
       }
 
       if (id !== reqIdRef.current) return;
@@ -262,9 +274,12 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
       const search = searchQuery.toLowerCase();
       const matchSearch = !search ||
         r.team.toLowerCase().includes(search) ||
+        (r.no_spj || '').toLowerCase().includes(search) ||
         r.region.toLowerCase().includes(search) ||
         r.items?.some(item => item.location.street.toLowerCase().includes(search)) ||
-        r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search));
+        r.items?.some(item => item.vehicle_operator.toLowerCase().includes(search)) ||
+        r.items?.some(item => (item.no_pol || '').toLowerCase().includes(search)) ||
+        r.items?.some(item => (item.recipient_name || '').toLowerCase().includes(search));
       const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
       const selectedRegionName = regions.find((region) => region.id === selectedRegion)?.name;
       const selectedTeamName = regionTeams.find((team) => team.id === selectedTeam)?.name;
@@ -354,7 +369,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
       <div className="bg-white p-4 rounded-xl border shadow-sm space-y-3">
         <div className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end">
           <div className="col-span-2 md:col-span-3 space-y-1">
-            <label className="text-[10px] font-bold uppercase text-slate-500">Cari Tim / Wilayah / Lokasi</label>
+            <label className="text-[10px] font-bold uppercase text-slate-500">{isLaporanBbm ? 'Cari No. SPJ / Tim / Wilayah / Kendaraan' : 'Cari Tim / Wilayah / Lokasi'}</label>
             <div className="flex gap-2">
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -483,19 +498,22 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
       ) : flatRows.length > 0 ? (
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse min-w-[900px]">
+            <table className="w-full text-xs border-collapse min-w-[1050px]">
               <thead>
                 <tr className="bg-slate-700 text-white">
                   {sortableHeader('No', 'no', 'text-center w-10')}
                   {sortableHeader('Tanggal', 'date', 'text-center w-24')}
+                  {isLaporanBbm && sortableHeader('No. SPJ', 'spj', 'text-left w-32')}
                   {sortableHeader('Wilayah', 'region', 'text-left w-24')}
                   {sortableHeader('Tim', 'team', 'text-left w-32')}
-                  {sortableHeader('Kendaraan / Operator', 'vehicle', 'text-left')}
+                  {sortableHeader('Kendaraan / Alat', 'vehicle', 'text-left')}
+                  {isLaporanBbm && <th className="px-3 py-2.5 text-left font-semibold w-28">No. Polisi</th>}
                   {sortableHeader('Jenis BBM', 'fuelType', 'text-center w-20')}
                   {sortableHeader('Jml (L)', 'liters', 'text-right w-20')}
                   {sortableHeader('Nilai (Rp)', 'value', 'text-right w-28')}
                   {sortableHeader('Lokasi', 'location', 'text-left')}
-                  {sortableHeader('Keterangan Item', 'remarks', 'text-left w-28')}
+                  {isLaporanBbm && sortableHeader('Penerima', 'receiver', 'text-left w-32')}
+                  {sortableHeader('Petugas', 'remarks', 'text-left w-28')}
                   <th className="px-3 py-2.5 text-center font-semibold w-20">Aksi</th>
                 </tr>
               </thead>
@@ -540,6 +558,11 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
                           </Badge>
                         </td>
                       )}
+                      {isLaporanBbm && isFirstItem && (
+                        <td rowSpan={row.totalItems} className={cn("px-3 py-2 font-semibold text-slate-700 border-r border-slate-100 align-middle", borderTop)}>
+                          {row.report.no_spj || '-'}
+                        </td>
+                      )}
                       {isFirstItem && (
                         <td rowSpan={row.totalItems} className={cn("px-3 py-2 font-semibold text-slate-800 border-r border-slate-100 align-middle", borderTop)}>
                           {row.report.team}
@@ -549,6 +572,9 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
                       <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
                         {row.item.vehicle_operator}
                       </td>
+                      {isLaporanBbm && <td className={cn("px-3 py-2 font-medium text-slate-600 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                        {row.item.no_pol || '-'}
+                      </td>}
                       <td className={cn("px-3 py-2 text-center border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
                         <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", fuelBadgeColor(row.item.fuel_type))}>
                           {row.item.fuel_type}
@@ -566,6 +592,9 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
                           <span className="text-slate-400 text-[10px]"> — {row.item.location.subDistrict}</span>
                         )}
                       </td>
+                      {isLaporanBbm && <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100 max-w-[140px]", borderTop && isFirstItem ? borderTop : '')}>
+                        <span className="line-clamp-2">{row.item.recipient_name || '-'}</span>
+                      </td>}
                       <td className={cn("px-3 py-2 text-slate-500 italic border-r border-slate-100 max-w-[120px]", borderTop && isFirstItem ? borderTop : '')}>
                         <span className="line-clamp-2">{row.item.item_remarks || '-'}</span>
                       </td>
@@ -576,7 +605,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`/fuel-reports/${row.reportId}`)}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`${routeBase}/${row.reportId}`)}>
                                     <Eye size={13} />
                                   </Button>
                                 </TooltipTrigger>
@@ -586,7 +615,7 @@ const FuelReportTab = ({ regionId = null }: { regionId?: string | null }) => {
                             {isAccountActive && <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => navigate(`/fuel-reports/edit/${row.reportId}`)}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => navigate(`${routeBase}/edit/${row.reportId}`)}>
                                     <Edit size={13} />
                                   </Button>
                                 </TooltipTrigger>

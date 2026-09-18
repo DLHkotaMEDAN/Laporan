@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Fuel, MapPin, Calendar, ShieldCheck, Edit, Calculator } from 'lucide-react';
-import { FuelReport } from '@/types/fuelReport';
+import { FuelReport, FuelReportType } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,11 @@ import { showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 
-const FuelReportDetail = () => {
+interface FuelReportDetailProps {
+  reportType?: FuelReportType;
+}
+
+const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
@@ -22,6 +26,8 @@ const FuelReportDetail = () => {
 
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isLaporanBbm = reportType === 'laporan_bbm';
+  const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
 
   useEffect(() => { if (id) loadReport(id); }, [id]);
 
@@ -29,10 +35,11 @@ const FuelReportDetail = () => {
     try {
       setLoading(true);
       const data = await fuelService.getReportById(reportId);
+      if (data.report_type !== reportType) throw new Error('Laporan tidak ditemukan');
       setReport(data);
     } catch (error) {
       showError("Laporan tidak ditemukan");
-      navigate('/fuel-reports');
+      navigate(routeBase);
     } finally {
       setLoading(false);
     }
@@ -51,7 +58,7 @@ const FuelReportDetail = () => {
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="max-w-4xl auto space-y-6">
         <div className="flex items-center justify-between no-print">
-          <Button variant="ghost" onClick={() => navigate('/fuel-reports')} className="px-2 md:px-4 h-9">
+          <Button variant="ghost" onClick={() => navigate(routeBase)} className="px-2 md:px-4 h-9">
             <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Kembali</span>
           </Button>
           
@@ -62,7 +69,7 @@ const FuelReportDetail = () => {
                   <ShieldCheck className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Mode Pantau</span>
                 </Badge>
               )}
-              <Button variant="outline" onClick={() => navigate(`/fuel-reports/edit/${report.id}`)} className="h-9">
+              <Button variant="outline" onClick={() => navigate(`${routeBase}/edit/${report.id}`)} className="h-9">
                 <Edit className="h-4 w-4 md:mr-2" /> Edit
               </Button>
             </div>
@@ -79,7 +86,7 @@ const FuelReportDetail = () => {
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle className="text-2xl font-black flex items-center gap-2">
-                  <Fuel className="text-orange-600 h-6 w-6" /> LAPORAN BBM & OLI
+                  <Fuel className="text-orange-600 h-6 w-6" /> {isLaporanBbm ? 'LAPORAN BBM' : 'LAPORAN BBM & OLI'}
                 </CardTitle>
                 <p className="text-slate-500 font-medium mt-1">{report.team} - {report.region}</p>
               </div>
@@ -91,12 +98,13 @@ const FuelReportDetail = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-8">
+            {isLaporanBbm && <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm"><span className="font-bold text-blue-800">No. SPJ:</span> <span className="ml-2 font-semibold text-slate-700">{report.no_spj || '-'}</span></div>}
             <div className="grid gap-4">
               <h3 className="text-sm font-bold uppercase text-slate-400 tracking-widest">Detail Pemakaian</h3>
               {report.items.map((item, idx) => (
                 <div key={idx} className="p-4 border rounded-xl bg-white shadow-sm space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="font-black text-slate-800">{item.vehicle_operator}</span>
+                    <div><span className="font-black text-slate-800">{item.vehicle_operator}</span>{isLaporanBbm && <p className="mt-0.5 text-xs font-medium text-slate-500">No. Polisi: {item.no_pol || '-'}</p>}</div>
                     <div className="flex gap-2">
                       <Badge className={cn(
                         "font-bold",
@@ -120,6 +128,12 @@ const FuelReportDetail = () => {
                     <MapPin className="h-4 w-4 mt-0.5 text-red-500 shrink-0" />
                     <span>{item.location.street}, {item.location.subDistrict}, {item.location.village}</span>
                   </div>
+                  {isLaporanBbm && item.recipient_name && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Penerima:</p>
+                      <p className="text-xs font-medium text-slate-700">{item.recipient_name}</p>
+                    </div>
+                  )}
                   {item.item_remarks && (
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Keterangan:</p>

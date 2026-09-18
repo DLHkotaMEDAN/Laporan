@@ -10,7 +10,7 @@ import {
   Table, FileText, CalendarDays, LogOut, ArrowRight, Settings2,
   Eye, ArrowDownAZ, ArrowDownZA, ArrowDownUp
 } from 'lucide-react';
-import { FuelReport, FuelUsageItem } from '@/types/fuelReport';
+import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
@@ -56,7 +56,7 @@ interface FlatRow {
   rowNo: number;
 }
 
-type SortKey = 'no' | 'date' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'remarks';
+type SortKey = 'no' | 'date' | 'spj' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'receiver' | 'remarks';
 type SortDirection = 'asc' | 'desc';
 const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
 
@@ -66,6 +66,7 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
 
   switch (key) {
     case 'date': return report.date || '';
+    case 'spj': return report.no_spj || '';
     case 'region': return report.region || '';
     case 'team': return report.team || '';
     case 'vehicle': return firstItem?.vehicle_operator || '';
@@ -73,6 +74,7 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
     case 'liters': return items.reduce((total, item) => total + Number(item.amount_liter || (item.fuel_type === 'Oli' ? item.amount : 0) || 0), 0);
     case 'value': return items.reduce((total, item) => total + (item.fuel_type === 'Oli' ? 0 : Number(item.amount_rp || item.amount || 0)), 0);
     case 'location': return firstItem?.location?.street || '';
+    case 'receiver': return firstItem?.recipient_name || '';
     case 'remarks': return firstItem?.item_remarks || '';
   }
 };
@@ -80,6 +82,8 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
 const getFuelReportDuplicateKey = (report: FuelReport) => {
   const items = (report.items || []).map((item) => ({
     vehicle_operator: normalizeText(item.vehicle_operator),
+    no_pol: normalizeText(item.no_pol),
+    recipient_name: normalizeText(item.recipient_name),
     fuel_type: item.fuel_type,
     amount: Number(item.amount || 0),
     amount_rp: Number(item.amount_rp || 0),
@@ -92,6 +96,7 @@ const getFuelReportDuplicateKey = (report: FuelReport) => {
 
   return JSON.stringify({
     date: report.date,
+    no_spj: normalizeText(report.no_spj),
     region: normalizeText(report.region),
     team: normalizeText(report.team),
     remarks: normalizeText(report.remarks),
@@ -101,7 +106,11 @@ const getFuelReportDuplicateKey = (report: FuelReport) => {
   });
 };
 
-const FuelReportList = () => {
+interface FuelReportListProps {
+  reportType?: FuelReportType;
+}
+
+const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const navigate = useNavigate();
   const { profile, session, signOut } = useAuth();
   const [reports, setReports] = useState<FuelReport[]>([]);
@@ -122,6 +131,8 @@ const FuelReportList = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 100;
+  const isLaporanBbm = reportType === 'laporan_bbm';
+  const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
 
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
@@ -152,7 +163,7 @@ const FuelReportList = () => {
   useEffect(() => {
     if (!isAllowed) return;
     loadReports(appliedDate, appliedMonth, appliedYear);
-  }, [isAllowed, appliedDate, appliedMonth, appliedYear, fuelRegionId]);
+  }, [isAllowed, appliedDate, appliedMonth, appliedYear, fuelRegionId, reportType]);
 
   const loadReports = async (date: string, month: string, year: string) => {
     const id = ++reqIdRef.current;
@@ -161,32 +172,32 @@ const FuelReportList = () => {
       let data: FuelReport[];
 
       if (date) {
-        data = await fuelService.getReportsBySpecificDate(date, fuelRegionId);
+        data = await fuelService.getReportsBySpecificDate(date, fuelRegionId, reportType);
       } else if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
       } else if (year !== "semua") {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
       } else if (month !== "semua") {
         const y = new Date().getFullYear();
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
+        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
       } else {
-        data = await fuelService.getAllReports(false, fuelRegionId);
+        data = await fuelService.getAllReports(false, fuelRegionId, reportType);
       }
 
       // Ambil seluruh data aktif sebagai pembanding sehingga filter tidak
       // membuat salah satu pasangan duplikat hilang dari analisis.
-      const duplicateSource = await fuelService.getAllReports(false, fuelRegionId);
+      const duplicateSource = await fuelService.getAllReports(false, fuelRegionId, reportType);
       if (id !== reqIdRef.current) return;
       setReports(data);
       setAllActiveReports(duplicateSource);
@@ -313,9 +324,12 @@ const FuelReportList = () => {
       const search = searchQuery.trim().toLowerCase();
       const matchSearch = !search ||
         (r.team || '').toLowerCase().includes(search) ||
+        (r.no_spj || '').toLowerCase().includes(search) ||
         (r.region || '').toLowerCase().includes(search) ||
         r.items?.some(item => (item.location?.street || '').toLowerCase().includes(search)) ||
-        r.items?.some(item => (item.vehicle_operator || '').toLowerCase().includes(search));
+        r.items?.some(item => (item.vehicle_operator || '').toLowerCase().includes(search)) ||
+        r.items?.some(item => (item.no_pol || '').toLowerCase().includes(search)) ||
+        r.items?.some(item => (item.recipient_name || '').toLowerCase().includes(search));
       const matchDuplicate = !showDuplicatesOnly || duplicateReportKeys.has(getFuelReportDuplicateKey(r));
       const selectedRegionName = regions.find((region) => region.id === selectedRegion)?.name;
       const selectedTeamName = regionTeams.find((team) => team.id === selectedTeam)?.name;
@@ -423,7 +437,7 @@ const FuelReportList = () => {
                       </Badge>
                     )}
                   </div>
-                  <h1 className="text-lg font-black tracking-tight text-slate-950 md:text-2xl">Sistem Laporan BBM & Oli</h1>
+                  <h1 className="text-lg font-black tracking-tight text-slate-950 md:text-2xl">{isLaporanBbm ? 'Laporan BBM' : 'Sistem Laporan BBM & Oli'}</h1>
                   <p className="text-xs font-semibold text-slate-500 md:text-sm">Dinas Lingkungan Hidup Kota Medan</p>
                 </div>
               </div>
@@ -434,7 +448,7 @@ const FuelReportList = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {(isAdmin || profile?.role === 'admin_spj_bbm') && (
+            {!isLaporanBbm && (isAdmin || profile?.role === 'admin_spj_bbm') && (
               <Button variant="outline" onClick={() => navigate('/fuel-reports/spj')} className="bg-blue-50 text-blue-700 border-blue-200 h-9 px-3 text-xs font-bold">
                 <FileText className="h-3.5 w-3.5 mr-1.5" /> Laporan SPJ <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
@@ -443,7 +457,7 @@ const FuelReportList = () => {
               <Settings2 className="mr-1.5 h-3.5 w-3.5 text-blue-600" /> Master Harga BBM
             </Button>
             {isAllowed && <Button variant="outline" onClick={() => setIsTrashOpen(true)} className="border-red-200 bg-red-50 text-red-700 h-9 px-3 text-xs font-bold hover:bg-red-100"><Trash2 className="mr-1.5 h-3.5 w-3.5" /> Tempat Sampah</Button>}
-            <DropdownMenu>
+            {!isLaporanBbm && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="bg-white border-slate-200 h-9 px-3 text-xs">
                   <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Rekap
@@ -464,7 +478,7 @@ const FuelReportList = () => {
                   <CalendarDays className="mr-2 h-3.5 w-3.5 text-orange-600" /> Rekap Tahunan
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -476,7 +490,7 @@ const FuelReportList = () => {
               </Tooltip>
             </TooltipProvider>
             {canInputFuelReport && (
-              <Button onClick={() => navigate('/fuel-reports/create')} className="bg-blue-600 hover:bg-blue-700 h-9 px-4 font-bold shadow-sm text-xs ml-auto">
+              <Button onClick={() => navigate(`${routeBase}/create`)} className="bg-blue-600 hover:bg-blue-700 h-9 px-4 font-bold shadow-sm text-xs ml-auto">
                 <Plus className="mr-1.5 h-4 w-4" /> Input Baru
               </Button>
             )}
@@ -487,7 +501,7 @@ const FuelReportList = () => {
         <div className="bg-white p-4 rounded-xl shadow-sm border space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end">
             <div className="col-span-2 md:col-span-3 space-y-1">
-              <label className="text-[10px] font-bold uppercase text-slate-500">Cari Tim / Wilayah / Lokasi</label>
+              <label className="text-[10px] font-bold uppercase text-slate-500">{isLaporanBbm ? 'Cari No. SPJ / Tim / Wilayah / Kendaraan' : 'Cari Tim / Wilayah / Lokasi'}</label>
               <div className="flex gap-2">
                 <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -605,19 +619,22 @@ const FuelReportList = () => {
         ) : flatRows.length > 0 ? (
           <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse min-w-[900px]">
+              <table className="w-full text-xs border-collapse min-w-[1050px]">
                 <thead>
                   <tr className="bg-slate-700 text-white">
                     {sortableHeader('No', 'no', 'text-center w-10')}
                     {sortableHeader('Tanggal', 'date', 'text-center w-24')}
+                    {isLaporanBbm && sortableHeader('No. SPJ', 'spj', 'text-left w-32')}
                     {sortableHeader('Wilayah', 'region', 'text-left w-24')}
                     {sortableHeader('Tim', 'team', 'text-left w-32')}
-                    {sortableHeader('Kendaraan / Operator', 'vehicle', 'text-left')}
+                    {sortableHeader('Kendaraan / Alat', 'vehicle', 'text-left')}
+                    {isLaporanBbm && <th className="px-3 py-2.5 text-left font-semibold w-28">No. Polisi</th>}
                     {sortableHeader('Jenis BBM', 'fuelType', 'text-center w-20')}
                     {sortableHeader('Jml (L)', 'liters', 'text-right w-20')}
                     {sortableHeader('Nilai (Rp)', 'value', 'text-right w-28')}
                     {sortableHeader('Lokasi', 'location', 'text-left')}
-                    {sortableHeader('Keterangan Item', 'remarks', 'text-left w-28')}
+                    {isLaporanBbm && sortableHeader('Penerima', 'receiver', 'text-left w-32')}
+                    {sortableHeader('Petugas', 'remarks', 'text-left w-28')}
                     {!isPimpinan && (
                       <th className="px-3 py-2.5 text-center font-semibold w-20">Aksi</th>
                     )}
@@ -657,6 +674,11 @@ const FuelReportList = () => {
                             </div>
                           </td>
                         )}
+                        {isLaporanBbm && isFirstItem && (
+                          <td rowSpan={row.totalItems} className={cn("px-3 py-2 font-semibold text-slate-700 border-r border-slate-100 align-middle", borderTop)}>
+                            {row.report.no_spj || '-'}
+                          </td>
+                        )}
                         {isFirstItem && (
                           <td rowSpan={row.totalItems} className={cn("px-3 py-2 border-r border-slate-100 align-middle", borderTop)}>
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] whitespace-nowrap">
@@ -673,6 +695,9 @@ const FuelReportList = () => {
                         <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
                           {row.item.vehicle_operator}
                         </td>
+                        {isLaporanBbm && <td className={cn("px-3 py-2 font-medium text-slate-600 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                          {row.item.no_pol || '-'}
+                        </td>}
                         <td className={cn("px-3 py-2 text-center border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
                           <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", fuelBadgeColor(row.item.fuel_type))}>
                             {row.item.fuel_type}
@@ -690,6 +715,9 @@ const FuelReportList = () => {
                             <span className="text-slate-400 text-[10px]"> — {row.item.location.subDistrict}</span>
                           )}
                         </td>
+                        {isLaporanBbm && <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100 max-w-[140px]", borderTop && isFirstItem ? borderTop : '')}>
+                          <span className="line-clamp-2">{row.item.recipient_name || '-'}</span>
+                        </td>}
                         <td className={cn("px-3 py-2 text-slate-500 italic border-r border-slate-100 max-w-[120px]", borderTop && isFirstItem ? borderTop : '')}>
                           <span className="line-clamp-2">{row.item.item_remarks || '-'}</span>
                         </td>
@@ -700,7 +728,7 @@ const FuelReportList = () => {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`/fuel-reports/${row.reportId}`)}>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`${routeBase}/${row.reportId}`)}>
                                       <Eye size={13} />
                                     </Button>
                                   </TooltipTrigger>
@@ -710,7 +738,7 @@ const FuelReportList = () => {
                               {isAccountActive && <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => navigate(`/fuel-reports/edit/${row.reportId}`)}>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => navigate(`${routeBase}/edit/${row.reportId}`)}>
                                       <Edit size={13} />
                                     </Button>
                                   </TooltipTrigger>
@@ -735,7 +763,7 @@ const FuelReportList = () => {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`/fuel-reports/${row.reportId}`)}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600 hover:bg-slate-100" onClick={() => navigate(`${routeBase}/${row.reportId}`)}>
                                     <Eye size={13} />
                                   </Button>
                                 </TooltipTrigger>

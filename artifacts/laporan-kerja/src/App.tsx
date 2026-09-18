@@ -29,6 +29,10 @@ import FuelReportList from "./pages/FuelReportList";
 import CreateFuelReport from "./pages/CreateFuelReport";
 import EditFuelReport from "./pages/EditFuelReport";
 import FuelReportDetail from "./pages/FuelReportDetail";
+import LaporanBbmList from "./pages/LaporanBbmList";
+import CreateLaporanBbm from "./pages/CreateLaporanBbm";
+import EditLaporanBbm from "./pages/EditLaporanBbm";
+import LaporanBbmDetail from "./pages/LaporanBbmDetail";
 import FuelDailyRecap from "./pages/FuelDailyRecap";
 import FuelWeeklyRecap from "./pages/FuelWeeklyRecap";
 import FuelMonthlyRecap from "./pages/FuelMonthlyRecap";
@@ -328,6 +332,10 @@ const App = () => (
             <Route path="/fuel-reports/weekly-rekap" element={<FuelReportRoute><FuelWeeklyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/monthly-rekap" element={<FuelReportRoute><FuelMonthlyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/yearly-rekap" element={<FuelReportRoute><FuelYearlyRecap /></FuelReportRoute>} />
+            <Route path="/laporan-bbm" element={<FuelReportRoute><LaporanBbmList /></FuelReportRoute>} />
+            <Route path="/laporan-bbm/create" element={<FuelReportRoute><CreateLaporanBbm /></FuelReportRoute>} />
+            <Route path="/laporan-bbm/edit/:id" element={<FuelReportRoute><EditLaporanBbm /></FuelReportRoute>} />
+            <Route path="/laporan-bbm/:id" element={<FuelReportRoute><LaporanBbmDetail /></FuelReportRoute>} />
 
             <Route path="/fuel-reports/spj" element={<FuelSpjRoute><FuelSpjReportList /></FuelSpjRoute>} />
             <Route path="/fuel-reports/spj/create" element={<FuelSpjRoute><CreateFuelSpjReport /></FuelSpjRoute>} />
