@@ -316,12 +316,13 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       showError("Akun nonaktif hanya dapat melihat dan mencetak data.");
       return;
     }
-    const isAllowed = profile?.role === 'admin'
-      || profile?.role === 'admin_bbm'
-      || profile?.role === 'admin_rencana_kerja_bbm'
-      || profile?.role === 'admin_wilayah_bbm'
-      || (isLaporanBbm && profile?.role === 'admin_laporan_bbm')
-      || session?.user?.email === 'admin@gmail.com';
+    const isAllowed = isLaporanBbm
+      ? isSuperAdmin || profile?.role === 'admin_laporan_bbm'
+      : profile?.role === 'admin'
+        || profile?.role === 'admin_bbm'
+        || profile?.role === 'admin_rencana_kerja_bbm'
+        || profile?.role === 'admin_wilayah_bbm'
+        || session?.user?.email === 'admin@gmail.com';
     if (!isAllowed) {
       showError("Anda tidak memiliki izin untuk menyimpan laporan ini");
       return;

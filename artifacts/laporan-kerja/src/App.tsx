@@ -57,6 +57,7 @@ import {
   canAccessFuelArea,
   canPrintAdminRecap,
   getRoleLandingPath,
+  isSuperAdminAccess,
   isAdminHarianAccess,
   isAdminBbmAccess,
   isLaporanBbmAdmin,
@@ -226,10 +227,8 @@ const LaporanBbmRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  const isAllowed = isLaporanBbmAdmin(profile?.role)
-    || (canAccessFuelArea(profile?.role, session.user.email)
-      && profile?.role !== USER_ROLES.ADMIN_SPJ_BBM
-      && profile?.role !== USER_ROLES.ADMIN_SPJ_OLI);
+  const isAllowed = isSuperAdminAccess(profile?.role, session.user.email)
+    || isLaporanBbmAdmin(profile?.role);
   if (!isAllowed) return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
 
   return <>{children}</>;

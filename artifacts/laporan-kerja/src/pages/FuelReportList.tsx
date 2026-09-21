@@ -142,8 +142,12 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const isAccountActive = profile?.is_active !== false;
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const canInputFuelReport = isAccountActive && (isSuperAdmin || isAdminBbm || (isLaporanBbm && isAdminLaporanBbm));
-  const isAllowed = isSuperAdmin || isAdminBbm || isPimpinan || (isLaporanBbm && isAdminLaporanBbm);
+  const canInputFuelReport = isAccountActive && (isLaporanBbm
+    ? isSuperAdmin || isAdminLaporanBbm
+    : isSuperAdmin || isAdminBbm);
+  const isAllowed = isLaporanBbm
+    ? isSuperAdmin || isAdminLaporanBbm
+    : isSuperAdmin || isAdminBbm || isPimpinan;
   const roleLabel = isAdmin
     ? "Administrator"
     : isPimpinan

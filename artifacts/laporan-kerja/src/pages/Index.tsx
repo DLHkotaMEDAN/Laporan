@@ -298,12 +298,15 @@ const Index = () => {
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
     const savedTab = savedViewStateRef.current.activeTab;
+    const canViewLaporanBbm = isAdmin || isAdminLaporanBbm;
 
     if (isNotaDinasOnly) {
       setActiveTab("nota_dinas");
     } else if (isOvertimeOnly) {
       setActiveTab("overtime");
-    } else if (isMainTab(requestedTab) && (requestedTab !== "nota_dinas" || isAdmin || isNotaDinasOnly)) {
+    } else if (isMainTab(requestedTab)
+      && (requestedTab !== "nota_dinas" || isAdmin || isNotaDinasOnly)
+      && (requestedTab !== "laporan_bbm" || canViewLaporanBbm)) {
       setActiveTab(requestedTab);
     } else if (isAdminLaporanBbm) {
       setActiveTab("laporan_bbm");
@@ -314,7 +317,10 @@ const Index = () => {
     } else if (isAdminSpjOli) {
       setActiveTab("spj_oli");
     } else if (savedTab) {
-      const safeSavedTab = savedTab === "nota_dinas" && !isAdmin && !isNotaDinasOnly ? "reports" : savedTab;
+      const safeSavedTab = (savedTab === "nota_dinas" && !isAdmin && !isNotaDinasOnly)
+        || (savedTab === "laporan_bbm" && !canViewLaporanBbm)
+        ? isAdminBbm ? "fuel_reports" : "reports"
+        : savedTab;
       setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && safeSavedTab === "reports" ? "workplans" : safeSavedTab);
     } else {
       setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
@@ -828,7 +834,7 @@ const Index = () => {
                       <Fuel size={16} /> Admin BBM
                     </TabsTrigger>
                   )}
-                  {(isAdmin || isAdminBbm || isAdminLaporanBbm) && (
+                  {(isAdmin || isAdminLaporanBbm) && (
                     <TabsTrigger value="laporan_bbm" className={cn(systemTabBaseClass, systemTabToneClass.laporan_bbm)}>
                       <FileText size={16} /> Laporan BBM
                     </TabsTrigger>
@@ -1326,7 +1332,7 @@ const Index = () => {
                   <FuelReportTab regionId={accountRegionId} />
                 </TabsContent>
               )}
-              {(isAdmin || isAdminBbm || isAdminLaporanBbm) && (
+              {(isAdmin || isAdminLaporanBbm) && (
                 <TabsContent value="laporan_bbm" className="mt-0">
                   <FuelReportTab regionId={accountRegionId} reportType="laporan_bbm" />
                 </TabsContent>
