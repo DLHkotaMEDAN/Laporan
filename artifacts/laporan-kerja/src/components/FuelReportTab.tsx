@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { laporanBbmService } from '@/services/laporanBbmService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
@@ -127,6 +128,16 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
   const reqIdRef = useRef(0);
   const specificDateInputRef = useRef<HTMLInputElement>(null);
 
+  const getAllReports = () => isLaporanBbm
+    ? laporanBbmService.getAllReports(false, regionId)
+    : fuelService.getAllReports(false, regionId);
+  const getReportsBySpecificDate = (date: string) => isLaporanBbm
+    ? laporanBbmService.getReportsBySpecificDate(date, regionId)
+    : fuelService.getReportsBySpecificDate(date, regionId);
+  const getReportsByDateRange = (startDate: string, endDate: string) => isLaporanBbm
+    ? laporanBbmService.getReportsByDateRange(startDate, endDate, regionId)
+    : fuelService.getReportsByDateRange(startDate, endDate, regionId);
+
   useEffect(() => {
     if (!profile || !session) return;
     loadReports(appliedDate, appliedMonth, appliedYear);
@@ -139,27 +150,27 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
       let data: FuelReport[];
 
       if (date) {
-        data = await fuelService.getReportsBySpecificDate(date, regionId, reportType);
+        data = await getReportsBySpecificDate(date);
       } else if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
+        data = await getReportsByDateRange(startDate, endDate);
       } else if (year !== "semua") {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
+        data = await getReportsByDateRange(startDate, endDate);
       } else if (month !== "semua") {
         const y = new Date().getFullYear();
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
+        data = await getReportsByDateRange(startDate, endDate);
       } else {
-        data = await fuelService.getAllReports(false, regionId, reportType);
+        data = await getAllReports();
       }
 
       if (id !== reqIdRef.current) return;
@@ -230,7 +241,11 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
     if (!isAccountActive) return;
     if (!confirm("Hapus laporan ini?")) return;
     try {
-      await fuelService.deleteReport(id);
+      if (isLaporanBbm) {
+        await laporanBbmService.deleteReport(id);
+      } else {
+        await fuelService.deleteReport(id);
+      }
       setReports(prev => prev.filter(r => r.id !== id));
       showSuccess("Laporan dihapus");
     } catch (error) {

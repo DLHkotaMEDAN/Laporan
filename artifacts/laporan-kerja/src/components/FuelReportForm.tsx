@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { FuelReport, FuelReportType, FuelType } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { laporanBbmService } from '@/services/laporanBbmService';
 import { fuelPriceService } from '@/services/fuelPriceService';
 import { medanDistricts } from '@/data/medan-districts';
 import { useAuth } from '@/context/AuthContext';
@@ -206,7 +207,10 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const reports = await fuelService.getAllReports(false, isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null, reportType);
+        const regionId = isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null;
+        const reports = isLaporanBbm
+          ? await laporanBbmService.getAllReports(false, regionId)
+          : await fuelService.getAllReports(false, regionId);
         const vehicles = new Map<string, string>();
         const noPolisi = new Map<string, string>();
         const streets = new Map<string, string>();
@@ -354,7 +358,6 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         team: values.team,
         region_id: selectedRegionId,
         team_id: selectedTeamId,
-        report_type: reportType,
         price_pertamax: values.price_pertamax,
         price_dexlite: values.price_dexlite,
         items: values.items.flatMap(item => {
@@ -385,10 +388,18 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       };
 
       if (isEditing && initialData) {
-        await fuelService.updateReport(initialData.id, finalData);
+        if (isLaporanBbm) {
+          await laporanBbmService.updateReport(initialData.id, finalData);
+        } else {
+          await fuelService.updateReport(initialData.id, finalData);
+        }
         showSuccess("Laporan BBM diperbarui");
       } else {
-        await fuelService.createReport(finalData);
+        if (isLaporanBbm) {
+          await laporanBbmService.createReport(finalData);
+        } else {
+          await fuelService.createReport(finalData);
+        }
         showSuccess("Laporan BBM disimpan");
       }
       await clearDraft();

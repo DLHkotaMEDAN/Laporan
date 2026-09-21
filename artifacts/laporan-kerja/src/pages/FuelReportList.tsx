@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin, isLaporanBbmAdmin } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
@@ -160,6 +161,16 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const reqIdRef = useRef(0);
   const specificDateInputRef = useRef<HTMLInputElement>(null);
 
+  const getAllReports = (includeDeleted = false) => isLaporanBbm
+    ? laporanBbmService.getAllReports(includeDeleted, fuelRegionId)
+    : fuelService.getAllReports(includeDeleted, fuelRegionId);
+  const getReportsBySpecificDate = (date: string) => isLaporanBbm
+    ? laporanBbmService.getReportsBySpecificDate(date, fuelRegionId)
+    : fuelService.getReportsBySpecificDate(date, fuelRegionId);
+  const getReportsByDateRange = (startDate: string, endDate: string) => isLaporanBbm
+    ? laporanBbmService.getReportsByDateRange(startDate, endDate, fuelRegionId)
+    : fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
+
   useEffect(() => {
     if (!isAllowed && profile) {
       showError("Akses ditolak. Hanya Administrator yang dapat mengakses halaman ini.");
@@ -180,32 +191,32 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
       let data: FuelReport[];
 
       if (date) {
-        data = await fuelService.getReportsBySpecificDate(date, fuelRegionId, reportType);
+        data = await getReportsBySpecificDate(date);
       } else if (month !== "semua" && year !== "semua") {
         const y = parseInt(year);
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
+        data = await getReportsByDateRange(startDate, endDate);
       } else if (year !== "semua") {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
+        data = await getReportsByDateRange(startDate, endDate);
       } else if (month !== "semua") {
         const y = new Date().getFullYear();
         const m = parseInt(month);
         const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
+        data = await getReportsByDateRange(startDate, endDate);
       } else {
-        data = await fuelService.getAllReports(false, fuelRegionId, reportType);
+        data = await getAllReports();
       }
 
       // Ambil seluruh data aktif sebagai pembanding sehingga filter tidak
       // membuat salah satu pasangan duplikat hilang dari analisis.
-      const duplicateSource = await fuelService.getAllReports(false, fuelRegionId, reportType);
+      const duplicateSource = await getAllReports();
       if (id !== reqIdRef.current) return;
       setReports(data);
       setAllActiveReports(duplicateSource);
@@ -266,7 +277,11 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
     if (!isAccountActive || isPimpinan) return;
     if (!confirm("Hapus laporan ini?")) return;
     try {
-      await fuelService.deleteReport(id);
+      if (isLaporanBbm) {
+        await laporanBbmService.deleteReport(id);
+      } else {
+        await fuelService.deleteReport(id);
+      }
       setReports(prev => prev.filter(r => r.id !== id));
       showSuccess("Laporan dihapus");
     } catch (error) {
