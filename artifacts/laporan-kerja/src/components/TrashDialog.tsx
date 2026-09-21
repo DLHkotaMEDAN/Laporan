@@ -9,6 +9,7 @@ import { Trash2, RotateCcw, FileText, ClipboardList, Fuel, Calendar, MapPin, Loa
 import { reportService } from '@/services/reportService';
 import { workPlanService } from '@/services/workPlanService';
 import { fuelService } from '@/services/fuelService';
+import { laporanBbmService } from '@/services/laporanBbmService';
 import { fuelSpjService } from '@/services/fuelSpjService';
 import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
@@ -58,7 +59,11 @@ const TrashDialog = ({ isOpen, onClose, onRefresh, fuelReportType = 'admin_bbm' 
       const results = await Promise.allSettled([
         reportService.getAllReports(categoryFilter, true),
         workPlanService.getAllWorkPlans(categoryFilter, true),
-        canViewFuelTrash ? fuelService.getAllReports(true, fuelRegionId, fuelReportType) : Promise.resolve([]),
+        canViewFuelTrash
+          ? fuelReportType === 'laporan_bbm'
+            ? laporanBbmService.getAllReports(true, fuelRegionId)
+            : fuelService.getAllReports(true, fuelRegionId)
+          : Promise.resolve([]),
         canViewSpjTrash ? fuelSpjService.getAllReports(true) : Promise.resolve([]),
       ]);
       const deletedReports: Report[] = results[0].status === 'fulfilled' ? results[0].value as Report[] : [];
@@ -90,7 +95,10 @@ const TrashDialog = ({ isOpen, onClose, onRefresh, fuelReportType = 'admin_bbm' 
     try {
       if (type === 'REPORT') await reportService.restoreReport(id);
       if (type === 'WORK_PLAN') await workPlanService.restoreWorkPlan(id);
-      if (type === 'FUEL_REPORT') await fuelService.restoreReport(id);
+      if (type === 'FUEL_REPORT') {
+        if (fuelReportType === 'laporan_bbm') await laporanBbmService.restoreReport(id);
+        else await fuelService.restoreReport(id);
+      }
       if (type === 'FUEL_SPJ_REPORT') await fuelSpjService.restoreReport(id);
       if (session?.user && (type === 'REPORT' || type === 'WORK_PLAN')) await auditLogService.logAction({ action: 'UPDATE', entityType: type, entityId: id, details: { title: `Memulihkan data: ${title}` }, userId: session.user.id, username: profile?.username || session.user.email || 'User' });
       showSuccess('Data berhasil dipulihkan');

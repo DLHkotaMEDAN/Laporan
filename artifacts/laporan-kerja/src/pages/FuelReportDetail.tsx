@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Fuel, MapPin, Calendar, ShieldCheck, Edit, Calculator } from 'lucide-react';
 import { FuelReport, FuelReportType } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { showError } from '@/utils/toast';
@@ -34,7 +35,9 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
   const loadReport = async (reportId: string) => {
     try {
       setLoading(true);
-      const data = await fuelService.getReportById(reportId);
+      const data = isLaporanBbm
+        ? await laporanBbmService.getReportById(reportId)
+        : await fuelService.getReportById(reportId);
       if (data.report_type !== reportType) throw new Error('Laporan tidak ditemukan');
       setReport(data);
     } catch (error) {
@@ -47,7 +50,11 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
 
   const handleSaveNote = async (note: string) => {
     if (!report) return;
-    await fuelService.updateReport(report.id, { pimpinan_note: note });
+    if (isLaporanBbm) {
+      await laporanBbmService.updateReport(report.id, { pimpinan_note: note });
+    } else {
+      await fuelService.updateReport(report.id, { pimpinan_note: note });
+    }
     setReport({ ...report, pimpinan_note: note });
   };
 

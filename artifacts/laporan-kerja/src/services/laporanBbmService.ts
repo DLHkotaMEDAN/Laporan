@@ -60,7 +60,8 @@ export const laporanBbmService = {
   },
 
   async createReport(report: Omit<FuelReport, 'id' | 'created_at'>) {
-    const { data, error } = await supabase.from(TABLE).insert([report]).select().single();
+    const { report_type: _reportType, ...payload } = report;
+    const { data, error } = await supabase.from(TABLE).insert([payload]).select().single();
     if (error) throw error;
     const normalized = normalize(data as FuelReport);
     void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'LAPORAN_BBM_REPORT', entityId: normalized.id, details: { date: normalized.date, team: normalized.team, region: normalized.region } });

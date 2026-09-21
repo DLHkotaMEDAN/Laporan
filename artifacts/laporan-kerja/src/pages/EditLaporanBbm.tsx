@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import FuelReportForm from '@/components/FuelReportForm';
-import { fuelService } from '@/services/fuelService';
+import { laporanBbmService } from '@/services/laporanBbmService';
 import { FuelReport } from '@/types/fuelReport';
 import { showError } from '@/utils/toast';
 
@@ -15,7 +15,7 @@ const EditLaporanBbm = () => {
 
   useEffect(() => {
     if (!id) return;
-    void fuelService.getReportById(id)
+    void laporanBbmService.getReportById(id)
       .then((data) => {
         if (data.report_type !== 'laporan_bbm') throw new Error('not-found');
         setReport(data);
