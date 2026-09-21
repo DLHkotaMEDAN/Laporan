@@ -330,10 +330,6 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
 
     setIsSubmitting(true);
     try {
-      if (isLaporanBbm && !values.no_spj.trim()) {
-        showError("No. SPJ wajib diisi untuk Laporan BBM.");
-        return;
-      }
       if (!values.team?.trim()) {
         showError("Tim wajib dipilih.");
         return;
@@ -359,7 +355,6 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         region_id: selectedRegionId,
         team_id: selectedTeamId,
         report_type: reportType,
-        no_spj: values.no_spj.trim(),
         price_pertamax: values.price_pertamax,
         price_dexlite: values.price_dexlite,
         items: values.items.flatMap(item => {
@@ -386,6 +381,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
             .map(entry => ({ ...base, ...entry, amount: entry.fuel_type === 'Oli' ? entry.amount_liter : entry.amount_rp }));
         }),
         remarks: values.remarks,
+        ...(isLaporanBbm ? { no_spj: values.no_spj.trim() } : {}),
       };
 
       if (isEditing && initialData) {
