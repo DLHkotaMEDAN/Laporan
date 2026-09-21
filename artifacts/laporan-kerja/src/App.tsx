@@ -59,6 +59,7 @@ import {
   getRoleLandingPath,
   isAdminHarianAccess,
   isAdminBbmAccess,
+  isLaporanBbmAdmin,
   isAdminRencanaKerjaAccess,
 } from "@/constants/access-control";
 import { AuthorizeRoute } from "@/components/AuthorizeRoute";
@@ -163,6 +164,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (
     isAdminBbmAccess(profile?.role)
+    || isLaporanBbmAdmin(profile?.role)
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
     || isAdminRencanaKerjaAccess(profile?.role)
   ) {
@@ -182,6 +184,7 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (
     isAdminBbmAccess(profile?.role)
+    || isLaporanBbmAdmin(profile?.role)
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
   ) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
@@ -196,7 +199,8 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
   
-  const isAllowed = canAccessFuelArea(profile?.role, session.user.email);
+  const isAllowed = canAccessFuelArea(profile?.role, session.user.email)
+    && !isLaporanBbmAdmin(profile?.role);
                     
   if (!isAllowed) return <Navigate to="/" />;
   
@@ -209,9 +213,24 @@ const FuelReportRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  if (!canAccessFuelArea(profile?.role, session.user.email) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM) {
+  if (!canAccessFuelArea(profile?.role, session.user.email) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || isLaporanBbmAdmin(profile?.role)) {
     return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
   }
+
+  return <>{children}</>;
+};
+
+const LaporanBbmRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  const isAllowed = isLaporanBbmAdmin(profile?.role)
+    || (canAccessFuelArea(profile?.role, session.user.email)
+      && profile?.role !== USER_ROLES.ADMIN_SPJ_BBM
+      && profile?.role !== USER_ROLES.ADMIN_SPJ_OLI);
+  if (!isAllowed) return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
 
   return <>{children}</>;
 };
@@ -222,7 +241,7 @@ const FuelSpjRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  if (!canAccessFuelArea(profile?.role, session.user.email) || isAdminBbmAccess(profile?.role)) {
+  if (!canAccessFuelArea(profile?.role, session.user.email) || isAdminBbmAccess(profile?.role) || isLaporanBbmAdmin(profile?.role)) {
     return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
   }
 
@@ -248,7 +267,7 @@ const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => 
   const { profile, loading } = useAuth();
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
-  if (isAdminBbmAccess(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_OLI) {
+  if (isAdminBbmAccess(profile?.role) || isLaporanBbmAdmin(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_OLI) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
 
@@ -332,10 +351,10 @@ const App = () => (
             <Route path="/fuel-reports/weekly-rekap" element={<FuelReportRoute><FuelWeeklyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/monthly-rekap" element={<FuelReportRoute><FuelMonthlyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/yearly-rekap" element={<FuelReportRoute><FuelYearlyRecap /></FuelReportRoute>} />
-            <Route path="/laporan-bbm" element={<FuelReportRoute><LaporanBbmList /></FuelReportRoute>} />
-            <Route path="/laporan-bbm/create" element={<FuelReportRoute><CreateLaporanBbm /></FuelReportRoute>} />
-            <Route path="/laporan-bbm/edit/:id" element={<FuelReportRoute><EditLaporanBbm /></FuelReportRoute>} />
-            <Route path="/laporan-bbm/:id" element={<FuelReportRoute><LaporanBbmDetail /></FuelReportRoute>} />
+            <Route path="/laporan-bbm" element={<LaporanBbmRoute><LaporanBbmList /></LaporanBbmRoute>} />
+            <Route path="/laporan-bbm/create" element={<LaporanBbmRoute><CreateLaporanBbm /></LaporanBbmRoute>} />
+            <Route path="/laporan-bbm/edit/:id" element={<LaporanBbmRoute><EditLaporanBbm /></LaporanBbmRoute>} />
+            <Route path="/laporan-bbm/:id" element={<LaporanBbmRoute><LaporanBbmDetail /></LaporanBbmRoute>} />
 
             <Route path="/fuel-reports/spj" element={<FuelSpjRoute><FuelSpjReportList /></FuelSpjRoute>} />
             <Route path="/fuel-reports/spj/create" element={<FuelSpjRoute><CreateFuelSpjReport /></FuelSpjRoute>} />

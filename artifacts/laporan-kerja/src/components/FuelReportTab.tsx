@@ -128,8 +128,9 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
   const specificDateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!profile || !session) return;
     loadReports(appliedDate, appliedMonth, appliedYear);
-  }, [appliedDate, appliedMonth, appliedYear, regionId, reportType]);
+  }, [profile, session, appliedDate, appliedMonth, appliedYear, regionId, reportType]);
 
   const loadReports = async (date: string, month: string, year: string) => {
     const id = ++reqIdRef.current;
@@ -318,7 +319,10 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
   const flatRows: FlatRow[] = [];
   let rowNo = (currentPage - 1) * PAGE_SIZE + 1;
   paginatedReports.forEach(report => {
-    const items = report.items?.length ? report.items : [{
+    const reportItems = isLaporanBbm
+      ? (report.items || []).filter(item => item.fuel_type !== 'Oli')
+      : report.items || [];
+    const items = reportItems.length ? reportItems : [{
       vehicle_operator: '-', fuel_type: 'Pertamax' as const, amount: 0, amount_rp: 0,
       amount_liter: 0, location: { street: '-' }
     }];
@@ -642,7 +646,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
             </table>
           </div>
           <div className="px-4 py-2.5 border-t bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-            <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item BBM/Oli ditampilkan</span>
+            <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item {isLaporanBbm ? 'BBM' : 'BBM/Oli'} ditampilkan</span>
             {totalPages > 1 && (
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="icon" className="h-7 w-7" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>

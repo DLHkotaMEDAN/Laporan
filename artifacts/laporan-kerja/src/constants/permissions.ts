@@ -163,6 +163,16 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles', action: 'read' },
   ],
 
+  // Admin Laporan BBM – only Laporan BBM records within the assigned region.
+  [USER_ROLES.ADMIN_LAPORAN_BBM]: [
+    { resource: 'fuel_reports', action: 'create', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    { resource: 'fuel_prices', action: 'read' },
+    { resource: 'profiles', action: 'read' },
+  ],
+
   // Admin SPJ Oli – akses global bila wilayah kosong, atau hanya wilayah yang ditetapkan.
   [USER_ROLES.ADMIN_SPJ_OLI]: [
     { resource: 'spj_oli', action: 'create' },

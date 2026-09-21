@@ -13,7 +13,7 @@ import {
 import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
 import { useAuth } from '@/context/AuthContext';
-import { isGlobalFuelAdmin } from '@/constants/access-control';
+import { isGlobalFuelAdmin, isLaporanBbmAdmin } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
@@ -135,19 +135,22 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
 
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
+  const isAdminLaporanBbm = isLaporanBbmAdmin(profile?.role);
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
-  const fuelRegionId = isAdminBbm && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
+  const fuelRegionId = (isAdminBbm || isAdminLaporanBbm) && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;
   const isAccountActive = profile?.is_active !== false;
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const canInputFuelReport = isAccountActive && (isSuperAdmin || isAdminBbm);
-  const isAllowed = isSuperAdmin || isAdminBbm || isPimpinan;
+  const canInputFuelReport = isAccountActive && (isSuperAdmin || isAdminBbm || (isLaporanBbm && isAdminLaporanBbm));
+  const isAllowed = isSuperAdmin || isAdminBbm || isPimpinan || (isLaporanBbm && isAdminLaporanBbm);
   const roleLabel = isAdmin
     ? "Administrator"
     : isPimpinan
       ? "Pimpinan"
-      : "Admin BBM";
+      : isAdminLaporanBbm
+        ? "Admin Laporan BBM"
+        : "Admin BBM";
   const { regions, teams: regionTeams } = useRegionFilterOptions(canFilterByRegionTeam, selectedRegion);
 
   const reqIdRef = useRef(0);
@@ -161,9 +164,10 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   }, [profile, isAllowed]);
 
   useEffect(() => {
+    if (!profile || !session) return;
     if (!isAllowed) return;
     loadReports(appliedDate, appliedMonth, appliedYear);
-  }, [isAllowed, appliedDate, appliedMonth, appliedYear, fuelRegionId, reportType]);
+  }, [profile, session, isAllowed, appliedDate, appliedMonth, appliedYear, fuelRegionId, reportType]);
 
   const loadReports = async (date: string, month: string, year: string) => {
     const id = ++reqIdRef.current;
@@ -367,7 +371,10 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const flatRows: FlatRow[] = [];
   let rowNo = (currentPage - 1) * PAGE_SIZE + 1;
   paginatedReports.forEach(report => {
-    const items = report.items?.length ? report.items : [{ 
+    const reportItems = isLaporanBbm
+      ? (report.items || []).filter(item => item.fuel_type !== 'Oli')
+      : report.items || [];
+    const items = reportItems.length ? reportItems : [{
       vehicle_operator: '-', fuel_type: 'Pertamax' as const, amount: 0, amount_rp: 0, 
       amount_liter: 0, location: { street: '-' } 
     }];
@@ -453,9 +460,9 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
                 <FileText className="h-3.5 w-3.5 mr-1.5" /> Laporan SPJ <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
             )}
-            <Button variant="outline" onClick={() => setIsPriceSettingsOpen(true)} className="bg-white border-slate-200 h-9 px-3 text-xs font-bold">
+            {!isLaporanBbm && <Button variant="outline" onClick={() => setIsPriceSettingsOpen(true)} className="bg-white border-slate-200 h-9 px-3 text-xs font-bold">
               <Settings2 className="mr-1.5 h-3.5 w-3.5 text-blue-600" /> Master Harga BBM
-            </Button>
+            </Button>}
             {isAllowed && <Button variant="outline" onClick={() => setIsTrashOpen(true)} className="border-red-200 bg-red-50 text-red-700 h-9 px-3 text-xs font-bold hover:bg-red-100"><Trash2 className="mr-1.5 h-3.5 w-3.5" /> Tempat Sampah</Button>}
             {!isLaporanBbm && <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -779,7 +786,7 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
               </table>
             </div>
             <div className="px-4 py-2.5 border-t bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-              <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item BBM/Oli ditampilkan</span>
+              <span><strong className="text-slate-700">{filteredReports.length}</strong> laporan · <strong className="text-slate-700">{flatRows.length}</strong> item {isLaporanBbm ? 'BBM' : 'BBM/Oli'} ditampilkan</span>
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <Button variant="outline" size="icon" className="h-7 w-7 text-xs" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
@@ -805,14 +812,15 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
         )}
       </div>
 
-      <FuelPriceSettings
+      {!isLaporanBbm && <FuelPriceSettings
         isOpen={isPriceSettingsOpen}
         onClose={() => setIsPriceSettingsOpen(false)}
-      />
+      />}
       <TrashDialog
         isOpen={isTrashOpen}
         onClose={() => setIsTrashOpen(false)}
         onRefresh={() => void loadReports(appliedDate, appliedMonth, appliedYear)}
+        fuelReportType={reportType}
       />
     </div>
   );

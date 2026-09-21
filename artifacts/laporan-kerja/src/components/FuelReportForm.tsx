@@ -136,16 +136,25 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
   // Autocomplete States
   const [history, setHistory] = useState({
     vehicles: new Set<string>(),
+    noPolisi: new Set<string>(),
     streets: new Set<string>(),
     officerNames: new Set<string>()
   });
 
-  const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
+  const canEditPrice = profile?.role === 'admin'
+    || profile?.role === 'admin_bbm'
+    || profile?.role === 'admin_rencana_kerja_bbm'
+    || profile?.role === 'admin_wilayah_bbm'
+    || session?.user?.email === 'admin@gmail.com';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   // Admin BBM is a cross-region role. Only the combined/regional roles are
   // restricted to the region assigned to their profile.
-  const isRegionalFuelAdmin = !isGlobalFuelAdmin(profile?.role) && (profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm') && !isSuperAdmin;
+  const isRegionalFuelAdmin = !isGlobalFuelAdmin(profile?.role) && (
+    profile?.role === 'admin_rencana_kerja_bbm'
+    || profile?.role === 'admin_wilayah_bbm'
+    || profile?.role === 'admin_laporan_bbm'
+  ) && !isSuperAdmin;
   const isLaporanBbm = reportType === 'laporan_bbm';
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -198,19 +207,32 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     const fetchHistory = async () => {
       try {
         const reports = await fuelService.getAllReports(false, isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null, reportType);
-        const vehicles = new Set<string>();
-        const streets = new Set<string>();
-        const officers = new Set<string>();
+        const vehicles = new Map<string, string>();
+        const noPolisi = new Map<string, string>();
+        const streets = new Map<string, string>();
+        const officers = new Map<string, string>();
+        const addUnique = (target: Map<string, string>, value?: string | null) => {
+          const cleaned = value?.trim();
+          if (!cleaned) return;
+          const key = cleaned.toLocaleLowerCase('id-ID');
+          if (!target.has(key)) target.set(key, cleaned);
+        };
 
         reports.forEach(r => {
           r.items?.forEach(item => {
-            if (item.vehicle_operator) vehicles.add(item.vehicle_operator);
-            if (item.location?.street) streets.add(item.location.street);
-            if (item.item_remarks) officers.add(item.item_remarks);
+            addUnique(vehicles, item.vehicle_operator);
+            addUnique(noPolisi, item.no_pol);
+            addUnique(streets, item.location?.street);
+            addUnique(officers, item.item_remarks);
           });
         });
 
-        setHistory({ vehicles, streets, officerNames: officers });
+        setHistory({
+          vehicles: new Set(vehicles.values()),
+          noPolisi: new Set(noPolisi.values()),
+          streets: new Set(streets.values()),
+          officerNames: new Set(officers.values()),
+        });
       } catch (e) { console.error(e); }
     };
     fetchHistory();
@@ -294,7 +316,12 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       showError("Akun nonaktif hanya dapat melihat dan mencetak data.");
       return;
     }
-    const isAllowed = profile?.role === 'admin' || profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm' || session?.user?.email === 'admin@gmail.com';
+    const isAllowed = profile?.role === 'admin'
+      || profile?.role === 'admin_bbm'
+      || profile?.role === 'admin_rencana_kerja_bbm'
+      || profile?.role === 'admin_wilayah_bbm'
+      || (isLaporanBbm && profile?.role === 'admin_laporan_bbm')
+      || session?.user?.email === 'admin@gmail.com';
     if (!isAllowed) {
       showError("Anda tidak memiliki izin untuk menyimpan laporan ini");
       return;
@@ -354,7 +381,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
             { fuel_type: 'Oli' as FuelType, amount_rp: 0, amount_liter: item.oli_liter || 0 },
           ];
           return entries
-            .filter(entry => entry.amount_rp > 0 || entry.amount_liter > 0)
+            .filter(entry => (!isLaporanBbm || entry.fuel_type !== 'Oli') && (entry.amount_rp > 0 || entry.amount_liter > 0))
             .map(entry => ({ ...base, ...entry, amount: entry.fuel_type === 'Oli' ? entry.amount_liter : entry.amount_rp }));
         }),
         remarks: values.remarks,
@@ -368,7 +395,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         showSuccess("Laporan BBM disimpan");
       }
       await clearDraft();
-      navigate('/fuel-reports');
+      navigate(isLaporanBbm ? '/laporan-bbm' : '/fuel-reports');
     } catch (error: any) {
       showError(`Gagal simpan: ${error.message || "Terjadi kesalahan database"}`);
     } finally {
@@ -383,6 +410,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-4xl mx-auto pb-20">
         {/* DataLists for Autocomplete */}
         <datalist id="fuel-history-vehicles">{Array.from(history.vehicles).map(v => <option key={v} value={v} />)}</datalist>
+        <datalist id="fuel-history-no-polisi">{Array.from(history.noPolisi).map(v => <option key={v} value={v} />)}</datalist>
         <datalist id="fuel-history-streets">{Array.from(history.streets).map(v => <option key={v} value={v} />)}</datalist>
         <datalist id="fuel-history-officers">{Array.from(history.officerNames).map(v => <option key={v} value={v} />)}</datalist>
 
@@ -530,10 +558,10 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
                       </div>
                       {isLaporanBbm && <div className="md:col-span-2">
                         <FormField control={form.control} name={`items.${index}.no_pol`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs font-bold">No. Polisi</FormLabel><FormControl><Input placeholder="Contoh: BK 1234 AB" className="uppercase" {...field} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs font-bold">No. Polisi</FormLabel><FormControl><Input placeholder="Contoh: BK 1234 AB" className="uppercase" list="fuel-history-no-polisi" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>}
-                      <div className={cn("grid grid-cols-1 sm:grid-cols-3 gap-2", isLaporanBbm ? "md:col-span-6" : "md:col-span-7")}>
+                      <div className={cn("grid grid-cols-1 gap-2", isLaporanBbm ? "sm:grid-cols-2 md:col-span-6" : "sm:grid-cols-3 md:col-span-7")}>
                         <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-2 space-y-2">
                           <p className="text-xs font-bold text-blue-700">PERTAMAX</p>
                           <FormField control={form.control} name={`items.${index}.pertamax_rp`} render={({ field }) => (
@@ -552,13 +580,13 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
                             <FormItem><FormLabel className="text-[10px] flex items-center gap-1">Liter <Calculator size={10} className="text-green-500" /></FormLabel><FormControl><Input type="number" step="0.01" className="h-9 font-bold bg-green-100" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                           )} />
                         </div>
-                        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2 space-y-2">
+                        {!isLaporanBbm && <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2 space-y-2">
                           <p className="text-xs font-bold text-amber-700">OLI</p>
                           <div className="h-9 text-[10px] text-slate-500 flex items-center">Input jumlah oli</div>
                           <FormField control={form.control} name={`items.${index}.oli_liter`} render={({ field }) => (
                             <FormItem><FormLabel className="text-[10px]">Liter</FormLabel><FormControl><Input type="number" step="0.01" className="h-9 font-bold" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
-                        </div>
+                        </div>}
                       </div>
                       {isLaporanBbm && <div className="space-y-3 md:col-span-2">
                         <FormField control={form.control} name={`items.${index}.recipient_name`} render={({ field }) => (
@@ -659,12 +687,12 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
               <HelpCircle className="h-5 w-5" /> Tipe Pemakaian Baru
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Apakah pemakaian baru ini memerlukan penginputan <strong>BBM / Oli</strong> lagi?
+              Apakah pemakaian baru ini memerlukan penginputan <strong>{isLaporanBbm ? 'BBM' : 'BBM / Oli'}</strong> lagi?
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 flex flex-col gap-3">
             <Button onClick={() => handleTypeSelection(true)} className="h-12 justify-start px-6 bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200">
-              <Fuel className="mr-3 h-5 w-5" /> Ya, Perlu Input BBM / Oli
+              <Fuel className="mr-3 h-5 w-5" /> Ya, Perlu Input {isLaporanBbm ? 'BBM' : 'BBM / Oli'}
             </Button>
             <Button onClick={() => handleTypeSelection(false)} variant="outline" className="h-12 justify-start px-6 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200">
               <MapPinned className="mr-3 h-5 w-5" /> Tidak, Hanya Tambah Lokasi

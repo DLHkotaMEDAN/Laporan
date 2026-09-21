@@ -101,7 +101,7 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
             {isLaporanBbm && <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm"><span className="font-bold text-blue-800">No. SPJ:</span> <span className="ml-2 font-semibold text-slate-700">{report.no_spj || '-'}</span></div>}
             <div className="grid gap-4">
               <h3 className="text-sm font-bold uppercase text-slate-400 tracking-widest">Detail Pemakaian</h3>
-              {report.items.map((item, idx) => (
+              {report.items.filter(item => !isLaporanBbm || item.fuel_type !== 'Oli').map((item, idx) => (
                 <div key={idx} className="p-4 border rounded-xl bg-white shadow-sm space-y-3">
                   <div className="flex justify-between items-center">
                     <div><span className="font-black text-slate-800">{item.vehicle_operator}</span>{isLaporanBbm && <p className="mt-0.5 text-xs font-medium text-slate-500">No. Polisi: {item.no_pol || '-'}</p>}</div>
