@@ -266,7 +266,8 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
   const selectedRegion = form.watch("region");
   const selectedTeam = form.watch("team");
   const normalizedTeam = selectedTeam.trim().toLocaleLowerCase('id-ID');
-  const isMultiToolTeam = normalizedTeam === 'tim pohon' || normalizedTeam === 'tim siram';
+  const isPohonTeam = normalizedTeam === 'tim pohon' || normalizedTeam.startsWith('tim pohon ');
+  const isMultiToolTeam = isPohonTeam || normalizedTeam === 'tim siram';
   const { regions, teams: allTeams } = useRegionFilterOptions(true, 'semua');
   const profileRegion = regions.find(region => region.id === profile?.region_id);
   // Keep the database foreign key independent from the displayed region name.
