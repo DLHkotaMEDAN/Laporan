@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { fuelService } from '@/services/fuelService';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FuelReport } from '@/types/fuelReport';
+import { fuelRecapService } from '@/services/fuelRecapService';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Printer, Table, Filter, Settings2, PenTool, ChevronDown, FileText, CalendarDays } from 'lucide-react';
@@ -15,7 +15,7 @@ import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
-import { fuelAmount, getMergedCellSpan, mergeFuelRecapItems } from '@/utils/fuelRecap';
+import { fuelAmount, getMergedCellSpan, mergeFuelRecapItems, recapActivityLabel, recapLocationLabel, recapVehicleLabel } from '@/utils/fuelRecap';
 import FuelRecapMenu from '@/components/FuelRecapMenu';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -38,13 +38,13 @@ const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
 
 const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-const regions = ["Pusat", "Wilayah 1 Medan Utara", "Wilayah 2 Medan Barat", "Wilayah 3 Medan Timur", "Wilayah 4 Medan Kota", "Wilayah 5 Medan Selatan"];
-
 type SignatureMode = "with-signature" | "without-signature";
 
 const FuelMonthlyRecap = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { profile } = useAuth();
+  const reportType = searchParams.get('reportType') === 'laporan_bbm' ? 'laporan_bbm' as const : 'admin_bbm' as const;
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString());
@@ -87,7 +87,7 @@ const FuelMonthlyRecap = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedMonth, selectedYear, fuelRegionId]);
+  }, [selectedMonth, selectedYear, fuelRegionId, reportType]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
@@ -98,7 +98,7 @@ const FuelMonthlyRecap = () => {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      const filtered = await fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
+      const filtered = await fuelRecapService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
       filtered.sort((a, b) => a.date.localeCompare(b.date) || a.region.localeCompare(b.region));
       if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
@@ -171,10 +171,10 @@ const FuelMonthlyRecap = () => {
 
       flatItems.forEach((item, idx) => {
         const rowData: any = { no: idx + 1 };
-        if (visibleColumns.date) rowData.date = format(parseISO(item.date), 'dd/MM');
+        if (visibleColumns.date && item.date) rowData.date = format(parseISO(item.date), 'dd/MM');
         if (showRegion) rowData.region = item.region;
         if (visibleColumns.team) rowData.team = item.team;
-        if (visibleColumns.vehicle) rowData.vehicle = item.vehicle_operator;
+        if (visibleColumns.vehicle) rowData.vehicle = recapVehicleLabel(item);
         if (visibleColumns.petugas) rowData.petugas = item.item_remarks || "-";
         
         const p_rp = fuelAmount(item, 'Pertamax', 'rp');
@@ -188,8 +188,8 @@ const FuelMonthlyRecap = () => {
         if (visibleColumns.dexlite_rp) rowData.d_rp = d_rp;
         if (visibleColumns.dexlite_ltr) rowData.d_ltr = d_ltr;
         if (visibleColumns.oli) rowData.oli = o_ltr;
-        if (visibleColumns.location) rowData.location = `${item.location.street}${item.location.subDistrict ? ', ' + item.location.subDistrict : ''}`;
-        if (visibleColumns.remarks) rowData.remarks = item.activity_detail || item.item_remarks || item.remarks || "-";
+        if (visibleColumns.location) rowData.location = recapLocationLabel(item);
+        if (visibleColumns.remarks) rowData.remarks = recapActivityLabel(item);
 
         const row = worksheet.addRow(rowData);
         row.eachCell(cell => {
@@ -227,7 +227,10 @@ const FuelMonthlyRecap = () => {
   const totalDexliteLtrAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Dexlite', 'liter'), 0);
   const totalOliAll = flatItems.reduce((acc, item) => acc + fuelAmount(item, 'Oli', 'liter'), 0);
 
-  const teamOptions = Array.from(new Set(reports.map(report => report.team))).sort();
+  const regionOptions = Array.from(new Set(reports.map(report => report.region).filter(Boolean))).sort();
+  const teamOptions = Array.from(new Set(reports
+    .filter(report => selectedRegion === 'semua' || report.region === selectedRegion)
+    .map(report => report.team).filter(Boolean))).sort();
   const bbmColCount = (visibleColumns.pertamax_rp ? 1 : 0) + (visibleColumns.pertamax_ltr ? 1 : 0) + (visibleColumns.dexlite_rp ? 1 : 0) + (visibleColumns.dexlite_ltr ? 1 : 0) + (visibleColumns.oli ? 1 : 0);
   const tableColumnCount = 1 + (visibleColumns.date ? 1 : 0) + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0) + (visibleColumns.petugas ? 1 : 0) + bbmColCount + (visibleColumns.location ? 1 : 0) + (visibleColumns.remarks ? 1 : 0);
   const leadingCols = 1 + (visibleColumns.date ? 1 : 0) + (showRegion ? 1 : 0) + (visibleColumns.team ? 1 : 0) + (visibleColumns.vehicle ? 1 : 0) + (visibleColumns.petugas ? 1 : 0);
@@ -246,15 +249,16 @@ const FuelMonthlyRecap = () => {
               <SelectTrigger className="w-[90px] md:w-[100px]"><SelectValue placeholder="Tahun" /></SelectTrigger>
               <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            {isRegularUser ? <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200"><Filter className="mr-2 h-4 w-4 text-slate-400" /><SelectValue placeholder="Pilih Tim" /></SelectTrigger>
-              <SelectContent><SelectItem value="semua">Semua Tim / Kategori</SelectItem>{teamOptions.map(team => <SelectItem key={team} value={team}>{team}</SelectItem>)}</SelectContent>
-            </Select> : <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            {!isRegularUser && <Select value={selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam('semua'); }}>
               <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200"><Filter className="mr-2 h-4 w-4 text-slate-400" /><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="semua">Semua Wilayah</SelectItem>
-                {regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
+            </Select>}
+            {teamOptions.length > 0 && <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200"><Filter className="mr-2 h-4 w-4 text-slate-400" /><SelectValue placeholder="Pilih Tim / Kategori" /></SelectTrigger>
+              <SelectContent><SelectItem value="semua">Semua Tim / Kategori</SelectItem>{teamOptions.map(team => <SelectItem key={team} value={team}>{team}</SelectItem>)}</SelectContent>
             </Select>}
           </div>
           
@@ -308,7 +312,7 @@ const FuelMonthlyRecap = () => {
               </PopoverContent>
             </Popover>
             
-            <FuelRecapMenu signatureMode={signatureMode} onSignatureChange={setSignatureMode} onPrint={() => window.print()} onSharePdf={handleSharePdf} onExportExcel={handleExportExcel} editItems={reports.map(report => ({ id: report.id, label: `${report.date} — ${report.team}` }))} />
+            <FuelRecapMenu reportType={reportType} signatureMode={signatureMode} onSignatureChange={setSignatureMode} onPrint={() => window.print()} onSharePdf={handleSharePdf} onExportExcel={handleExportExcel} editItems={reports.map(report => ({ id: report.id, label: `${report.date} — ${report.team}` }))} />
           </div>
         </div>
       </div>
@@ -363,17 +367,17 @@ const FuelMonthlyRecap = () => {
                             {visibleColumns.date && <td className="border-2 border-black p-1 text-center leading-tight">{format(parseISO(item.date), 'dd/MM')}</td>}
                             {showRegion && idx === 0 && (<td className="border-2 border-black p-1 text-center font-bold align-middle" rowSpan={items.length}>{item.region}</td>)}
                             {visibleColumns.team && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center align-middle whitespace-normal break-words leading-tight">{item.team}</td>}
-                            {visibleColumns.vehicle && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{item.vehicle_operator}</td>}
-                            {visibleColumns.petugas && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
+                            {visibleColumns.vehicle && <td className="border-2 border-black p-1 whitespace-normal break-words font-medium leading-tight">{recapVehicleLabel(item)}</td>}
+                            {visibleColumns.petugas && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.item_remarks || "-"}</td>}
                             
-                            {visibleColumns.pertamax_rp && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-right whitespace-nowrap">{fuelAmount(item, 'Pertamax', 'rp') ? fuelAmount(item, 'Pertamax', 'rp').toLocaleString('id-ID') : "-"}</td>}
-                            {visibleColumns.pertamax_ltr && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center whitespace-nowrap">{fuelAmount(item, 'Pertamax', 'liter') || "-"}</td>}
-                            {visibleColumns.dexlite_rp && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-right whitespace-nowrap">{fuelAmount(item, 'Dexlite', 'rp') ? fuelAmount(item, 'Dexlite', 'rp').toLocaleString('id-ID') : "-"}</td>}
-                            {visibleColumns.dexlite_ltr && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center whitespace-nowrap">{fuelAmount(item, 'Dexlite', 'liter') || "-"}</td>}
-                            {visibleColumns.oli && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 text-center whitespace-nowrap">{fuelAmount(item, 'Oli', 'liter') || "-"}</td>}
+                            {visibleColumns.pertamax_rp && <td className="border-2 border-black p-1 text-right whitespace-nowrap">{fuelAmount(item, 'Pertamax', 'rp') ? fuelAmount(item, 'Pertamax', 'rp').toLocaleString('id-ID') : "-"}</td>}
+                            {visibleColumns.pertamax_ltr && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{fuelAmount(item, 'Pertamax', 'liter') || "-"}</td>}
+                            {visibleColumns.dexlite_rp && <td className="border-2 border-black p-1 text-right whitespace-nowrap">{fuelAmount(item, 'Dexlite', 'rp') ? fuelAmount(item, 'Dexlite', 'rp').toLocaleString('id-ID') : "-"}</td>}
+                            {visibleColumns.dexlite_ltr && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{fuelAmount(item, 'Dexlite', 'liter') || "-"}</td>}
+                            {visibleColumns.oli && <td className="border-2 border-black p-1 text-center whitespace-nowrap">{fuelAmount(item, 'Oli', 'liter') || "-"}</td>}
                             
-                            {visibleColumns.location && <td className="border-2 border-black p-1 whitespace-normal break-words leading-tight">{item.location.street}{item.location.subDistrict && item.location.subDistrict !== " " ? `, ${item.location.subDistrict}` : ""}</td>}
-                            {visibleColumns.remarks && getMergedCellSpan(items, idx, item => item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.reportId || '')} className="border-2 border-black p-1 italic align-middle whitespace-normal break-words leading-tight">{item.activity_detail || item.item_remarks || item.remarks || "-"}</td>}
+                            {visibleColumns.location && getMergedCellSpan(items, idx, item => item.usageGroupId || item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.usageGroupId || item.reportId || '')} className="border-2 border-black p-1 whitespace-pre-line break-words align-middle leading-tight">{recapLocationLabel(item)}</td>}
+                            {visibleColumns.remarks && getMergedCellSpan(items, idx, item => item.usageGroupId || item.reportId || '') > 0 && <td rowSpan={getMergedCellSpan(items, idx, item => item.usageGroupId || item.reportId || '')} className="border-2 border-black p-1 italic align-middle whitespace-pre-line break-words leading-tight">{recapActivityLabel(item)}</td>}
                           </tr>
                         ))}
                         {!isRegularUser && selectedRegion === "semua" && (

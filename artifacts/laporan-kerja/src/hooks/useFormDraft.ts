@@ -29,7 +29,7 @@ const getActiveSelector = (element: Element | null) => {
   const path: string[] = [];
   let current: Element | null = element;
   while (current && current !== document.body) {
-    const parent = current.parentElement;
+    const parent: HTMLElement | null = current.parentElement;
     if (!parent) break;
     const siblingIndex = Array.from(parent.children).indexOf(current) + 1;
     path.unshift(`${current.tagName.toLowerCase()}:nth-child(${siblingIndex})`);
@@ -201,11 +201,16 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
     });
     const saveImmediately = () => { void save(); };
     document.addEventListener("visibilitychange", saveImmediately);
+    // Switching to another application can blur the window without changing
+    // document.visibilityState. Save here as well so the latest Select value
+    // is available when the form is mounted again.
+    window.addEventListener("blur", saveImmediately);
     window.addEventListener("pagehide", saveImmediately);
     return () => {
       subscription.unsubscribe();
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       document.removeEventListener("visibilitychange", saveImmediately);
+      window.removeEventListener("blur", saveImmediately);
       window.removeEventListener("pagehide", saveImmediately);
       void save();
     };
@@ -306,9 +311,12 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
     if (!key) return;
     const saveImmediately = () => { void save(); };
     document.addEventListener("visibilitychange", saveImmediately);
+    // A desktop app switch may only emit blur, not visibilitychange.
+    window.addEventListener("blur", saveImmediately);
     window.addEventListener("pagehide", saveImmediately);
     return () => {
       document.removeEventListener("visibilitychange", saveImmediately);
+      window.removeEventListener("blur", saveImmediately);
       window.removeEventListener("pagehide", saveImmediately);
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       void save();

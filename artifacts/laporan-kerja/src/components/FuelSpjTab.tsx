@@ -11,6 +11,7 @@ import { fuelSpjService } from '@/services/fuelSpjService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
+import { useValueDraft } from '@/hooks/useFormDraft';
 
 const FuelSpjTab = () => {
   const navigate = useNavigate();
@@ -20,6 +21,18 @@ const FuelSpjTab = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+
+  const filterDraftKey = session?.user?.id
+    ? `fuel-spj-tab:${session.user.id}`
+    : undefined;
+  useValueDraft(
+    { searchQuery, selectedDate },
+    (values) => {
+      setSearchQuery(values.searchQuery || "");
+      setSelectedDate(values.selectedDate || "");
+    },
+    filterDraftKey,
+  );
 
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
 

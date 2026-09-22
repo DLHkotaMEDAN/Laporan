@@ -96,6 +96,19 @@ export default function SpjOli() {
     values => setForm({ ...emptyRecord, ...values }),
     draftKey,
   );
+  const filterDraftKey = !isForm && session?.user?.id
+    ? `spj-oli-filters:${session.user.id}`
+    : undefined;
+  useValueDraft(
+    { search, regionId, teamId, date },
+    values => {
+      setSearch(values.search || '');
+      setRegionId(values.regionId || 'semua');
+      setTeamId(values.teamId || 'semua');
+      setDate(values.date || '');
+    },
+    filterDraftKey,
+  );
   const teamFilterRegion = isForm && form.region_id ? form.region_id : (lockedRegionId || regionId);
   const { regions, teams } = useRegionFilterOptions(true, teamFilterRegion);
   const period = params.get('period');

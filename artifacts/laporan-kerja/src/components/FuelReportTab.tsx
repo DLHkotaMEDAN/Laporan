@@ -26,6 +26,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
+import { useValueDraft } from '@/hooks/useFormDraft';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
 
 const months = [
@@ -39,7 +40,7 @@ const PAGE_SIZE = 100;
 interface FlatRow {
   reportId: string;
   report: FuelReport;
-  item: FuelUsageItem;
+  item: FuelUsageItem & { displayLocation?: string; displayActivity?: string; displayGroupId?: string };
   itemIndex: number;
   totalItems: number;
   rowNo: number;
@@ -49,6 +50,65 @@ type SortKey = 'no' | 'date' | 'spj' | 'region' | 'team' | 'vehicle' | 'fuelType
 type SortDirection = 'asc' | 'desc';
 
 const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
+
+const formatDisplayLocation = (location: FuelUsageItem['location']) =>
+  [location?.street, location?.subDistrict, location?.village]
+    .filter(value => value && value !== ' ')
+    .join(', ') || '-';
+
+const getDisplayFuelItems = (items: FuelUsageItem[]) => {
+  type DisplayItem = FuelUsageItem & { displayLocation?: string; displayActivity?: string; displayGroupId?: string };
+  type LocationEntry = { location: FuelUsageItem['location']; activity: string };
+  const result: DisplayItem[] = [];
+  let currentGroup: DisplayItem[] = [];
+  let locations: LocationEntry[] = [];
+  let groupNumber = 0;
+  let currentGroupId = '';
+
+  const refreshDisplayFields = () => {
+    const numberedLocations = locations.length > 1;
+    const locationText = locations.map((entry, index) => `${numberedLocations ? `${index + 1}. ` : ''}${formatDisplayLocation(entry.location)}`).join('\n');
+    const activities = locations.map(entry => entry.activity);
+    const numberedActivities = activities.length > 1;
+    const activityText = activities.some(Boolean)
+      ? activities.map((activity, index) => `${numberedActivities ? `${index + 1}. ` : ''}${activity || '-'}`).join('\n')
+      : '-';
+    currentGroup.forEach(item => {
+      item.displayLocation = locationText;
+      item.displayActivity = activityText;
+    });
+  };
+
+  items.forEach(item => {
+    if (item.requires_fuel === false) {
+      const marker = {
+        location: item.location,
+        activity: item.activity_detail?.trim() || '',
+      };
+      const markerKey = [marker.location?.street, marker.location?.subDistrict, marker.location?.village, marker.activity].map(value => String(value || '').trim()).join('|');
+      const alreadyIncluded = locations.some(entry => [entry.location?.street, entry.location?.subDistrict, entry.location?.village, entry.activity].map(value => String(value || '').trim()).join('|') === markerKey);
+      if (currentGroup.length > 0 && marker.location?.street && !alreadyIncluded) {
+        locations = [...locations, marker];
+        refreshDisplayFields();
+      }
+      return;
+    }
+
+    if (!item.is_location_same || currentGroup.length === 0) {
+      currentGroup = [];
+      locations = [{ location: item.location, activity: item.activity_detail?.trim() || '' }];
+      groupNumber += 1;
+      currentGroupId = `group-${groupNumber}`;
+    }
+
+    const displayItem: DisplayItem = { ...item, displayGroupId: currentGroupId };
+    currentGroup.push(displayItem);
+    result.push(displayItem);
+    refreshDisplayFields();
+  });
+
+  return result;
+};
 
 const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): string | number => {
   const items = report.items || [];
@@ -127,6 +187,35 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
   const [currentPage, setCurrentPage] = useState(1);
   const reqIdRef = useRef(0);
   const specificDateInputRef = useRef<HTMLInputElement>(null);
+
+  // This tab is unmounted when another main tab is opened. Keep its filters
+  // together so returning to it does not make the user choose the dropdowns
+  // again.
+  const filterDraftKey = session?.user?.id
+    ? `fuel-report-tab:${reportType}:${session.user.id}`
+    : undefined;
+  const filterDraftValues = useMemo(() => ({
+    searchQuery,
+    showDuplicatesOnly,
+    selectedDate,
+    appliedDate,
+    appliedMonth,
+    appliedYear,
+    selectedRegion,
+    selectedTeam,
+    sort,
+  }), [searchQuery, showDuplicatesOnly, selectedDate, appliedDate, appliedMonth, appliedYear, selectedRegion, selectedTeam, sort]);
+  useValueDraft(filterDraftValues, (values) => {
+    setSearchQuery(values.searchQuery || "");
+    setShowDuplicatesOnly(Boolean(values.showDuplicatesOnly));
+    setSelectedDate(values.selectedDate || "");
+    setAppliedDate(values.appliedDate || "");
+    setAppliedMonth(values.appliedMonth || "semua");
+    setAppliedYear(values.appliedYear || "semua");
+    setSelectedRegion(values.selectedRegion || "semua");
+    setSelectedTeam(values.selectedTeam || "semua");
+    setSort(values.sort || null);
+  }, filterDraftKey);
 
   const getAllReports = () => isLaporanBbm
     ? laporanBbmService.getAllReports(false, regionId)
@@ -335,8 +424,8 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
   let rowNo = (currentPage - 1) * PAGE_SIZE + 1;
   paginatedReports.forEach(report => {
     const reportItems = isLaporanBbm
-      ? (report.items || []).filter(item => item.fuel_type !== 'Oli')
-      : report.items || [];
+      ? getDisplayFuelItems(report.items || []).filter(item => item.fuel_type !== 'Oli')
+      : getDisplayFuelItems(report.items || []);
     const items = reportItems.length ? reportItems : [{
       vehicle_operator: '-', fuel_type: 'Pertamax' as const, amount: 0, amount_rp: 0,
       amount_liter: 0, location: { street: '-' }
@@ -361,13 +450,13 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
 
   const formatRp = (n: number) => n > 0 ? `Rp ${n.toLocaleString('id-ID')}` : '-';
   const formatL = (n: number) => n > 0 ? `${n.toLocaleString('id-ID')} L` : '-';
-  const sortableHeader = (label: string, key: SortKey, className: string) => {
+  const sortableHeader = (label: string, key: SortKey, className: string, options?: { rowSpan?: number }) => {
     const isActive = sort?.key === key;
     const Icon = isActive && sort.direction === 'desc' ? ArrowDownZA : isActive ? ArrowDownAZ : ArrowDownUp;
     const directionLabel = isActive && sort.direction === 'desc' ? 'Z ke A / besar ke kecil' : 'A ke Z / kecil ke besar';
 
     return (
-      <th className={cn("px-3 py-2.5 font-semibold border-r border-slate-600", className)}>
+      <th rowSpan={options?.rowSpan} className={cn("px-3 py-2.5 font-semibold border-r border-slate-600 align-middle", className)}>
         <button
           type="button"
           onClick={() => handleSort(key)}
@@ -380,6 +469,24 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
         </button>
       </th>
     );
+  };
+
+  const sameDisplayGroup = (left: FlatRow | undefined, right: FlatRow | undefined) => Boolean(
+    left && right &&
+    left.reportId === right.reportId &&
+    left.item.displayGroupId &&
+    left.item.displayGroupId === right.item.displayGroupId
+  );
+
+  const getDisplayGroupRowSpan = (index: number) => {
+    const current = flatRows[index];
+    if (!current?.item.displayGroupId || (index > 0 && sameDisplayGroup(flatRows[index - 1], current))) return 0;
+    let span = 1;
+    for (let nextIndex = index + 1; nextIndex < flatRows.length; nextIndex += 1) {
+      if (!sameDisplayGroup(current, flatRows[nextIndex])) break;
+      span += 1;
+    }
+    return span;
   };
 
   return (
@@ -520,20 +627,27 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
             <table className="w-full text-xs border-collapse min-w-[1050px]">
               <thead>
                 <tr className="bg-slate-700 text-white">
-                  {sortableHeader('No', 'no', 'text-center w-10')}
-                  {sortableHeader('Tanggal', 'date', 'text-center w-24')}
-                  {isLaporanBbm && sortableHeader('No. SPJ', 'spj', 'text-left w-32')}
-                  {sortableHeader('Wilayah', 'region', 'text-left w-24')}
-                  {sortableHeader('Tim', 'team', 'text-left w-32')}
-                  {sortableHeader('Kendaraan / Alat', 'vehicle', 'text-left')}
-                  {isLaporanBbm && <th className="px-3 py-2.5 text-left font-semibold w-28">No. Polisi</th>}
-                  {sortableHeader('Jenis BBM', 'fuelType', 'text-center w-20')}
-                  {sortableHeader('Jml (L)', 'liters', 'text-right w-20')}
-                  {sortableHeader('Nilai (Rp)', 'value', 'text-right w-28')}
-                  {sortableHeader('Lokasi', 'location', 'text-left')}
-                  {isLaporanBbm && sortableHeader('Penerima', 'receiver', 'text-left w-32')}
-                  {sortableHeader('Petugas', 'remarks', 'text-left w-28')}
-                  <th className="px-3 py-2.5 text-center font-semibold w-20">Aksi</th>
+                  {sortableHeader('No', 'no', 'text-center w-10', { rowSpan: 2 })}
+                  {sortableHeader('Tanggal', 'date', 'text-center w-24', { rowSpan: 2 })}
+                  {isLaporanBbm && sortableHeader('No. SPJ', 'spj', 'text-left w-32', { rowSpan: 2 })}
+                  {sortableHeader('Wilayah', 'region', 'text-left w-24', { rowSpan: 2 })}
+                  {sortableHeader('Tim', 'team', 'text-left w-32', { rowSpan: 2 })}
+                  {sortableHeader('Kendaraan / Alat Operasional', 'vehicle', 'text-left min-w-[150px]', { rowSpan: 2 })}
+                  {isLaporanBbm && <th rowSpan={2} className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 align-middle w-28">No. Polisi</th>}
+                  {isLaporanBbm && <th rowSpan={2} className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 align-middle w-32">Penerima</th>}
+                  <th rowSpan={2} className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 align-middle w-28">Petugas</th>
+                  <th colSpan={2} className="px-3 py-2 font-semibold text-center border-r border-slate-600">PERTAMAX</th>
+                  <th colSpan={2} className="px-3 py-2 font-semibold text-center border-r border-slate-600">DEXLITE</th>
+                  <th rowSpan={2} className="px-3 py-2.5 font-semibold text-center border-r border-slate-600 align-middle w-20">OLI<br /><span className="text-[10px] font-normal">(Liter)</span></th>
+                  <th rowSpan={2} className="px-3 py-2.5 font-semibold text-left border-r border-slate-600 align-middle min-w-[190px]">Lokasi Kerja</th>
+                  <th rowSpan={2} className="px-3 py-2.5 font-semibold text-left border-r border-slate-600 align-middle min-w-[170px]">Keterangan</th>
+                  <th rowSpan={2} className="px-3 py-2.5 text-center font-semibold align-middle w-20">Aksi</th>
+                </tr>
+                <tr className="bg-slate-600 text-white">
+                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-500">Rupiah (Rp)</th>
+                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-600">Liter</th>
+                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-500">Rupiah (Rp)</th>
+                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-600">Liter</th>
                 </tr>
               </thead>
               <tbody>
@@ -549,9 +663,15 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
                       : 'bg-blue-50/80'
                     : isEvenReport ? 'bg-white' : 'bg-slate-50/60';
                   const borderTop = isFirstItem && idx > 0 ? 'border-t-2 border-slate-200' : '';
+                  const displayGroupRowSpan = getDisplayGroupRowSpan(idx);
+                  const isFirstDisplayGroupRow = displayGroupRowSpan > 0;
+
+                  const isPertamax = row.item.fuel_type === 'Pertamax';
+                  const isDexlite = row.item.fuel_type === 'Dexlite';
+                  const isOli = row.item.fuel_type === 'Oli';
 
                   return (
-                    <tr key={`${row.reportId}-${row.itemIndex}`} className={cn(rowBg, "hover:bg-blue-50/40 transition-colors")}>
+                    <tr key={`${row.reportId}-${row.itemIndex}`} className={cn(rowBg, "border-b border-slate-200 hover:bg-blue-50/40 transition-colors")}>
                       {isFirstItem && (
                         <td rowSpan={row.totalItems} className={cn("px-3 py-2 text-center font-bold text-slate-500 border-r border-slate-100 align-middle", borderTop)}>
                           {row.rowNo}
@@ -588,35 +708,43 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
                         </td>
                       )}
 
-                      <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
+                      <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-200 align-middle", borderTop && isFirstItem ? borderTop : '')}>
                         {row.item.vehicle_operator}
                       </td>
                       {isLaporanBbm && <td className={cn("px-3 py-2 font-medium text-slate-600 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
                         {row.item.no_pol || '-'}
                       </td>}
-                      <td className={cn("px-3 py-2 text-center border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
-                        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", fuelBadgeColor(row.item.fuel_type))}>
-                          {row.item.fuel_type}
-                        </Badge>
-                      </td>
-                      <td className={cn("px-3 py-2 text-right font-mono text-slate-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
-                        {row.item.fuel_type === 'Oli' ? formatL(row.item.amount_liter || row.item.amount) : (row.item.amount_liter > 0 ? formatL(row.item.amount_liter) : '-')}
-                      </td>
-                      <td className={cn("px-3 py-2 text-right font-mono font-semibold text-orange-700 border-r border-slate-100", borderTop && isFirstItem ? borderTop : '')}>
-                        {row.item.fuel_type !== 'Oli' ? formatRp(row.item.amount_rp || row.item.amount) : '-'}
-                      </td>
-                      <td className={cn("px-3 py-2 text-slate-600 border-r border-slate-100 max-w-[180px]", borderTop && isFirstItem ? borderTop : '')}>
-                        <span className="line-clamp-2">{row.item.location.street}</span>
-                        {row.item.location.subDistrict && (
-                          <span className="text-slate-400 text-[10px]"> — {row.item.location.subDistrict}</span>
-                        )}
-                      </td>
-                      {isLaporanBbm && <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-100 max-w-[140px]", borderTop && isFirstItem ? borderTop : '')}>
+                      {isLaporanBbm && <td className={cn("px-3 py-2 text-slate-700 border-r border-slate-200", borderTop && isFirstItem ? borderTop : '')}>
                         <span className="line-clamp-2">{row.item.recipient_name || '-'}</span>
                       </td>}
-                      <td className={cn("px-3 py-2 text-slate-500 italic border-r border-slate-100 max-w-[120px]", borderTop && isFirstItem ? borderTop : '')}>
+                      <td className={cn("px-3 py-2 text-slate-500 italic border-r border-slate-200 max-w-[140px] align-middle", borderTop && isFirstItem ? borderTop : '')}>
                         <span className="line-clamp-2">{row.item.item_remarks || '-'}</span>
                       </td>
+                      <td className={cn("px-2 py-2 text-right font-mono text-slate-700 border-r border-slate-200", borderTop && isFirstItem ? borderTop : '')}>
+                        {isPertamax ? formatRp(row.item.amount_rp || row.item.amount) : '-'}
+                      </td>
+                      <td className={cn("px-2 py-2 text-center font-mono text-slate-700 border-r border-slate-200", borderTop && isFirstItem ? borderTop : '')}>
+                        {isPertamax ? formatL(row.item.amount_liter) : '-'}
+                      </td>
+                      <td className={cn("px-2 py-2 text-right font-mono text-slate-700 border-r border-slate-200", borderTop && isFirstItem ? borderTop : '')}>
+                        {isDexlite ? formatRp(row.item.amount_rp || row.item.amount) : '-'}
+                      </td>
+                      <td className={cn("px-2 py-2 text-center font-mono text-slate-700 border-r border-slate-200", borderTop && isFirstItem ? borderTop : '')}>
+                        {isDexlite ? formatL(row.item.amount_liter) : '-'}
+                      </td>
+                      <td className={cn("px-2 py-2 text-center font-mono text-slate-700 border-r border-slate-200", borderTop && isFirstItem ? borderTop : '')}>
+                        {isOli ? formatL(row.item.amount_liter || row.item.amount) : '-'}
+                      </td>
+                      {isFirstDisplayGroupRow && (
+                        <td rowSpan={displayGroupRowSpan} className={cn("px-3 py-2 text-slate-600 border-r border-slate-200 max-w-[220px] align-middle", borderTop && isFirstItem ? borderTop : '')}>
+                          <span className="whitespace-pre-line">{row.item.displayLocation || formatDisplayLocation(row.item.location)}</span>
+                        </td>
+                      )}
+                      {isFirstDisplayGroupRow && (
+                        <td rowSpan={displayGroupRowSpan} className={cn("px-3 py-2 text-slate-500 italic border-r border-slate-200 max-w-[200px] align-middle", borderTop && isFirstItem ? borderTop : '')}>
+                          <span className="whitespace-pre-line">{row.item.displayActivity || row.item.activity_detail || '-'}</span>
+                        </td>
+                      )}
 
                       {isFirstItem && (
                         <td rowSpan={row.totalItems} className={cn("px-2 py-2 text-center border-r border-slate-100 align-middle", borderTop)}>

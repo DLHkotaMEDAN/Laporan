@@ -943,6 +943,22 @@ const Index = () => {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {activeTab === 'laporan_bbm' && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/daily-rekap?reportType=laporan_bbm')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Laporan BBM
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/weekly-rekap?reportType=laporan_bbm')} className="py-3 cursor-pointer">
+                        <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Laporan BBM
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/monthly-rekap?reportType=laporan_bbm')} className="py-3 cursor-pointer">
+                        <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan Laporan BBM
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/yearly-rekap?reportType=laporan_bbm')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-red-600" /> Rekap Tahunan Laporan BBM
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   {activeTab === 'spj_oli' && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/spj-oli/daily-rekap')} className="py-3 cursor-pointer">

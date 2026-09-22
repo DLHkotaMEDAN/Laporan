@@ -90,6 +90,13 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
     return current >= start && current <= end;
   }), [records, selectedRegion, lockedRegionId, selectedTeam, selectedDate, period]);
 
+  const availableRegionIds = useMemo(() => new Set(records.map(record => record.region_id)), [records]);
+  const availableTeamIds = useMemo(() => new Set(records
+    .filter(record => selectedRegion === 'semua' || record.region_id === selectedRegion)
+    .map(record => record.team_id)), [records, selectedRegion]);
+  const visibleRegions = regions.filter(region => availableRegionIds.has(region.id));
+  const visibleTeams = teams.filter(team => availableTeamIds.has(team.id));
+
   // Satukan sel tanggal untuk record yang berurutan pada tanggal yang sama.
   // Rincian SPJ/Oli tetap ditampilkan per baris agar tidak ada data yang hilang.
   const dateRowSpans = useMemo(() => {
@@ -216,8 +223,8 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
 
         <section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-4 print:hidden">
           <div><label className="mb-1 block text-xs font-bold text-slate-500">{period === 'monthly' ? 'Bulan Acuan' : period === 'weekly' ? 'Tanggal Minggu' : 'Tanggal'}</label><Input type={period === 'monthly' ? 'month' : 'date'} value={period === 'monthly' ? selectedDate.slice(0, 7) : selectedDate} onChange={(event) => setSelectedDate(period === 'monthly' ? `${event.target.value}-01` : event.target.value)} /></div>
-          <div><label className="mb-1 block text-xs font-bold text-slate-500">Wilayah</label><Select value={lockedRegionId || selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam('semua'); }} disabled={Boolean(lockedRegionId)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{!lockedRegionId && <SelectItem value="semua">Semua Wilayah</SelectItem>}{regions.filter((region) => !lockedRegionId || region.id === lockedRegionId).map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></div>
-          <div><label className="mb-1 block text-xs font-bold text-slate-500">Tim</label><Select value={selectedTeam} onValueChange={setSelectedTeam}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Tim</SelectItem>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></div>
+          <div><label className="mb-1 block text-xs font-bold text-slate-500">Wilayah</label><Select value={lockedRegionId || selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam('semua'); }} disabled={Boolean(lockedRegionId)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{!lockedRegionId && <SelectItem value="semua">Semua Wilayah</SelectItem>}{visibleRegions.filter((region) => !lockedRegionId || region.id === lockedRegionId).map((region) => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}</SelectContent></Select></div>
+          <div><label className="mb-1 block text-xs font-bold text-slate-500">Tim / Kategori</label><Select value={selectedTeam} onValueChange={setSelectedTeam}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="semua">Semua Tim / Kategori</SelectItem>{visibleTeams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select></div>
           <div className="flex items-end"><Button variant="outline" onClick={reset} className="w-full"><FilterX className="mr-2 h-4 w-4" /> Reset Filter</Button></div>
         </section>
         </div>

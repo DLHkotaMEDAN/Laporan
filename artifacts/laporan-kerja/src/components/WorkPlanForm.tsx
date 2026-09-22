@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
-import { useFormDraft } from '@/hooks/useFormDraft';
+import { useFormDraft, useValueDraft } from '@/hooks/useFormDraft';
 import { isCategoryScopedWorkPlanAdmin, isGlobalWorkPlanAdmin } from '@/constants/access-control';
 import {
   Dialog,
@@ -183,8 +183,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const allowedWorkPlanCategories = isCategoryScopedWorkPlanAdmin(profile?.role)
     ? profile?.work_plan_categories ?? []
     : null;
-  const [selectedRegion, setSelectedRegion] = useState(initialData?.region_id ?? '');
   const { regions: selectableRegions } = useRegionFilterOptions(canManageAllWorkPlanRegions, 'semua');
+  const [selectedRegion, setSelectedRegion] = useState(initialData?.region_id ?? '');
   const activeRegionId = canManageAllWorkPlanRegions
     ? selectedRegion || null
     : profile?.region_id ?? initialData?.region_id ?? null;
@@ -240,6 +240,10 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
   const selectedTeamId = availableTeams.find(team => team.name === selectedCategory)?.id ?? initialData?.team_id ?? profile?.team_id ?? null;
   const draftKey = session?.user?.id ? `work-plan:${session.user.id}:${initialData?.id ?? "new"}` : undefined;
   const { clearDraft, lastSavedAt, restoredAt } = useFormDraft(form, draftKey);
+  const regionDraftKey = session?.user?.id
+    ? `work-plan-region:${session.user.id}:${initialData?.id ?? "new"}`
+    : undefined;
+  useValueDraft(selectedRegion, setSelectedRegion, regionDraftKey);
   const hasNoActivity = form.watch("has_no_activity");
   const isGlobalStyle = selectedCategory === "Tim Babat";
   const fuelNeedCategories = ["Tim Siram"];
