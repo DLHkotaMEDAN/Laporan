@@ -419,7 +419,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       });
 
       if (normalizedItems.some(item => !item.location.street?.trim())) {
-        showError("Nama Jalan wajib diisi untuk setiap lokasi kerja.");
+        showError("Lokasi Kerja wajib diisi untuk setiap lokasi kerja.");
         return;
       }
 
@@ -754,7 +754,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
                     <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                       <div className="flex items-center gap-2 border-b border-slate-200 pb-3 text-xs font-bold uppercase tracking-[0.12em] text-green-700"><MapPin size={15} /> Lokasi Kerja Item Ini</div>
                       <FormField control={form.control} name={`items.${locationOwnerIndex}.location.street`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs font-semibold text-slate-600">{normalizedTeam === 'tim siram' ? 'Lokasi Kerja' : 'Nama Jalan'}</FormLabel><FormControl><Input className="h-10 bg-white" list="fuel-history-streets" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs font-semibold text-slate-600">Lokasi Kerja</FormLabel><FormControl><Input className="h-10 bg-white" list="fuel-history-streets" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name={`items.${locationOwnerIndex}.location.subDistrict`} render={({ field }) => (
