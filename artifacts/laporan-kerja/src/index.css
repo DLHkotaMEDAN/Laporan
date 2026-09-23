@@ -124,11 +124,19 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  /* Keep print previews at a useful report width. The viewport shows only
+     the first part and the user can swipe horizontally to inspect the rest. */
+  .print-container > *,
+  .print-area:not(.recap-print-area) > * {
+    min-width: 900px;
   }
 }
 
-/* Shared responsive rules for all report toolbars. Controls may keep their
-   useful desktop widths, but never force a tablet or phone viewport wider. */
+/* Shared responsive rules for all report toolbars. Controls keep useful
+   widths inside a horizontal swipe surface on tablet and phone viewports. */
 @media (max-width: 1023px) {
   html,
   body,
@@ -163,11 +171,24 @@
     display: inline !important;
   }
 
+  /* Keep toolbar controls in their natural horizontal order. The toolbar is
+     itself a swipe surface, so users can discover every filter and action by
+     dragging left/right instead of receiving a tall, rearranged stack. */
+  .recap-sticky-toolbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
   .recap-sticky-toolbar > .flex,
   .recap-sticky-toolbar > header,
+  .recap-sticky-toolbar .flex,
   .recap-sticky-toolbar .flex.flex-wrap {
-    min-width: 0;
-    flex-wrap: wrap;
+    min-width: max-content;
+    width: max-content;
+    max-width: none;
+    flex-wrap: nowrap;
   }
 
   .recap-sticky-toolbar [data-slot="select-trigger"]:has(span),
@@ -185,7 +206,8 @@
   .recap-sticky-toolbar .flex.flex-wrap > [data-slot="button"],
   .recap-sticky-toolbar .flex.flex-wrap > [data-slot="select-trigger"],
   .recap-sticky-toolbar .flex.flex-wrap > [role="combobox"] {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    max-width: none;
   }
 
   .recap-sticky-toolbar [data-slot="select-trigger"] {
