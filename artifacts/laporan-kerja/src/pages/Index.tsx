@@ -99,7 +99,7 @@ const emptyRecordCounts: RecordCounts = {
 };
 
 const systemTabBaseClass =
-  "flex h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 sm:text-sm lg:w-auto lg:px-3 xl:px-4 data-[state=active]:hover:text-white [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
+  "flex h-auto min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-center text-xs font-semibold leading-tight whitespace-normal text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 sm:text-sm lg:w-auto lg:px-3 xl:px-4 data-[state=active]:hover:text-white [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
 
 const systemTabToneClass: Record<MainTab, string> = {
   reports:

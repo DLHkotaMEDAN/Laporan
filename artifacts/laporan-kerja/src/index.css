@@ -50,24 +50,13 @@
     overflow-x: clip;
   }
 
-  /* Keep button labels intact. Action bars can wrap complete buttons to a new
-     row, but button text must never be split into vertical characters. */
+  /* Keep button labels readable. Long labels may wrap inside their button;
+     action bars can wrap complete buttons to a new row. */
   [data-slot="button"] {
-    height: auto !important;
-    min-height: 2.5rem;
     max-width: 100%;
-    flex-shrink: 1;
-    white-space: nowrap;
+    white-space: normal;
     overflow-wrap: normal;
     word-break: normal;
-    text-overflow: ellipsis;
-  }
-
-  [data-slot="button"]:has(> svg:only-child) {
-    width: 2.5rem;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-    padding-inline: 0.5rem;
   }
 
   /* Action bars may wrap safely. The last action group is kept together so
@@ -125,6 +114,17 @@
     overflow-x: visible;
     padding-bottom: 0;
   }
+
+  /* The printable layout can be wider than a phone. Keep it inside a
+     deliberate scroll surface so the browser chrome and toolbar never get
+     pushed off-screen by the report table. */
+  .print-container,
+  .print-area {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
 }
 
 /* Shared responsive rules for all report toolbars. Controls may keep their
@@ -153,6 +153,39 @@
   .recap-sticky-toolbar [data-slot="button"] {
     max-width: 100%;
     min-width: 0;
+  }
+
+  /* Recap controls are intentionally labelled at phone/tablet widths. The
+     previous icon-only treatment hid useful actions and made fixed 40px
+     controls clip their own text. */
+  .recap-sticky-toolbar [class~="hidden"][class~="sm:inline"],
+  .recap-sticky-toolbar [class~="hidden"][class~="md:inline"] {
+    display: inline !important;
+  }
+
+  .recap-sticky-toolbar > .flex,
+  .recap-sticky-toolbar > header,
+  .recap-sticky-toolbar .flex.flex-wrap {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .recap-sticky-toolbar [data-slot="select-trigger"]:has(span),
+  .recap-sticky-toolbar [role="combobox"] {
+    width: min(100%, 18rem) !important;
+    min-width: 0;
+  }
+
+  .recap-sticky-toolbar [data-slot="button"][class~="w-10"]:has(span) {
+    width: auto !important;
+    min-width: 0;
+    padding-inline: 0.75rem !important;
+  }
+
+  .recap-sticky-toolbar .flex.flex-wrap > [data-slot="button"],
+  .recap-sticky-toolbar .flex.flex-wrap > [data-slot="select-trigger"],
+  .recap-sticky-toolbar .flex.flex-wrap > [role="combobox"] {
+    flex: 0 1 auto;
   }
 
   .recap-sticky-toolbar [data-slot="select-trigger"] {

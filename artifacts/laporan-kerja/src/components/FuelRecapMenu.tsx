@@ -33,9 +33,9 @@ export default function FuelRecapMenu({ signatureMode, onSignatureChange, onPrin
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button aria-label="Menu Rekap" title="Menu Rekap" className="h-10 w-10 justify-center bg-blue-600 px-0 shadow-md hover:bg-blue-700 sm:w-auto sm:px-4">
-          <FileText className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Menu Rekap</span>
-          <ChevronDown className="hidden h-4 w-4 opacity-70 sm:ml-2 sm:inline" />
+        <Button aria-label="Menu Rekap" title="Menu Rekap" className="h-10 w-full justify-center bg-blue-600 px-3 shadow-md hover:bg-blue-700 sm:w-auto sm:px-4">
+          <FileText className="h-4 w-4 shrink-0" /> <span>Menu Rekap</span>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
