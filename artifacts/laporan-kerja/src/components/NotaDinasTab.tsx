@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FilePlus2, FileText, Loader2, Pencil, Plus, Printer, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronUp, FilePlus2, FileText, Loader2, Pencil, Plus, Printer, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,14 @@ import { isNotaDinasAdmin } from "@/constants/access-control";
 import { useValueDraft } from "@/hooks/useFormDraft";
 import TotalRecordLabel from "@/components/TotalRecordLabel";
 import type { NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord } from "@/types/notaDinas";
+
+type SortDirection = "asc" | "desc";
+type NotaDinasSortKey = "requestNumber" | "continuationNumber" | "date" | "subject" | "region" | "items";
+
+const compareSortValues = (left: string | number, right: string | number) => {
+  if (typeof left === "number" && typeof right === "number") return left - right;
+  return String(left).localeCompare(String(right), "id-ID", { numeric: true, sensitivity: "base" });
+};
 
 const SAMPLE_FORM: NotaDinasForm = {
   jenisDokumen: "permintaan",
@@ -257,7 +265,7 @@ const NotaDinasSheet = ({
   </article>
 );
 
-const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
+const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; isActive?: boolean }) => {
   const { profile, session } = useAuth();
   const [form, setForm] = useState<NotaDinasForm>(readDraft);
   const [itemCatalog, setItemCatalog] = useState<string[]>(readItemCatalog);
@@ -267,6 +275,7 @@ const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
   const [saving, setSaving] = useState(false);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
+  const [sort, setSort] = useState<{ key: NotaDinasSortKey; direction: SortDirection } | null>(null);
   const [accountRegion, setAccountRegion] = useState<{ id: string; name: string; notaCode: string } | null>(null);
   const [accountRegionReady, setAccountRegionReady] = useState(false);
   const isLanjutan = form.jenisDokumen === "lanjutan";
@@ -283,10 +292,13 @@ const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
     form,
     (values) => {
       setForm(applyAccountRegion(values));
-      setView("form");
     },
     draftKey,
   );
+
+  useEffect(() => {
+    if (isActive) setView("list");
+  }, [isActive]);
 
   useEffect(() => {
     if (restoredAt) showSuccess("Draft Nota Dinas sebelumnya dipulihkan.");
@@ -485,6 +497,50 @@ const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
     setView("form");
   };
 
+  const getNumberLabel = (record: NotaDinasRecord, continuation = false) => {
+    const recordMonth = getLetterMonth(record.form.tanggal);
+    const recordYear = getLetterYear(record.form.tanggal);
+    if (continuation) {
+      return record.form.gunakanNomorOtomatisLanjutan
+        ? `${record.form.nomorLanjutanUrut.trim()}/ Katim/ PL/ ${recordMonth}/ ${recordYear}`
+        : record.form.nomorManualLanjutan;
+    }
+    return record.form.gunakanNomorOtomatisPertama
+      ? `${record.form.nomorUrut.trim() ? record.form.nomorUrut.trim().padStart(3, "0") : ""}/${record.form.kodeSurat}/ Dinas-LH/ ${record.form.kodeWilayah}/ ${recordMonth}/ ${recordYear}`
+      : record.form.nomorManualPertama;
+  };
+
+  const sortedRecords = useMemo(() => [...records].sort((left, right) => {
+    if (!sort) return right.updatedAt.localeCompare(left.updatedAt);
+    const getValue = (record: NotaDinasRecord): string | number => {
+      switch (sort.key) {
+        case "requestNumber": return getNumberLabel(record);
+        case "continuationNumber": return getNumberLabel(record, true);
+        case "date": return new Date(record.form.tanggal).getTime();
+        case "subject": return record.form.hal || "";
+        case "region": return record.form.wilayah || "";
+        case "items": return record.form.items.length;
+      }
+    };
+    const comparison = compareSortValues(getValue(left), getValue(right));
+    return sort.direction === "asc" ? comparison : -comparison;
+  }), [records, sort]);
+
+  const toggleSort = (key: NotaDinasSortKey) => setSort((current) => ({
+    key,
+    direction: current?.key === key && current.direction === "asc" ? "desc" : "asc",
+  }));
+
+  const sortableHeader = (label: string, key: NotaDinasSortKey, className = "") => {
+    const active = sort?.key === key;
+    const Icon = !active ? ArrowUpDown : sort.direction === "asc" ? ChevronUp : ChevronDown;
+    return <th className={`px-3 py-3 sm:px-5 ${className}`}>
+      <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1.5 hover:text-indigo-700" aria-label={`Urutkan ${label}`} title={`Urutkan ${label}`}>
+        {label}<Icon className="h-3.5 w-3.5" />
+      </button>
+    </th>;
+  };
+
   const saveRecord = async () => {
     setSaving(true);
     try {
@@ -508,7 +564,6 @@ const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
   };
 
   if (view === "list") {
-    const sortedRecords = [...records].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     return (
       <section className="space-y-5">
         <div className="flex flex-col gap-4 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-5 text-indigo-950 sm:flex-row sm:items-center sm:justify-between">
@@ -553,25 +608,19 @@ const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
                 <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
                   <tr>
                     <th className="w-10 px-3 py-3 sm:px-5">No.</th>
-                    <th className="px-3 py-3 sm:px-5">Nota Permintaan</th>
-                    <th className="hidden px-3 py-3 md:table-cell sm:px-5">Nota Lanjutan</th>
-                    <th className="hidden px-3 py-3 sm:table-cell sm:px-5">Tanggal</th>
-                    <th className="px-3 py-3 sm:px-5">Perihal</th>
-                    <th className="hidden px-3 py-3 lg:table-cell sm:px-5">Wilayah</th>
-                    <th className="hidden px-3 py-3 text-center md:table-cell sm:px-5">Barang</th>
+                    {sortableHeader("Nota Permintaan", "requestNumber")}
+                    {sortableHeader("Nota Lanjutan", "continuationNumber", "hidden md:table-cell")}
+                    {sortableHeader("Tanggal", "date", "hidden sm:table-cell")}
+                    {sortableHeader("Perihal", "subject")}
+                    {sortableHeader("Wilayah", "region", "hidden lg:table-cell")}
+                    {sortableHeader("Barang", "items", "hidden text-center md:table-cell")}
                     <th className="w-20 px-3 py-3 text-right sm:w-28 sm:px-5">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {sortedRecords.map((record, index) => {
-                    const recordMonth = getLetterMonth(record.form.tanggal);
-                    const recordYear = getLetterYear(record.form.tanggal);
-                    const firstNumber = record.form.gunakanNomorOtomatisPertama
-                      ? `${record.form.nomorUrut.trim() ? record.form.nomorUrut.trim().padStart(3, "0") : ""}/${record.form.kodeSurat}/ Dinas-LH/ ${record.form.kodeWilayah}/ ${recordMonth}/ ${recordYear}`
-                      : record.form.nomorManualPertama;
-                    const continuationNumber = record.form.gunakanNomorOtomatisLanjutan
-                      ? `${record.form.nomorLanjutanUrut.trim()}/ Katim/ PL/ ${recordMonth}/ ${recordYear}`
-                      : record.form.nomorManualLanjutan;
+                    const firstNumber = getNumberLabel(record);
+                    const continuationNumber = getNumberLabel(record, true);
                     return <tr key={record.id} className="hover:bg-slate-50/80">
                       <td className="px-3 py-4 font-semibold text-slate-500 sm:px-5">{index + 1}</td>
                       <td className="break-words px-3 py-4 font-semibold text-slate-800 sm:px-5">{firstNumber}</td>

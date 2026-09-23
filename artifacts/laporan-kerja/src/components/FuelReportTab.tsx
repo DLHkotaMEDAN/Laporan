@@ -48,7 +48,7 @@ interface FlatRow {
   rowNo: number;
 }
 
-type SortKey = 'no' | 'date' | 'spj' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'liters' | 'value' | 'location' | 'receiver' | 'remarks';
+type SortKey = 'no' | 'date' | 'spj' | 'region' | 'team' | 'vehicle' | 'fuelType' | 'noPol' | 'receiver' | 'petugas' | 'pertamaxValue' | 'pertamaxLiters' | 'dexliteValue' | 'dexliteLiters' | 'oli' | 'location' | 'activity' | 'liters' | 'value' | 'remarks';
 type SortDirection = 'asc' | 'desc';
 
 const normalizeText = (value?: string | null) => (value || "").trim().toLowerCase();
@@ -115,6 +115,9 @@ const getDisplayFuelItems = (items: FuelUsageItem[]) => {
 const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): string | number => {
   const items = report.items || [];
   const firstItem = items[0];
+  const sum = (fuelType: FuelUsageItem['fuel_type'], field: 'amount_rp' | 'amount_liter' | 'amount') => items
+    .filter(item => item.fuel_type === fuelType)
+    .reduce((total, item) => total + Number(item[field] || 0), 0);
 
   switch (key) {
     case 'date': return report.date || '';
@@ -123,10 +126,18 @@ const getReportSortValue = (report: FuelReport, key: Exclude<SortKey, 'no'>): st
     case 'team': return report.team || '';
     case 'vehicle': return firstItem?.vehicle_operator || '';
     case 'fuelType': return firstItem?.fuel_type || '';
+    case 'noPol': return firstItem?.no_pol || '';
+    case 'receiver': return firstItem?.recipient_name || '';
+    case 'petugas': return firstItem?.item_remarks || '';
+    case 'pertamaxValue': return sum('Pertamax', 'amount_rp') || sum('Pertamax', 'amount');
+    case 'pertamaxLiters': return sum('Pertamax', 'amount_liter');
+    case 'dexliteValue': return sum('Dexlite', 'amount_rp') || sum('Dexlite', 'amount');
+    case 'dexliteLiters': return sum('Dexlite', 'amount_liter');
+    case 'oli': return sum('Oli', 'amount_liter') || sum('Oli', 'amount');
     case 'liters': return items.reduce((total, item) => total + Number(item.amount_liter || (item.fuel_type === 'Oli' ? item.amount : 0) || 0), 0);
     case 'value': return items.reduce((total, item) => total + (item.fuel_type === 'Oli' ? 0 : Number(item.amount_rp || item.amount || 0)), 0);
     case 'location': return firstItem?.location?.street || '';
-    case 'receiver': return firstItem?.recipient_name || '';
+    case 'activity': return firstItem?.activity_detail || '';
     case 'remarks': return firstItem?.item_remarks || '';
   }
 };
@@ -483,6 +494,26 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
     );
   };
 
+  const sortableSubHeader = (label: string, key: SortKey, className: string) => {
+    const isActive = sort?.key === key;
+    const Icon = isActive && sort.direction === 'desc' ? ArrowDownZA : isActive ? ArrowDownAZ : ArrowDownUp;
+    const directionLabel = isActive && sort.direction === 'desc' ? 'Z ke A / besar ke kecil' : 'A ke Z / kecil ke besar';
+    return (
+      <th className={cn("px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-600", className)}>
+        <button
+          type="button"
+          onClick={() => handleSort(key)}
+          aria-label={`Urutkan ${label}: ${directionLabel}`}
+          title={`Urutkan ${label}: ${directionLabel}`}
+          className="inline-flex items-center justify-center gap-1 rounded text-inherit outline-none transition-colors hover:text-orange-200 focus-visible:ring-2 focus-visible:ring-white/80"
+        >
+          <span>{label}</span>
+          <Icon className={cn("h-3 w-3 shrink-0", isActive ? "text-orange-300" : "text-slate-300")} aria-hidden="true" />
+        </button>
+      </th>
+    );
+  };
+
   const sameDisplayGroup = (left: FlatRow | undefined, right: FlatRow | undefined) => Boolean(
     left && right &&
     left.reportId === right.reportId &&
@@ -642,25 +673,25 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
                 <tr className="bg-slate-700 text-white">
                   {sortableHeader('No', 'no', 'text-center w-10', { rowSpan: 2 })}
                   {sortableHeader('Tanggal', 'date', 'text-center w-24', { rowSpan: 2 })}
-                  {isLaporanBbm && sortableHeader('No. SPJ', 'spj', 'text-left w-32', { rowSpan: 2 })}
                   {sortableHeader('Wilayah', 'region', 'text-left w-24', { rowSpan: 2 })}
+                  {isLaporanBbm && sortableHeader('No. SPJ', 'spj', 'text-left w-32', { rowSpan: 2 })}
                   {sortableHeader('Tim', 'team', 'text-left w-32', { rowSpan: 2 })}
                   {sortableHeader('Kendaraan / Alat Operasional', 'vehicle', 'text-left min-w-[150px]', { rowSpan: 2 })}
-                  {isLaporanBbm && <th rowSpan={2} className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 align-middle w-28">No. Polisi</th>}
-                  {isLaporanBbm && <th rowSpan={2} className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 align-middle w-32">Penerima</th>}
-                  <th rowSpan={2} className="px-3 py-2.5 text-left font-semibold border-r border-slate-600 align-middle w-28">Petugas</th>
+                  {isLaporanBbm && sortableHeader('No. Polisi', 'noPol', 'text-left w-28', { rowSpan: 2 })}
+                  {isLaporanBbm && sortableHeader('Penerima', 'receiver', 'text-left w-32', { rowSpan: 2 })}
+                  {sortableHeader('Petugas', 'petugas', 'text-left w-28', { rowSpan: 2 })}
                   <th colSpan={2} className="px-3 py-2 font-semibold text-center border-r border-slate-600">PERTAMAX</th>
                   <th colSpan={2} className="px-3 py-2 font-semibold text-center border-r border-slate-600">DEXLITE</th>
-                  <th rowSpan={2} className="px-3 py-2.5 font-semibold text-center border-r border-slate-600 align-middle w-20">OLI<br /><span className="text-[10px] font-normal">(Liter)</span></th>
-                  <th rowSpan={2} className="px-3 py-2.5 font-semibold text-left border-r border-slate-600 align-middle min-w-[190px]">Lokasi Kerja</th>
-                  <th rowSpan={2} className="px-3 py-2.5 font-semibold text-left border-r border-slate-600 align-middle min-w-[170px]">Keterangan</th>
+                  {sortableHeader('OLI (Liter)', 'oli', 'text-center w-20', { rowSpan: 2 })}
+                  {sortableHeader('Lokasi Kerja', 'location', 'text-left min-w-[190px]', { rowSpan: 2 })}
+                  {sortableHeader('Keterangan', 'activity', 'text-left min-w-[170px]', { rowSpan: 2 })}
                   <th rowSpan={2} className="px-3 py-2.5 text-center font-semibold align-middle w-20">Aksi</th>
                 </tr>
                 <tr className="bg-slate-600 text-white">
-                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-500">Rupiah (Rp)</th>
-                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-600">Liter</th>
-                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-500">Rupiah (Rp)</th>
-                  <th className="px-2 py-1.5 text-center text-[10px] font-semibold border-r border-slate-600">Liter</th>
+                  {sortableSubHeader('Rupiah (Rp)', 'pertamaxValue', 'border-r-slate-500')}
+                  {sortableSubHeader('Liter', 'pertamaxLiters', '')}
+                  {sortableSubHeader('Rupiah (Rp)', 'dexliteValue', 'border-r-slate-500')}
+                  {sortableSubHeader('Liter', 'dexliteLiters', '')}
                 </tr>
               </thead>
               <tbody>

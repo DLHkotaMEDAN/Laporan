@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Edit, FilterX, Loader2, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, Edit, FilterX, Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,6 +24,14 @@ const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: ''
 const canAccess = (role?: string, email?: string | null) =>
   email === 'admin@gmail.com' || ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
 const defaultOilOptions = ['Oli Hydraulic', 'Oli Mesin', 'Minyak Rem'];
+
+type SortDirection = 'asc' | 'desc';
+type SpjOliSortKey = 'date' | 'region' | 'team' | 'spj_number' | 'receiver_name' | 'oil_name' | 'quantity' | 'remarks';
+
+const compareSortValues = (left: string | number, right: string | number) => {
+  if (typeof left === 'number' && typeof right === 'number') return left - right;
+  return String(left).localeCompare(String(right), 'id-ID', { numeric: true, sensitivity: 'base' });
+};
 
 const getNextSpjNumber = (value: string) => value.replace(/^(\d+)/, (_, number: string) => String(Number(number) + 1).padStart(number.length, '0'));
 
@@ -86,6 +94,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   const [regionId, setRegionId] = useState('semua');
   const [teamId, setTeamId] = useState('semua');
   const [date, setDate] = useState('');
+  const [sort, setSort] = useState<{ key: SpjOliSortKey; direction: SortDirection } | null>(null);
   const [form, setForm] = useState(emptyRecord);
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; region_id: string; name: string }>();
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
@@ -201,6 +210,36 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
 
   const regionName = (value: string) => regions.find(region => region.id === value)?.name || '-';
   const teamName = (value: string) => teams.find(team => team.id === value)?.name || '-';
+  const sortedRecords = useMemo(() => [...filtered].sort((left, right) => {
+    if (!sort) return 0;
+    const getValue = (record: SpjOliRecord): string | number => {
+      switch (sort.key) {
+        case 'date': return new Date(record.date).getTime();
+        case 'region': return regionName(record.region_id);
+        case 'team': return teamName(record.team_id);
+        case 'spj_number': return record.spj_number || '';
+        case 'receiver_name': return record.receiver_name || '';
+        case 'oil_name': return record.oil_name || '';
+        case 'quantity': return Number(record.quantity || 0);
+        case 'remarks': return record.remarks || '';
+      }
+    };
+    const comparison = compareSortValues(getValue(left), getValue(right));
+    return sort.direction === 'asc' ? comparison : -comparison;
+  }), [filtered, sort, regions, teams]);
+  const toggleSort = (key: SpjOliSortKey) => setSort(current => ({
+    key,
+    direction: current?.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+  }));
+  const sortableHeader = (label: string, key: SpjOliSortKey, className = '') => {
+    const active = sort?.key === key;
+    const Icon = !active ? ArrowUpDown : sort.direction === 'asc' ? ChevronUp : ChevronDown;
+    return <th className={`p-3 ${className}`}>
+      <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1.5 hover:text-emerald-200" aria-label={`Urutkan ${label}`} title={`Urutkan ${label}`}>
+        {label}<Icon className="h-3.5 w-3.5" />
+      </button>
+    </th>;
+  };
   const update = (key: keyof typeof form, value: string | number) => setForm(current => ({ ...current, [key]: value }));
   useEffect(() => {
     if (id || !isForm || !isDraftReady || restoredAt || nextSpjNumberInitialized.current || form.spj_number.trim()) return;
@@ -270,21 +309,21 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
             <thead>
               <tr className="bg-slate-700 text-white">
                 <th className="p-3">No</th>
-                <th className="p-3">Tanggal</th>
-                <th className="p-3 text-left">Wilayah</th>
-                <th className="p-3 text-left">Tim / Operator</th>
-                <th className="p-3 text-left">No. SPJ</th>
-                <th className="p-3 text-left">Nama Penerima</th>
-                <th className="p-3 text-left">Jenis Oli / Minyak Rem</th>
-                <th className="p-3 text-right">Jumlah</th>
-                <th className="p-3 text-left">Keterangan</th>
+                {sortableHeader('Tanggal', 'date', 'text-center')}
+                {sortableHeader('Wilayah', 'region', 'text-left')}
+                {sortableHeader('Tim / Operator', 'team', 'text-left')}
+                {sortableHeader('No. SPJ', 'spj_number', 'text-left')}
+                {sortableHeader('Nama Penerima', 'receiver_name', 'text-left')}
+                {sortableHeader('Jenis Oli / Minyak Rem', 'oil_name', 'text-left')}
+                {sortableHeader('Jumlah', 'quantity', 'text-right')}
+                {sortableHeader('Keterangan', 'remarks', 'text-left')}
                 {editable && <th className="p-3">Aksi</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr><td colSpan={editable ? 10 : 9} className="p-10 text-center"><Loader2 className="mx-auto animate-spin" /></td></tr>
-              ) : filtered.length ? filtered.map((record, index) => (
+              ) : sortedRecords.length ? sortedRecords.map((record, index) => (
                 <tr key={record.id} className={cn('border-t hover:bg-emerald-50/50', index % 2 && 'bg-slate-50/70')}>
                   <td className="p-3 text-center font-bold text-slate-500">{index + 1}</td>
                   <td className="p-3 text-center">{record.date}</td>
@@ -303,7 +342,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
             </tbody>
           </table>
         </div>
-        <div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500"><b>{filtered.length}</b> data SPJ Oli ditampilkan.</div>
+        <div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500"><b>{sortedRecords.length}</b> data SPJ Oli ditampilkan.</div>
       </section>
     </div>
   );

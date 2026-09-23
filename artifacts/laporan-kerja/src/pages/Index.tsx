@@ -1442,7 +1442,7 @@ const Index = () => {
               )}
             </>
           )}
-          {(isAdmin || isNotaDinasOnly) && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab recordCount={recordCounts.nota_dinas} /></TabsContent>}
+          {(isAdmin || isNotaDinasOnly) && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab isActive={activeTab === "nota_dinas"} recordCount={recordCounts.nota_dinas} /></TabsContent>}
         </Tabs>
         {activeTab === 'spj_oli' && (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
           <div className="mt-6">
