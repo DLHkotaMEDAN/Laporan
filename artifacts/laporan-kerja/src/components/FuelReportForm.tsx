@@ -147,6 +147,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     || profile?.role === 'admin_bbm'
     || profile?.role === 'admin_rencana_kerja_bbm'
     || profile?.role === 'admin_wilayah_bbm'
+    || profile?.role === 'admin_laporan_bbm'
     || session?.user?.email === 'admin@gmail.com';
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
