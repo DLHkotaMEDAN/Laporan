@@ -58,8 +58,6 @@ as $$
     when public.current_access_role() = 'pimpinan' then action in ('select', 'update')
     when public.current_access_role() in ('admin_bbm', 'admin_rencana_kerja_bbm', 'admin_wilayah_bbm') then
       resource = 'fuel_reports' or action = 'select'
-    when public.current_access_role() = 'admin_spj_bbm' then
-      resource = 'fuel_spj_reports' or action = 'select'
     else false
   end
 $$;
@@ -115,5 +113,5 @@ security definer
 set search_path = public
 as $$
   select auth.uid() is not null
-    and public.current_access_role() in ('admin', 'admin_bbm', 'admin_rencana_kerja_bbm', 'admin_wilayah_bbm', 'admin_spj_bbm')
+    and public.current_access_role() in ('admin', 'admin_bbm', 'admin_rencana_kerja_bbm', 'admin_wilayah_bbm')
 $$;

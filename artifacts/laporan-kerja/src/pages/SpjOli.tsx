@@ -18,6 +18,7 @@ import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { isSpjOliAdmin } from '@/constants/access-control';
+import TotalRecordLabel from '@/components/TotalRecordLabel';
 
 const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: '', team_id: '', spj_number: '', vehicle_name: '', receiver_name: '', operator_name: '', oil_name: '', quantity: 0, unit: 'Liter', location: '', remarks: '' };
 const canAccess = (role?: string, email?: string | null) =>
@@ -71,7 +72,7 @@ const SpjOliInputForm = ({ form, regions, teams, selectedTeam, savedRecords, spj
   </main>
 );
 
-export default function SpjOli() {
+export default function SpjOli({ recordCount }: { recordCount?: number | null } = {}) {
   const navigate = useNavigate();
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -262,6 +263,7 @@ export default function SpjOli() {
         </div>
       </section>
 
+      <TotalRecordLabel count={recordCount === undefined ? records.length : recordCount} />
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[950px] text-xs">

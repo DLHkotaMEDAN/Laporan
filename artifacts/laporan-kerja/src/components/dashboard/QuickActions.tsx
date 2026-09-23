@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, ClipboardList, ArrowRight, Fuel, FileText } from 'lucide-react';
+import { Plus, ClipboardList, ArrowRight, Fuel } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 
@@ -12,13 +12,12 @@ interface QuickActionsProps {
   canManageReports?: boolean;
   canManageWorkPlans?: boolean;
   canManageFuel?: boolean;
-  canManageFuelSpj?: boolean;
 }
 
-const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canManageWorkPlans = true, canManageFuel = false, canManageFuelSpj = false }: QuickActionsProps) => {
+const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canManageWorkPlans = true, canManageFuel = false }: QuickActionsProps) => {
   const navigate = useNavigate();
 
-  if (!isLoggedIn || isPimpinan || (!canManageReports && !canManageWorkPlans && !canManageFuel && !canManageFuelSpj)) return null;
+  if (!isLoggedIn || isPimpinan || (!canManageReports && !canManageWorkPlans && !canManageFuel)) return null;
 
   return (
     <div className={cn("mb-8 grid min-w-0 gap-3 sm:gap-4", canManageReports && canManageWorkPlans ? "lg:grid-cols-2" : "lg:grid-cols-1")}>
@@ -76,26 +75,6 @@ const QuickActions = ({ isPimpinan, isLoggedIn, canManageReports = true, canMana
             <div className="min-w-0">
               <p className="text-sm font-black sm:text-base">Laporan BBM Baru</p>
               <p className="mt-1 text-xs font-medium leading-5 text-white/75">Input laporan penggunaan BBM</p>
-            </div>
-          </div>
-          <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />
-        </Button>
-      )}
-      {canManageFuelSpj && (
-        <Button
-          onClick={() => navigate('/fuel-reports/spj/create')}
-          className={cn(
-            "group h-auto w-full min-w-0 justify-between rounded-2xl p-4 text-left shadow-lg shadow-blue-900/10 transition-all hover:-translate-y-1 active:scale-[0.99] sm:p-5",
-            "bg-gradient-to-br from-blue-700 to-indigo-700 text-white hover:from-blue-800 hover:to-indigo-800"
-          )}
-        >
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <div className="shrink-0 rounded-xl bg-white/20 p-3">
-              <FileText className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-black sm:text-base">Laporan SPJ Baru</p>
-              <p className="mt-1 text-xs font-medium leading-5 text-white/75">Input laporan pertanggungjawaban BBM</p>
             </div>
           </div>
           <ArrowRight className="h-5 w-5 opacity-70 transition-transform group-hover:translate-x-1" />

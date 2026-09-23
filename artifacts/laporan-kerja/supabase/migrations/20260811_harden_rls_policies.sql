@@ -102,9 +102,6 @@ as $$
     when public.current_access_role() = 'admin_bbm' then
       resource = 'fuel_reports'
       or action = 'select'
-    when public.current_access_role() = 'admin_spj_bbm' then
-      resource = 'fuel_spj_reports'
-      or action = 'select'
     else false
   end
 $$;
@@ -134,7 +131,6 @@ alter table public.profiles enable row level security;
 alter table public.reports enable row level security;
 alter table public.work_plans enable row level security;
 alter table public.fuel_reports enable row level security;
-alter table public.fuel_spj_reports enable row level security;
 alter table public.fuel_prices enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.regions enable row level security;
@@ -318,39 +314,6 @@ on public.fuel_reports
 for delete
 to authenticated
 using (public.has_fuel_access('fuel_reports', 'delete'));
-
--- Fuel SPJ reports
-drop policy if exists "Allow read for all authenticated" on public.fuel_spj_reports;
-drop policy if exists "Allow all for admin" on public.fuel_spj_reports;
-drop policy if exists "fuel_spj_reports_select_authenticated" on public.fuel_spj_reports;
-drop policy if exists "fuel_spj_reports_insert_authenticated" on public.fuel_spj_reports;
-drop policy if exists "fuel_spj_reports_update_authenticated" on public.fuel_spj_reports;
-drop policy if exists "fuel_spj_reports_delete_authenticated" on public.fuel_spj_reports;
-
-create policy "fuel_spj_reports_select_authenticated"
-on public.fuel_spj_reports
-for select
-to authenticated
-using (public.has_fuel_access('fuel_spj_reports', 'select'));
-
-create policy "fuel_spj_reports_insert_authenticated"
-on public.fuel_spj_reports
-for insert
-to authenticated
-with check (public.has_fuel_access('fuel_spj_reports', 'insert'));
-
-create policy "fuel_spj_reports_update_authenticated"
-on public.fuel_spj_reports
-for update
-to authenticated
-using (public.has_fuel_access('fuel_spj_reports', 'update'))
-with check (public.has_fuel_access('fuel_spj_reports', 'update'));
-
-create policy "fuel_spj_reports_delete_authenticated"
-on public.fuel_spj_reports
-for delete
-to authenticated
-using (public.has_fuel_access('fuel_spj_reports', 'delete'));
 
 -- Fuel prices
 drop policy if exists "Allow read for all authenticated_prices" on public.fuel_prices;

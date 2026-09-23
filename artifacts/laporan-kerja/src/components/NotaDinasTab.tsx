@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { isNotaDinasAdmin } from "@/constants/access-control";
 import { useValueDraft } from "@/hooks/useFormDraft";
+import TotalRecordLabel from "@/components/TotalRecordLabel";
 import type { NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord } from "@/types/notaDinas";
 
 const SAMPLE_FORM: NotaDinasForm = {
@@ -256,7 +257,7 @@ const NotaDinasSheet = ({
   </article>
 );
 
-const NotaDinasTab = () => {
+const NotaDinasTab = ({ recordCount }: { recordCount?: number | null }) => {
   const { profile, session } = useAuth();
   const [form, setForm] = useState<NotaDinasForm>(readDraft);
   const [itemCatalog, setItemCatalog] = useState<string[]>(readItemCatalog);
@@ -523,6 +524,7 @@ const NotaDinasTab = () => {
           </Button>
         </div>
 
+        <TotalRecordLabel count={recordCount === undefined ? records.length : recordCount} />
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

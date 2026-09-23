@@ -213,7 +213,7 @@ export const getRoleLandingPath = (role: string | null | undefined) => {
   if (role === USER_ROLES.ADMIN_BBM_PUSAT) return '/?tab=fuel_reports_pusat';
   if (role === USER_ROLES.ADMIN_BBM) return '/';
   if (role === USER_ROLES.ADMIN_LAPORAN_BBM) return '/laporan-bbm';
-  if (role === USER_ROLES.ADMIN_SPJ_BBM) return '/fuel-reports/spj';
+  if (role === USER_ROLES.ADMIN_SPJ_BBM) return '/?tab=spj_oli';
   if (role === USER_ROLES.ADMIN_SPJ_OLI) return '/?tab=spj_oli';
   if (role === USER_ROLES.ADMIN_NOTA_DINAS) return '/?tab=nota_dinas';
   if (role === USER_ROLES.ADMIN_RENCANA_KERJA) return '/work-plans/daily-rekap';

@@ -10,8 +10,9 @@ import { roleRequiresRegion } from '@/constants/access-control';
 import { overtimeService } from '@/services/overtimeService';
 import { OvertimeRecord } from '@/types/overtime';
 import { showError, showSuccess } from '@/utils/toast';
+import TotalRecordLabel from '@/components/TotalRecordLabel';
 
-const OvertimeRecap = () => {
+const OvertimeRecap = ({ recordCount }: { recordCount?: number | null }) => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -29,6 +30,7 @@ const OvertimeRecap = () => {
 
   return <div className="space-y-5">
     <div className="recap-sticky-toolbar flex flex-col gap-3 rounded-xl border bg-white p-4 md:flex-row"><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="md:w-48" /><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input className="pl-9" placeholder="Cari nama, NIP, atau lokasi" value={search} onChange={e => setSearch(e.target.value)} /></div></div>
+    <TotalRecordLabel count={recordCount === undefined ? records.length : recordCount} />
     <div className="space-y-2"><div className="text-center"><p className="text-sm font-bold uppercase text-slate-700">Wilayah: {regionTitle}</p><p className="text-sm font-semibold text-slate-600">Tim: {teamTitle}</p></div><div className="overflow-x-auto rounded-xl border bg-white shadow-sm"><table className="w-full min-w-[1250px] border-collapse text-sm"><thead className="bg-slate-300"><tr>{['No', 'Nama', 'NIP', 'Jabatan', 'Lokasi Pekerjaan', 'Foto Sebelum', 'Foto Sesudah', 'Jam', 'Jumlah Kehadiran', 'Aksi'].map(header => <th key={header} className="border border-black px-3 py-3 text-center font-bold">{header}</th>)}</tr></thead><tbody>{filtered.map((record, index) => <tr key={record.id} className="hover:bg-slate-50"><td className="border border-slate-300 p-3 text-center">{index + 1}</td><td className="border border-slate-300 p-3 font-medium">{record.name}</td><td className="border border-slate-300 p-3">{record.nip}</td><td className="border border-slate-300 p-3 text-center">{record.position}</td><td className="border border-slate-300 p-3 text-center">{record.work_location}</td><td className="border border-slate-300 p-1 text-center">{(record.photo_before_url || record.photo_url) ? <img src={record.photo_before_url || record.photo_url} alt={`Foto sebelum ${record.name}`} className="mx-auto h-28 w-48 object-cover" /> : '-'}</td><td className="border border-slate-300 p-1 text-center">{record.photo_after_url ? <img src={record.photo_after_url} alt={`Foto sesudah ${record.name}`} className="mx-auto h-28 w-48 object-cover" /> : '-'}</td><td className="border border-slate-300 p-3 text-center whitespace-nowrap">{record.start_time} s/d {record.end_time}</td><td className="border border-slate-300 p-3 text-center">{record.attendance_count}</td><td className="border border-slate-300 p-2"><div className="flex justify-center gap-1"><Button variant="ghost" size="icon" title="Edit" onClick={() => navigate(`/overtime/edit/${record.id}`)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="Hapus" className="text-red-600" onClick={() => void remove(record.id)}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}{filtered.length === 0 && <tr><td colSpan={10} className="p-12 text-center text-slate-500">Belum ada data lembur.</td></tr>}</tbody></table></div></div>
   </div>;
 };

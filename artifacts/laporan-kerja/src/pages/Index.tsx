@@ -22,7 +22,6 @@ import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
 import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 import FuelReportTab from '@/components/FuelReportTab';
-import FuelSpjTab from '@/components/FuelSpjTab';
 import SpjOli from '@/pages/SpjOli';
 import OvertimeRecap from '@/pages/OvertimeRecap';
 import DashboardStats from '@/components/dashboard/DashboardStats';
@@ -61,6 +60,7 @@ import {
 } from "@/components/ui/dialog";
 import PublicLanding from "./PublicLanding";
 import NotaDinasTab from '@/components/NotaDinasTab';
+import TotalRecordLabel from '@/components/TotalRecordLabel';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -82,8 +82,21 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_reports_pusat', 'laporan_bbm', 'fuel_spj', 'spj_oli', 'nota_dinas'] as const;
+const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_reports_pusat', 'laporan_bbm', 'spj_oli', 'nota_dinas'] as const;
 type MainTab = typeof validMainTabs[number];
+
+type RecordCounts = Record<MainTab, number | null>;
+
+const emptyRecordCounts: RecordCounts = {
+  reports: null,
+  workplans: null,
+  overtime: null,
+  fuel_reports: null,
+  fuel_reports_pusat: null,
+  laporan_bbm: null,
+  spj_oli: null,
+  nota_dinas: null,
+};
 
 const systemTabBaseClass =
   "flex h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:ring-2 sm:text-sm lg:w-auto lg:px-3 xl:px-4 data-[state=active]:hover:text-white [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
@@ -101,8 +114,6 @@ const systemTabToneClass: Record<MainTab, string> = {
     "hover:border-cyan-200 hover:text-cyan-700 focus-visible:ring-cyan-400 data-[state=active]:border-cyan-600 data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   laporan_bbm:
     "hover:border-amber-200 hover:text-amber-800 focus-visible:ring-amber-400 data-[state=active]:border-amber-700 data-[state=active]:bg-amber-700 data-[state=active]:text-white data-[state=active]:shadow-sm",
-  fuel_spj:
-    "hover:border-blue-200 hover:text-blue-800 focus-visible:ring-blue-400 data-[state=active]:border-blue-800 data-[state=active]:bg-blue-800 data-[state=active]:text-white data-[state=active]:shadow-sm",
   spj_oli:
     "hover:border-emerald-200 hover:text-emerald-800 focus-visible:ring-emerald-400 data-[state=active]:border-emerald-700 data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-sm",
   nota_dinas:
@@ -203,13 +214,27 @@ const TabPageHeader = ({
       </div>
     </div>
     {showAction && (
-        <Button onClick={onAction} className={cn("h-10 w-full rounded-xl px-4 font-bold shadow-sm sm:w-auto", actionClassName)}>
-          <ActionIcon className="mr-2 h-4 w-4 shrink-0" />
-          {actionLabel}
-        </Button>
+      <Button onClick={onAction} className={cn("h-10 w-full rounded-xl px-4 font-bold shadow-sm sm:w-auto", actionClassName)}>
+        <ActionIcon className="mr-2 h-4 w-4 shrink-0" />
+        {actionLabel}
+      </Button>
     )}
   </section>
 );
+
+const getDatabaseRecordCount = async (
+  table: string,
+  options: { regionId?: string | null; reportType?: string; softDeleted?: boolean } = {},
+) => {
+  let query = supabase.from(table).select('id', { count: 'exact', head: true });
+  if (options.regionId) query = query.eq('region_id', options.regionId);
+  if (options.reportType) query = query.eq('report_type', options.reportType);
+  if (options.softDeleted !== false) query = query.is('deleted_at', null);
+
+  const { count, error } = await query;
+  if (error) throw error;
+  return count || 0;
+};
 
 const Index = () => {
   const navigate = useNavigate();
@@ -219,6 +244,7 @@ const Index = () => {
   const hasRestoredScrollRef = useRef(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
+  const [recordCounts, setRecordCounts] = useState<RecordCounts>(emptyRecordCounts);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(savedViewStateRef.current.searchQuery || "");
@@ -283,9 +309,10 @@ const Index = () => {
 
   useEffect(() => {
     if (authLoading || !isLoggedIn) return;
+    void loadRecordCounts();
     // Admin SPJ Oli hanya memerlukan data SPJ Oli. Jangan memuat laporan
     // harian/rencana kerja yang memang tidak diberi akses oleh RLS.
-    if (isAdminSpjOli || isAdminLaporanBbm || isNotaDinasOnly) {
+    if (isAdminSpj || isAdminSpjOli || isAdminLaporanBbm || isNotaDinasOnly) {
       setLoading(false);
       return;
     }
@@ -318,9 +345,7 @@ const Index = () => {
       setActiveTab("laporan_bbm");
     } else if (isAdminBbm && !isCombinedWorkspace) {
       setActiveTab("fuel_reports");
-    } else if (isAdminSpj) {
-      setActiveTab("fuel_spj");
-    } else if (isAdminSpjOli) {
+    } else if (isAdminSpj || isAdminSpjOli) {
       setActiveTab("spj_oli");
     } else if (savedTab) {
       const safeSavedTab = (savedTab === "nota_dinas" && !isAdmin && !isNotaDinasOnly)
@@ -395,6 +420,7 @@ const Index = () => {
       ]);
       setReports(reportsData);
       setWorkPlans(workPlansData);
+      setRecordCounts(current => ({ ...current, reports: reportsData.length, workplans: workPlansData.length }));
       if (accountRegionId) {
         setSelectedRegion(accountRegionId);
       } else if (!isAdmin) {
@@ -516,6 +542,53 @@ const Index = () => {
 
   const formatReportLocation = (report: Report) => {
     return formatLocation(report.location);
+  };
+
+  const loadRecordCounts = async () => {
+    if (!profile || !isLoggedIn) return;
+
+    const jobs: Partial<Record<MainTab, Promise<number>>> = {};
+    const canShowReports = canViewReportsTab && !isOvertimeOnly;
+    const canShowWorkPlans = !isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly;
+
+    if (canShowReports) {
+      jobs.reports = Promise.resolve(reports.length);
+    }
+    if (canShowWorkPlans) {
+      jobs.workplans = Promise.resolve(workPlans.length);
+    }
+    if (canViewOvertime && !isAdminHarian) {
+      jobs.overtime = getDatabaseRecordCount('overtime_records', { regionId: accountRegionId, softDeleted: false });
+    }
+    if ((isAdmin || isAdminBbm) && !isAdminHarian) {
+      jobs.fuel_reports = getDatabaseRecordCount('fuel_reports', { regionId: accountRegionId, reportType: 'admin_bbm' });
+    }
+    if ((isAdmin || isAdminBbmPusat) && !isAdminHarian) {
+      jobs.fuel_reports_pusat = getDatabaseRecordCount('fuel_reports_pusat', { regionId: accountRegionId });
+    }
+    if ((isAdmin || isAdminLaporanBbm) && !isAdminHarian) {
+      jobs.laporan_bbm = getDatabaseRecordCount('laporan_bbm_reports', { regionId: accountRegionId });
+    }
+    if ((isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && !isAdminHarian) {
+      jobs.spj_oli = getDatabaseRecordCount('spj_oli_records', { regionId: accountRegionId, softDeleted: false });
+    }
+    if ((isAdmin || isNotaDinasOnly) && !isAdminHarian) {
+      jobs.nota_dinas = getDatabaseRecordCount('nota_dinas_records', { regionId: accountRegionId, softDeleted: false });
+    }
+
+    const entries = await Promise.all(Object.entries(jobs).map(async ([tab, job]) => {
+      try {
+        return [tab, await job] as const;
+      } catch (error) {
+        console.warn(`Gagal menghitung record tab ${tab}:`, error);
+        return [tab, null] as const;
+      }
+    }));
+
+    setRecordCounts(current => ({
+      ...current,
+      ...Object.fromEntries(entries),
+    } as RecordCounts));
   };
 
   const handleRegionChange = (regionId: string) => {
@@ -851,11 +924,6 @@ const Index = () => {
                       <FileText size={16} /> Laporan BBM
                     </TabsTrigger>
                   )}
-                  {(isAdmin || isPimpinan || isAdminSpj) && (
-                    <TabsTrigger value="fuel_spj" className={cn(systemTabBaseClass, systemTabToneClass.fuel_spj)}>
-                      <Table size={16} /> Laporan SPJ
-                    </TabsTrigger>
-                  )}
                   {(isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
                     <TabsTrigger value="spj_oli" className={cn(systemTabBaseClass, systemTabToneClass.spj_oli)}>
                       <Fuel size={16} /> SPJ Oli
@@ -936,22 +1004,6 @@ const Index = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate('/fuel-reports/yearly-rekap')} className="py-3 cursor-pointer">
                         <CalendarDays className="mr-3 h-4 w-4 text-red-600" /> Rekap Tahunan BBM
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {activeTab === 'fuel_spj' && (
-                    <>
-                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/spj/daily-rekap')} className="py-3 cursor-pointer">
-                        <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian SPJ
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/spj/weekly-rekap')} className="py-3 cursor-pointer">
-                        <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan SPJ
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/spj/monthly-rekap')} className="py-3 cursor-pointer">
-                        <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan SPJ
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/spj/yearly-rekap')} className="py-3 cursor-pointer">
-                        <CalendarDays className="mr-3 h-4 w-4 text-red-600" /> Rekap Tahunan SPJ
                       </DropdownMenuItem>
                     </>
                   )}
@@ -1074,17 +1126,6 @@ const Index = () => {
               iconClassName="bg-amber-50 text-amber-700"
             />
           )}
-          {activeTab === 'fuel_spj' && (
-            <TabPageHeader
-              title="Laporan SPJ"
-              description="Pencatatan laporan pertanggungjawaban BBM."
-              actionLabel="Input Laporan SPJ"
-              onAction={() => navigate('/fuel-reports/spj/create')}
-              actionIcon={FileText}
-              actionClassName="bg-blue-700 hover:bg-blue-800"
-              iconClassName="bg-blue-50 text-blue-700"
-            />
-          )}
           {/* Filter Section */}
           {(activeTab === "reports" || activeTab === "workplans") && !isOvertimeOnly && (
             <div className="min-w-0 rounded-2xl border bg-white p-4 shadow-sm ring-1 ring-slate-100 sm:p-5">
@@ -1161,9 +1202,10 @@ const Index = () => {
             </div>
           )}
 
-          {canViewOvertime && <TabsContent value="overtime" className="mt-0"><OvertimeRecap /></TabsContent>}
+          {canViewOvertime && <TabsContent value="overtime" className="mt-0"><OvertimeRecap recordCount={recordCounts.overtime} /></TabsContent>}
 
           {canViewReportsTab && !isOvertimeOnly && <TabsContent value="reports" className="mt-0">
+            <TotalRecordLabel count={recordCounts.reports} />
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
@@ -1274,6 +1316,7 @@ const Index = () => {
           </TabsContent>}
 
           {!isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsContent value="workplans" className="mt-0">
+            <TotalRecordLabel count={recordCounts.workplans} />
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-green-600" />
@@ -1382,33 +1425,28 @@ const Index = () => {
 
           {(isAdmin || isPimpinan || isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli) && (
             <>
-              {(isAdmin || isAdminBbmPusat) && (
+              {(isAdmin || isAdminBbm) && (
                 <TabsContent value="fuel_reports" className="mt-0">
-                  <FuelReportTab regionId={accountRegionId} />
+                  <FuelReportTab regionId={accountRegionId} recordCount={recordCounts.fuel_reports} />
                 </TabsContent>
               )}
-              {(isAdmin || isAdminBbm) && (
+              {(isAdmin || isAdminBbmPusat) && (
                 <TabsContent value="fuel_reports_pusat" className="mt-0">
-                  <FuelReportTab regionId={accountRegionId} reportType="admin_bbm_pusat" />
+                  <FuelReportTab regionId={accountRegionId} reportType="admin_bbm_pusat" recordCount={recordCounts.fuel_reports_pusat} />
                 </TabsContent>
               )}
               {(isAdmin || isAdminLaporanBbm) && (
                 <TabsContent value="laporan_bbm" className="mt-0">
-                  <FuelReportTab regionId={accountRegionId} reportType="laporan_bbm" />
-                </TabsContent>
-              )}
-              {(isAdmin || isPimpinan || isAdminSpj) && (
-                <TabsContent value="fuel_spj" className="mt-0">
-                  <FuelSpjTab />
+                  <FuelReportTab regionId={accountRegionId} reportType="laporan_bbm" recordCount={recordCounts.laporan_bbm} />
                 </TabsContent>
               )}
             </>
           )}
-          {(isAdmin || isNotaDinasOnly) && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab /></TabsContent>}
+          {(isAdmin || isNotaDinasOnly) && <TabsContent value="nota_dinas" className="mt-0"><NotaDinasTab recordCount={recordCounts.nota_dinas} /></TabsContent>}
         </Tabs>
         {activeTab === 'spj_oli' && (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && (
           <div className="mt-6">
-            <SpjOli />
+          <SpjOli recordCount={recordCounts.spj_oli} />
           </div>
         )}
       </main>

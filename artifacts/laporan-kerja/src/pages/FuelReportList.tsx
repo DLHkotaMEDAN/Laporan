@@ -491,11 +491,6 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {!isLaporanBbm && (isAdmin || profile?.role === 'admin_spj_bbm') && (
-              <Button variant="outline" onClick={() => navigate('/fuel-reports/spj')} className="bg-blue-50 text-blue-700 border-blue-200 h-9 px-3 text-xs font-bold">
-                <FileText className="h-3.5 w-3.5 mr-1.5" /> Laporan SPJ <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            )}
             {!isLaporanBbm && <Button variant="outline" onClick={() => setIsPriceSettingsOpen(true)} className="bg-white border-slate-200 h-9 px-3 text-xs font-bold">
               <Settings2 className="mr-1.5 h-3.5 w-3.5 text-blue-600" /> Master Harga BBM
             </Button>}

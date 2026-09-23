@@ -29,6 +29,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useValueDraft } from '@/hooks/useFormDraft';
 import { isGlobalFuelAdmin } from '@/constants/access-control';
+import TotalRecordLabel from '@/components/TotalRecordLabel';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -160,9 +161,10 @@ const getFuelReportDuplicateKey = (report: FuelReport) => {
 interface FuelReportTabProps {
   regionId?: string | null;
   reportType?: FuelReportType;
+  recordCount?: number | null;
 }
 
-const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReportTabProps) => {
+const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount }: FuelReportTabProps) => {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
   const isAccountActive = profile?.is_active !== false;
@@ -626,6 +628,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
       </div>
 
       {/* Datasheet Table */}
+      <TotalRecordLabel count={recordCount === undefined ? reports.length : recordCount} />
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-xl border">
           <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />

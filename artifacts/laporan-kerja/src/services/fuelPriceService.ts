@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { FuelPrice } from '@/types/fuelSpjReport';
+import { FuelPrice } from '@/types/fuelPrice';
 import { auditLogService } from '@/services/auditLogService';
 
 export const fuelPriceService = {

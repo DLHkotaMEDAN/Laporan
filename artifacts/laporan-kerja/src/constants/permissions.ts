@@ -7,10 +7,8 @@ export type Resource =
   | 'work_plans'
   | 'fuel_reports'
   | 'fuel_reports_pusat'
-  | 'fuel_spj_reports'
   | 'fuel_prices'
   | 'fuel_prices_pusat'
-  | 'spj_bbm'
   | 'spj_oli'
   | 'nota_dinas'
   | 'audit_logs'
@@ -67,10 +65,6 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'fuel_reports_pusat', action: 'delete' },
     { resource: 'fuel_prices_pusat', action: 'read' },
     { resource: 'fuel_prices_pusat', action: 'update' },
-    { resource: 'fuel_spj_reports', action: 'create' },
-    { resource: 'fuel_spj_reports', action: 'read' },
-    { resource: 'fuel_spj_reports', action: 'update' },
-    { resource: 'fuel_spj_reports', action: 'delete' },
     { resource: 'spj_oli', action: 'create' },
     { resource: 'spj_oli', action: 'read' },
     { resource: 'spj_oli', action: 'update' },
@@ -109,7 +103,6 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'fuel_reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'fuel_reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'fuel_reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
-    { resource: 'fuel_spj_reports', action: 'read', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'profiles', action: 'read' },
     { resource: 'profiles', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
   ],
@@ -151,14 +144,14 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles', action: 'read' },
   ],
 
-  // Admin Spesialis SPJ BBM – only fuel SPJ reports
+  // Legacy role retained for existing accounts; it now manages SPJ Oli only.
   [USER_ROLES.ADMIN_SPJ_BBM]: [
-    { resource: 'fuel_spj_reports', action: 'create' },
-    { resource: 'fuel_spj_reports', action: 'read' },
-    { resource: 'fuel_spj_reports', action: 'update' },
-    { resource: 'fuel_spj_reports', action: 'delete' },
-    { resource: 'spj_bbm', action: 'read' },
-    { resource: 'spj_bbm', action: 'update' },
+    { resource: 'spj_oli', action: 'create' },
+    { resource: 'spj_oli', action: 'read', condition: ctx => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+    { resource: 'spj_oli', action: 'update', condition: ctx => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+    { resource: 'spj_oli', action: 'delete', condition: ctx => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+    { resource: 'spj_oli', action: 'export' },
+    { resource: 'spj_oli', action: 'print' },
     { resource: 'profiles', action: 'read' },
   ],
 
@@ -267,7 +260,6 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'reports', action: 'read' },
     { resource: 'work_plans', action: 'read' },
     { resource: 'fuel_reports', action: 'read' },
-    { resource: 'fuel_spj_reports', action: 'read' },
     { resource: 'audit_logs', action: 'read' },
   ],
 };

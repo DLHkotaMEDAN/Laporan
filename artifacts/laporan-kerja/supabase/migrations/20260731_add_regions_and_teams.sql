@@ -51,8 +51,6 @@ alter table public.work_plans add column if not exists region_id uuid references
 alter table public.work_plans add column if not exists team_id uuid references public.teams(id) on delete restrict;
 alter table public.fuel_reports add column if not exists region_id uuid references public.regions(id) on delete restrict;
 alter table public.fuel_reports add column if not exists team_id uuid references public.teams(id) on delete restrict;
-alter table public.fuel_spj_reports add column if not exists region_id uuid references public.regions(id) on delete restrict;
-alter table public.fuel_spj_reports add column if not exists team_id uuid references public.teams(id) on delete restrict;
 
 update public.reports report
 set region_id = region.id,
@@ -95,25 +93,6 @@ where region.code = case fuel.region
 end
 and fuel.region_id is null;
 
-update public.fuel_spj_reports fuel
-set region_id = region.id,
-    team_id = (
-      select team.id
-      from public.teams team
-      where team.region_id = region.id and team.name = fuel.team
-    )
-from public.regions region
-where region.code = case fuel.region
-  when 'Pusat' then 'pusat'
-  when 'Wilayah 1 Utara' then 'wilayah-1'
-  when 'Wilayah 2 Barat' then 'wilayah-2'
-  when 'Wilayah 3 Timur' then 'wilayah-3'
-  when 'Wilayah 4 Kota' then 'wilayah-4'
-  when 'Wilayah 5 Selatan' then 'wilayah-5'
-  else null
-end
-and fuel.region_id is null;
-
 alter table public.regions enable row level security;
 alter table public.teams enable row level security;
 
@@ -125,4 +104,3 @@ create policy "Teams are readable" on public.teams for select using (true);
 create index if not exists reports_region_id_idx on public.reports(region_id);
 create index if not exists work_plans_region_id_idx on public.work_plans(region_id);
 create index if not exists fuel_reports_region_id_idx on public.fuel_reports(region_id);
-create index if not exists fuel_spj_reports_region_id_idx on public.fuel_spj_reports(region_id);

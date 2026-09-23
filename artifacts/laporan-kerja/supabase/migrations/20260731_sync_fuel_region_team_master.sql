@@ -47,23 +47,3 @@ where region.code = case fuel.region
   when 'Wilayah 5 Selatan' then 'wilayah-5'
   when 'Wilayah 5 Medan Selatan' then 'wilayah-5'
 end;
-
-update public.fuel_spj_reports fuel
-set region_id = region.id,
-    region = region.name,
-    team_id = team.id
-from public.regions region
-left join public.teams team on team.region_id = region.id and team.name = fuel.team
-where region.code = case fuel.region
-  when 'Pusat' then 'pusat'
-  when 'Wilayah 1 Utara' then 'wilayah-1'
-  when 'Wilayah 1 Medan Utara' then 'wilayah-1'
-  when 'Wilayah 2 Barat' then 'wilayah-2'
-  when 'Wilayah 2 Medan Barat' then 'wilayah-2'
-  when 'Wilayah 3 Timur' then 'wilayah-3'
-  when 'Wilayah 3 Medan Timur' then 'wilayah-3'
-  when 'Wilayah 4 Kota' then 'wilayah-4'
-  when 'Wilayah 4 Medan Kota' then 'wilayah-4'
-  when 'Wilayah 5 Selatan' then 'wilayah-5'
-  when 'Wilayah 5 Medan Selatan' then 'wilayah-5'
-end;

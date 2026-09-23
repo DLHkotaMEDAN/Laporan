@@ -28,7 +28,7 @@ A work reporting and management system for Dinas Lingkungan Hidup (Environmental
 ## Architecture decisions
 
 - Uses Supabase for auth and database — no Replit DB or Express API server needed.
-- Role-based routing: `admin_bbm` redirects to `/fuel-reports`, `admin_spj_bbm` to `/fuel-reports/spj`, others to `/`.
+- Role-based routing: `admin_bbm` redirects to `/fuel-reports`, legacy `admin_spj_bbm` to the SPJ Oli workspace, others to `/`.
 - ProtectedRoute requires login; AdminRoute also checks role allowlist.
 - Tailwind v4 with `@tailwindcss/vite` — no postcss.config.js (conflicts with v4).
 - Blue theme: primary `221.2 83.2% 53.3%`, background `210 40% 98%`, radius `1rem`.
@@ -38,7 +38,6 @@ A work reporting and management system for Dinas Lingkungan Hidup (Environmental
 - **Laporan Harian** — staff submit and view daily work activity reports by team/category
 - **Rencana Kerja** — work plan management (create, edit, print)
 - **Laporan BBM** — fuel usage reports with daily/weekly/monthly/yearly recaps
-- **Laporan SPJ BBM** — SPJ fuel accountability reports
 - **Rekap & Cetak** — exportable recap reports (PDF/Excel)
 - **Maintenance** — admin-only user and settings management
 

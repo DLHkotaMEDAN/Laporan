@@ -42,14 +42,6 @@ import OvertimePrint from "./pages/OvertimePrint";
 import CreateOvertime from "./pages/CreateOvertime";
 import EditOvertime from "./pages/EditOvertime";
 
-import FuelSpjReportList from "./pages/FuelSpjReportList";
-import CreateFuelSpjReport from "./pages/CreateFuelSpjReport";
-import EditFuelSpjReport from "./pages/EditFuelSpjReport";
-import FuelSpjReportDetail from "./pages/FuelSpjReportDetail";
-import FuelSpjDailyRecap from "./pages/FuelSpjDailyRecap";
-import FuelSpjWeeklyRecap from "./pages/FuelSpjWeeklyRecap";
-import FuelSpjMonthlyRecap from "./pages/FuelSpjMonthlyRecap";
-import FuelSpjYearlyRecap from "./pages/FuelSpjYearlyRecap";
 import SpjOli from "./pages/SpjOli";
 import SpjOliRecap from "./pages/SpjOliRecap";
 import {
@@ -234,19 +226,6 @@ const LaporanBbmRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const FuelSpjRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, profile, loading } = useAuth();
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
-  if (!session) return <Navigate to="/login" replace />;
-
-  if (!canAccessFuelArea(profile?.role, session.user.email) || isAdminBbmAccess(profile?.role) || isLaporanBbmAdmin(profile?.role)) {
-    return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
-  }
-
-  return <>{children}</>;
-};
-
 const SpjOliRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, profile, loading } = useAuth();
 
@@ -358,15 +337,6 @@ const App = () => (
             <Route path="/laporan-bbm/create" element={<LaporanBbmRoute><CreateLaporanBbm /></LaporanBbmRoute>} />
             <Route path="/laporan-bbm/edit/:id" element={<LaporanBbmRoute><EditLaporanBbm /></LaporanBbmRoute>} />
             <Route path="/laporan-bbm/:id" element={<LaporanBbmRoute><LaporanBbmDetail /></LaporanBbmRoute>} />
-
-            <Route path="/fuel-reports/spj" element={<FuelSpjRoute><FuelSpjReportList /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/create" element={<FuelSpjRoute><CreateFuelSpjReport /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/edit/:id" element={<FuelSpjRoute><EditFuelSpjReport /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/:id" element={<FuelSpjRoute><FuelSpjReportDetail /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/daily-rekap" element={<FuelSpjRoute><FuelSpjDailyRecap /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/weekly-rekap" element={<FuelSpjRoute><FuelSpjWeeklyRecap /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/monthly-rekap" element={<FuelSpjRoute><FuelSpjMonthlyRecap /></FuelSpjRoute>} />
-            <Route path="/fuel-reports/spj/yearly-rekap" element={<FuelSpjRoute><FuelSpjYearlyRecap /></FuelSpjRoute>} />
 
             <Route path="/spj-oli" element={<SpjOliRoute><SpjOli /></SpjOliRoute>} />
             <Route path="/spj-oli/create" element={<SpjOliRoute><SpjOli /></SpjOliRoute>} />
