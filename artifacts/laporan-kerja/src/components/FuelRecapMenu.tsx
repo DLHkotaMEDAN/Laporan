@@ -27,7 +27,8 @@ type FuelRecapMenuProps = {
 
 export default function FuelRecapMenu({ signatureMode, onSignatureChange, onPrint, onSharePdf, onExportExcel, editItems, reportType = 'admin_bbm' }: FuelRecapMenuProps) {
   const navigate = useNavigate();
-  const recapQuery = reportType === 'laporan_bbm' ? '?reportType=laporan_bbm' : '';
+  const recapQuery = reportType === 'laporan_bbm' || reportType === 'admin_bbm_pusat' ? `?reportType=${reportType}` : '';
+  const editRouteBase = reportType === 'laporan_bbm' ? '/laporan-bbm/edit' : reportType === 'admin_bbm_pusat' ? '/fuel-reports-pusat/edit' : '/fuel-reports/edit';
 
   return (
     <DropdownMenu>
@@ -52,7 +53,7 @@ export default function FuelRecapMenu({ signatureMode, onSignatureChange, onPrin
           <DropdownMenuSub>
             <DropdownMenuSubTrigger><Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit Data</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="max-h-72 w-80 overflow-y-auto">
-              {editItems.map(item => <DropdownMenuItem key={item.id} onClick={() => navigate(`${reportType === 'laporan_bbm' ? '/laporan-bbm/edit' : '/fuel-reports/edit'}/${item.id}`)} className="cursor-pointer whitespace-normal">{item.label}</DropdownMenuItem>)}
+              {editItems.map(item => <DropdownMenuItem key={item.id} onClick={() => navigate(`${editRouteBase}/${item.id}`)} className="cursor-pointer whitespace-normal">{item.label}</DropdownMenuItem>)}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}

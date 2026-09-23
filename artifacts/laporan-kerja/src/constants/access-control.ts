@@ -16,6 +16,7 @@ export const USER_ROLES = {
   ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
   ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
   ADMIN_BBM: 'admin_bbm',
+  ADMIN_BBM_PUSAT: 'admin_bbm_pusat',
   ADMIN_LAPORAN_BBM: 'admin_laporan_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   ADMIN_SPJ_OLI: 'admin_spj_oli',
@@ -47,6 +48,7 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.ADMIN_RENCANA_KERJA_BBM, label: 'Admin Rencana Kerja + Admin BBM' },
   { value: USER_ROLES.ADMIN_REKAP_LEMBUR, label: 'Rekap Lembur' },
   { value: USER_ROLES.ADMIN_BBM, label: 'Admin BBM' },
+  { value: USER_ROLES.ADMIN_BBM_PUSAT, label: 'Admin BBM Pusat (Semua Wilayah)' },
   { value: USER_ROLES.ADMIN_LAPORAN_BBM, label: 'Admin Laporan BBM (Per Wilayah)' },
   { value: USER_ROLES.ADMIN_SPJ_BBM, label: 'Admin SPJ BBM' },
   { value: USER_ROLES.ADMIN_NOTA_DINAS, label: 'Admin Nota Dinas' },
@@ -140,14 +142,18 @@ export const isAdminRencanaKerjaAccess = (role: string | null | undefined) =>
 
 export const isAdminBbmAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_BBM
+  || role === USER_ROLES.ADMIN_BBM_PUSAT
   || role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM
   || role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
+export const isAdminBbmPusatAccess = (role: string | null | undefined) =>
+  role === USER_ROLES.ADMIN_BBM_PUSAT;
 
 export const isLaporanBbmAdmin = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_LAPORAN_BBM;
 
 export const isGlobalFuelAdmin = (role: string | null | undefined) =>
-  role === USER_ROLES.ADMIN_BBM;
+  role === USER_ROLES.ADMIN_BBM || role === USER_ROLES.ADMIN_BBM_PUSAT;
 
 export const isSpjOliAdmin = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_SPJ_OLI;
@@ -204,6 +210,7 @@ export const canPrintReportRecapByRole = (
   || (isKnownRole(role) && REPORT_RECAP_ROLES_BY_PERIOD[period].includes(role));
 
 export const getRoleLandingPath = (role: string | null | undefined) => {
+  if (role === USER_ROLES.ADMIN_BBM_PUSAT) return '/?tab=fuel_reports_pusat';
   if (role === USER_ROLES.ADMIN_BBM) return '/';
   if (role === USER_ROLES.ADMIN_LAPORAN_BBM) return '/laporan-bbm';
   if (role === USER_ROLES.ADMIN_SPJ_BBM) return '/fuel-reports/spj';
@@ -244,6 +251,8 @@ export const getRoleBadgeClass = (role: string | null | undefined) => {
       return 'text-emerald-700 border-emerald-200 bg-emerald-50';
     case USER_ROLES.ADMIN_BBM:
       return 'text-orange-600 border-orange-200 bg-orange-50';
+    case USER_ROLES.ADMIN_BBM_PUSAT:
+      return 'text-cyan-700 border-cyan-200 bg-cyan-50';
     case USER_ROLES.ADMIN_LAPORAN_BBM:
       return 'text-amber-700 border-amber-200 bg-amber-50';
     case USER_ROLES.ADMIN_SPJ_BBM:

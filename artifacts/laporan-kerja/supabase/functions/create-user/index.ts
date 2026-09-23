@@ -54,6 +54,7 @@ const USER_ROLES = {
   ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
   ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
   ADMIN_BBM: 'admin_bbm',
+  ADMIN_BBM_PUSAT: 'admin_bbm_pusat',
   ADMIN_LAPORAN_BBM: 'admin_laporan_bbm',
   ADMIN_SPJ_BBM: 'admin_spj_bbm',
   ADMIN_SPJ_OLI: 'admin_spj_oli',

@@ -43,7 +43,10 @@ const FuelYearlyRecap = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
-  const reportType = searchParams.get('reportType') === 'laporan_bbm' ? 'laporan_bbm' as const : 'admin_bbm' as const;
+  const requestedReportType = searchParams.get('reportType');
+  const reportType = requestedReportType === 'laporan_bbm' || requestedReportType === 'admin_bbm_pusat'
+    ? requestedReportType
+    : 'admin_bbm' as const;
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
@@ -229,7 +232,7 @@ const FuelYearlyRecap = () => {
       <div className="recap-sticky-toolbar max-w-[1200px] mx-auto space-y-3 no-print mb-8 p-3 sm:p-4 bg-white rounded-2xl shadow-sm border">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Button variant="ghost" onClick={() => navigate('/?tab=fuel_reports')} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
+            <Button variant="ghost" onClick={() => navigate(`/?tab=${reportType === 'admin_bbm_pusat' ? 'fuel_reports_pusat' : reportType === 'laporan_bbm' ? 'laporan_bbm' : 'fuel_reports'}`)} aria-label="Kembali" title="Kembali" className="h-10 w-10 rounded-xl p-0 sm:w-auto sm:px-3"><ArrowLeft className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Kembali</span></Button>
             <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="w-[120px] md:w-[150px]"><SelectValue placeholder="Tahun" /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
             {!isRegularUser && <Select value={selectedRegion} onValueChange={(value) => { setSelectedRegion(value); setSelectedTeam('semua'); }}>
               <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200"><Filter className="mr-2 h-4 w-4 text-slate-400" /><SelectValue placeholder="Pilih Wilayah" /></SelectTrigger>

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -166,7 +167,8 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
   const { profile, session } = useAuth();
   const isAccountActive = profile?.is_active !== false;
   const isLaporanBbm = reportType === 'laporan_bbm';
-  const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
+  const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
+  const routeBase = reportType === 'admin_bbm_pusat' ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
   const [reports, setReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -219,13 +221,19 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
 
   const getAllReports = () => isLaporanBbm
     ? laporanBbmService.getAllReports(false, regionId)
-    : fuelService.getAllReports(false, regionId);
+    : isAdminBbmPusat
+      ? fuelPusatService.getAllReports(false, regionId)
+      : fuelService.getAllReports(false, regionId, reportType);
   const getReportsBySpecificDate = (date: string) => isLaporanBbm
     ? laporanBbmService.getReportsBySpecificDate(date, regionId)
-    : fuelService.getReportsBySpecificDate(date, regionId);
+    : isAdminBbmPusat
+      ? fuelPusatService.getReportsBySpecificDate(date, regionId)
+      : fuelService.getReportsBySpecificDate(date, regionId, reportType);
   const getReportsByDateRange = (startDate: string, endDate: string) => isLaporanBbm
     ? laporanBbmService.getReportsByDateRange(startDate, endDate, regionId)
-    : fuelService.getReportsByDateRange(startDate, endDate, regionId);
+    : isAdminBbmPusat
+      ? fuelPusatService.getReportsByDateRange(startDate, endDate, regionId)
+      : fuelService.getReportsByDateRange(startDate, endDate, regionId, reportType);
 
   useEffect(() => {
     if (!profile || !session) return;
@@ -332,6 +340,8 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm' }: FuelReport
     try {
       if (isLaporanBbm) {
         await laporanBbmService.deleteReport(id);
+      } else if (isAdminBbmPusat) {
+        await fuelPusatService.deleteReport(id);
       } else {
         await fuelService.deleteReport(id);
       }

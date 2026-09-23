@@ -2,11 +2,12 @@
 
 import React from 'react';
 import FuelReportForm from '@/components/FuelReportForm';
+import { FuelReportType } from '@/types/fuelReport';
 
-const CreateFuelReport = () => {
+const CreateFuelReport = ({ reportType = 'admin_bbm' }: { reportType?: FuelReportType }) => {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <FuelReportForm />
+      <FuelReportForm reportType={reportType} />
     </div>
   );
 };

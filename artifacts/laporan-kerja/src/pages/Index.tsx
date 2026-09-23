@@ -29,7 +29,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isGlobalWorkPlanAdmin, isLaporanBbmAdmin, isNotaDinasAdmin, roleRequiresRegion } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isAdminBbmPusatAccess, isGlobalWorkPlanAdmin, isLaporanBbmAdmin, isNotaDinasAdmin, roleRequiresRegion } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -82,7 +82,7 @@ const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 type SortDirection = "asc" | "desc";
 type ReportSortKey = "date" | "category" | "description" | "location" | "volume" | "remarks";
 type WorkPlanSortKey = "date" | "category" | "description" | "location" | "status";
-const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'laporan_bbm', 'fuel_spj', 'spj_oli', 'nota_dinas'] as const;
+const validMainTabs = ['reports', 'workplans', 'overtime', 'fuel_reports', 'fuel_reports_pusat', 'laporan_bbm', 'fuel_spj', 'spj_oli', 'nota_dinas'] as const;
 type MainTab = typeof validMainTabs[number];
 
 const systemTabBaseClass =
@@ -97,6 +97,8 @@ const systemTabToneClass: Record<MainTab, string> = {
     "hover:border-amber-200 hover:text-amber-700 focus-visible:ring-amber-400 data-[state=active]:border-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   fuel_reports:
     "hover:border-orange-200 hover:text-orange-700 focus-visible:ring-orange-400 data-[state=active]:border-orange-600 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
+  fuel_reports_pusat:
+    "hover:border-cyan-200 hover:text-cyan-700 focus-visible:ring-cyan-400 data-[state=active]:border-cyan-600 data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
   laporan_bbm:
     "hover:border-amber-200 hover:text-amber-800 focus-visible:ring-amber-400 data-[state=active]:border-amber-700 data-[state=active]:bg-amber-700 data-[state=active]:text-white data-[state=active]:shadow-sm",
   fuel_spj:
@@ -239,6 +241,7 @@ const Index = () => {
   const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
   const canFilterWorkPlanRegions = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
+  const isAdminBbmPusat = isAdminBbmPusatAccess(profile?.role);
   const isAdminLaporanBbm = isLaporanBbmAdmin(profile?.role);
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isAdminSpjOli = profile?.role === 'admin_spj_oli';
@@ -249,7 +252,7 @@ const Index = () => {
   const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
   const accountRegionId = !isAdmin && (roleRequiresRegion(profile?.role) || isAdminSpjOli) ? profile?.region_id || "__unassigned__" : null;
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
-  const isFuelSpecialist = (isAdminBbm || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli) && !isCombinedWorkspace;
+  const isFuelSpecialist = (isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli) && !isCombinedWorkspace;
   const canViewReportsTab = !isNotaDinasOnly && !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
   const isOvertimeOnly = profile?.role === 'admin_rekap_lembur';
   const canViewOvertime = isAdmin || isOvertimeOnly;
@@ -293,7 +296,7 @@ const Index = () => {
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
     }
-  }, [profile, isLoggedIn, isAdminBbm, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId]);
+  }, [profile, isLoggedIn, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId]);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -306,8 +309,11 @@ const Index = () => {
       setActiveTab("overtime");
     } else if (isMainTab(requestedTab)
       && (requestedTab !== "nota_dinas" || isAdmin || isNotaDinasOnly)
-      && (requestedTab !== "laporan_bbm" || canViewLaporanBbm)) {
+      && (requestedTab !== "laporan_bbm" || canViewLaporanBbm)
+      && (requestedTab !== "fuel_reports_pusat" || isAdmin || isAdminBbmPusat)) {
       setActiveTab(requestedTab);
+    } else if (isAdminBbmPusat) {
+      setActiveTab("fuel_reports_pusat");
     } else if (isAdminLaporanBbm) {
       setActiveTab("laporan_bbm");
     } else if (isAdminBbm && !isCombinedWorkspace) {
@@ -319,13 +325,14 @@ const Index = () => {
     } else if (savedTab) {
       const safeSavedTab = (savedTab === "nota_dinas" && !isAdmin && !isNotaDinasOnly)
         || (savedTab === "laporan_bbm" && !canViewLaporanBbm)
+        || (savedTab === "fuel_reports_pusat" && !isAdmin && !isAdminBbmPusat)
         ? isAdminBbm ? "fuel_reports" : "reports"
         : savedTab;
       setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && safeSavedTab === "reports" ? "workplans" : safeSavedTab);
     } else {
       setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdmin, isAdminBbm, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, isNotaDinasOnly, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
+  }, [isAdmin, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, isNotaDinasOnly, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
@@ -827,11 +834,16 @@ const Index = () => {
               >
                 <FileText size={16} /> Rekap Lembur
               </TabsTrigger>}
-              {(isAdmin || isPimpinan || isAdminBbm || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli || isNotaDinasOnly) && !isAdminHarian && (
+              {(isAdmin || isPimpinan || isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli || isNotaDinasOnly) && !isAdminHarian && (
                 <>
                   {(isAdmin || isAdminBbm) && (
                     <TabsTrigger value="fuel_reports" className={cn(systemTabBaseClass, systemTabToneClass.fuel_reports)}>
                       <Fuel size={16} /> Admin BBM
+                    </TabsTrigger>
+                  )}
+                  {(isAdmin || isAdminBbmPusat) && (
+                    <TabsTrigger value="fuel_reports_pusat" className={cn(systemTabBaseClass, systemTabToneClass.fuel_reports_pusat)}>
+                      <Fuel size={16} /> Admin BBM Pusat
                     </TabsTrigger>
                   )}
                   {(isAdmin || isAdminLaporanBbm) && (
@@ -943,6 +955,22 @@ const Index = () => {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {activeTab === 'fuel_reports_pusat' && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/daily-rekap?reportType=admin_bbm_pusat')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Admin BBM Pusat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/weekly-rekap?reportType=admin_bbm_pusat')} className="py-3 cursor-pointer">
+                        <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Admin BBM Pusat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/monthly-rekap?reportType=admin_bbm_pusat')} className="py-3 cursor-pointer">
+                        <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan Admin BBM Pusat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/fuel-reports/yearly-rekap?reportType=admin_bbm_pusat')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-red-600" /> Rekap Tahunan Admin BBM Pusat
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   {activeTab === 'laporan_bbm' && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/fuel-reports/daily-rekap?reportType=laporan_bbm')} className="py-3 cursor-pointer">
@@ -1022,6 +1050,17 @@ const Index = () => {
               actionIcon={Fuel}
               actionClassName="bg-orange-600 hover:bg-orange-700"
               iconClassName="bg-orange-50 text-orange-600"
+            />
+          )}
+          {activeTab === 'fuel_reports_pusat' && (
+            <TabPageHeader
+              title="Admin BBM Pusat"
+              description="Pencatatan penggunaan BBM dan Oli untuk administrasi BBM Pusat."
+              actionLabel="Input BBM Pusat"
+              onAction={() => navigate('/fuel-reports-pusat/create')}
+              actionIcon={Fuel}
+              actionClassName="bg-cyan-600 hover:bg-cyan-700"
+              iconClassName="bg-cyan-50 text-cyan-600"
             />
           )}
           {activeTab === 'laporan_bbm' && (
@@ -1341,11 +1380,16 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {(isAdmin || isPimpinan || isAdminBbm || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli) && (
+          {(isAdmin || isPimpinan || isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli) && (
             <>
-              {(isAdmin || isAdminBbm) && (
+              {(isAdmin || isAdminBbmPusat) && (
                 <TabsContent value="fuel_reports" className="mt-0">
                   <FuelReportTab regionId={accountRegionId} />
+                </TabsContent>
+              )}
+              {(isAdmin || isAdminBbm) && (
+                <TabsContent value="fuel_reports_pusat" className="mt-0">
+                  <FuelReportTab regionId={accountRegionId} reportType="admin_bbm_pusat" />
                 </TabsContent>
               )}
               {(isAdmin || isAdminLaporanBbm) && (
@@ -1369,10 +1413,11 @@ const Index = () => {
         )}
       </main>
       
-      <TrashDialog 
-        isOpen={isTrashOpen} 
-        onClose={() => setIsTrashOpen(false)} 
-        onRefresh={loadData} 
+      <TrashDialog
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        onRefresh={loadData}
+        fuelReportType={activeTab === 'fuel_reports_pusat' ? 'admin_bbm_pusat' : activeTab === 'laporan_bbm' ? 'laporan_bbm' : 'admin_bbm'}
       />
       <ChangePasswordDialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
 

@@ -13,27 +13,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings2, Save, Loader2, Fuel } from 'lucide-react';
 import { fuelPriceService } from '@/services/fuelPriceService';
+import { fuelPusatPriceService } from '@/services/fuelPusatPriceService';
 import { showSuccess, showError } from '@/utils/toast';
 
 interface FuelPriceSettingsProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdated?: () => void;
+  isPusat?: boolean;
 }
 
-const FuelPriceSettings = ({ isOpen, onClose, onUpdated }: FuelPriceSettingsProps) => {
+const FuelPriceSettings = ({ isOpen, onClose, onUpdated, isPusat = false }: FuelPriceSettingsProps) => {
   const [prices, setPrices] = useState({ Pertamax: 0, Dexlite: 0 });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen) fetchPrices();
-  }, [isOpen]);
+  }, [isOpen, isPusat]);
 
   const fetchPrices = async () => {
     setLoading(true);
     try {
-      const data = await fuelPriceService.getPrices();
+      const data = await (isPusat ? fuelPusatPriceService : fuelPriceService).getPrices();
       const p = data.find(x => x.type === 'Pertamax')?.price || 0;
       const d = data.find(x => x.type === 'Dexlite')?.price || 0;
       setPrices({ Pertamax: p, Dexlite: d });
@@ -47,8 +49,9 @@ const FuelPriceSettings = ({ isOpen, onClose, onUpdated }: FuelPriceSettingsProp
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fuelPriceService.updatePrice('Pertamax', prices.Pertamax);
-      await fuelPriceService.updatePrice('Dexlite', prices.Dexlite);
+      const priceService = isPusat ? fuelPusatPriceService : fuelPriceService;
+      await priceService.updatePrice('Pertamax', prices.Pertamax);
+      await priceService.updatePrice('Dexlite', prices.Dexlite);
       showSuccess("Harga BBM berhasil diperbarui");
       if (onUpdated) onUpdated();
       onClose();

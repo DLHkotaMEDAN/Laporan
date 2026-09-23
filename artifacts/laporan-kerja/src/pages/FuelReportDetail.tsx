@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Fuel, MapPin, Calendar, ShieldCheck, Edit, Calculator } from 'lucide-react';
 import { FuelReport, FuelReportType } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,8 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
   const isLoggedIn = !!session;
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const isLaporanBbm = reportType === 'laporan_bbm';
-  const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
+  const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
+  const routeBase = isAdminBbmPusat ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
 
   useEffect(() => { if (id) loadReport(id); }, [id]);
 
@@ -37,7 +39,9 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
       setLoading(true);
       const data = isLaporanBbm
         ? await laporanBbmService.getReportById(reportId)
-        : await fuelService.getReportById(reportId);
+        : isAdminBbmPusat
+          ? await fuelPusatService.getReportById(reportId)
+          : await fuelService.getReportById(reportId);
       if (data.report_type !== reportType) throw new Error('Laporan tidak ditemukan');
       setReport(data);
     } catch (error) {
@@ -52,6 +56,8 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
     if (!report) return;
     if (isLaporanBbm) {
       await laporanBbmService.updateReport(report.id, { pimpinan_note: note });
+    } else if (isAdminBbmPusat) {
+      await fuelPusatService.updateReport(report.id, { pimpinan_note: note });
     } else {
       await fuelService.updateReport(report.id, { pimpinan_note: note });
     }
@@ -92,8 +98,8 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
           <CardHeader className="border-b bg-slate-50/50">
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-2xl font-black flex items-center gap-2">
-                  <Fuel className="text-orange-600 h-6 w-6" /> {isLaporanBbm ? 'LAPORAN BBM' : 'LAPORAN BBM & OLI'}
+                  <CardTitle className="text-2xl font-black flex items-center gap-2">
+                    <Fuel className="text-orange-600 h-6 w-6" /> {isLaporanBbm ? 'LAPORAN BBM' : isAdminBbmPusat ? 'ADMIN BBM PUSAT' : 'LAPORAN BBM & OLI'}
                 </CardTitle>
                 <p className="text-slate-500 font-medium mt-1">{report.team} - {report.region}</p>
               </div>

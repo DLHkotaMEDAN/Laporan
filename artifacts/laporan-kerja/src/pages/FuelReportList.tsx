@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { FuelReport, FuelReportType, FuelUsageItem } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalFuelAdmin, isLaporanBbmAdmin } from '@/constants/access-control';
@@ -133,9 +134,12 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 100;
   const isLaporanBbm = reportType === 'laporan_bbm';
-  const routeBase = isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
+  const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
+  const routeBase = isAdminBbmPusat ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
+  const recapQuery = isAdminBbmPusat ? '?reportType=admin_bbm_pusat' : '';
 
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
+  const isAdminBbmPusatRole = profile?.role === 'admin_bbm_pusat';
   const isAdminLaporanBbm = isLaporanBbmAdmin(profile?.role);
   const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
   const fuelRegionId = (isAdminBbm || isAdminLaporanBbm) && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
@@ -145,17 +149,23 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
   const canInputFuelReport = isAccountActive && (isLaporanBbm
     ? isSuperAdmin || isAdminLaporanBbm
-    : isSuperAdmin || isAdminBbm);
+    : isAdminBbmPusat
+      ? isSuperAdmin || isAdminBbmPusatRole
+      : isSuperAdmin || isAdminBbm);
   const isAllowed = isLaporanBbm
     ? isSuperAdmin || isAdminLaporanBbm
-    : isSuperAdmin || isAdminBbm || isPimpinan;
+    : isAdminBbmPusat
+      ? isSuperAdmin || isAdminBbmPusatRole
+      : isSuperAdmin || isAdminBbm || isPimpinan;
   const roleLabel = isAdmin
     ? "Administrator"
     : isPimpinan
       ? "Pimpinan"
       : isAdminLaporanBbm
         ? "Admin Laporan BBM"
-        : "Admin BBM";
+        : isAdminBbmPusat
+          ? "Admin BBM Pusat"
+          : "Admin BBM";
   const { regions, teams: regionTeams } = useRegionFilterOptions(canFilterByRegionTeam, selectedRegion);
 
   const reqIdRef = useRef(0);
@@ -163,13 +173,19 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
 
   const getAllReports = (includeDeleted = false) => isLaporanBbm
     ? laporanBbmService.getAllReports(includeDeleted, fuelRegionId)
-    : fuelService.getAllReports(includeDeleted, fuelRegionId);
+    : isAdminBbmPusat
+      ? fuelPusatService.getAllReports(includeDeleted, fuelRegionId)
+      : fuelService.getAllReports(includeDeleted, fuelRegionId, reportType);
   const getReportsBySpecificDate = (date: string) => isLaporanBbm
     ? laporanBbmService.getReportsBySpecificDate(date, fuelRegionId)
-    : fuelService.getReportsBySpecificDate(date, fuelRegionId);
+    : isAdminBbmPusat
+      ? fuelPusatService.getReportsBySpecificDate(date, fuelRegionId)
+      : fuelService.getReportsBySpecificDate(date, fuelRegionId, reportType);
   const getReportsByDateRange = (startDate: string, endDate: string) => isLaporanBbm
     ? laporanBbmService.getReportsByDateRange(startDate, endDate, fuelRegionId)
-    : fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId);
+    : isAdminBbmPusat
+      ? fuelPusatService.getReportsByDateRange(startDate, endDate, fuelRegionId)
+      : fuelService.getReportsByDateRange(startDate, endDate, fuelRegionId, reportType);
 
   useEffect(() => {
     if (!isAllowed && profile) {
@@ -280,7 +296,8 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
       if (isLaporanBbm) {
         await laporanBbmService.deleteReport(id);
       } else {
-        await fuelService.deleteReport(id);
+        if (isAdminBbmPusat) await fuelPusatService.deleteReport(id);
+        else await fuelService.deleteReport(id);
       }
       setReports(prev => prev.filter(r => r.id !== id));
       showSuccess("Laporan dihapus");
@@ -463,7 +480,7 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
                       </Badge>
                     )}
                   </div>
-                  <h1 className="text-lg font-black tracking-tight text-slate-950 md:text-2xl">{isLaporanBbm ? 'Laporan BBM' : 'Sistem Laporan BBM & Oli'}</h1>
+                  <h1 className="text-lg font-black tracking-tight text-slate-950 md:text-2xl">{isLaporanBbm ? 'Laporan BBM' : isAdminBbmPusat ? 'Admin BBM Pusat' : 'Sistem Laporan BBM & Oli'}</h1>
                   <p className="text-xs font-semibold text-slate-500 md:text-sm">Dinas Lingkungan Hidup Kota Medan</p>
                 </div>
               </div>
@@ -491,16 +508,16 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/daily-rekap')} className="cursor-pointer text-xs py-2">
+                <DropdownMenuItem onClick={() => navigate(`/fuel-reports/daily-rekap${recapQuery}`)} className="cursor-pointer text-xs py-2">
                   <Calendar className="mr-2 h-3.5 w-3.5 text-blue-600" /> Rekap Harian
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/weekly-rekap')} className="cursor-pointer text-xs py-2">
+                <DropdownMenuItem onClick={() => navigate(`/fuel-reports/weekly-rekap${recapQuery}`)} className="cursor-pointer text-xs py-2">
                   <Table className="mr-2 h-3.5 w-3.5 text-green-600" /> Rekap Mingguan
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/monthly-rekap')} className="cursor-pointer text-xs py-2">
+                <DropdownMenuItem onClick={() => navigate(`/fuel-reports/monthly-rekap${recapQuery}`)} className="cursor-pointer text-xs py-2">
                   <FileText className="mr-2 h-3.5 w-3.5 text-purple-600" /> Rekap Bulanan
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/fuel-reports/yearly-rekap')} className="cursor-pointer text-xs py-2">
+                <DropdownMenuItem onClick={() => navigate(`/fuel-reports/yearly-rekap${recapQuery}`)} className="cursor-pointer text-xs py-2">
                   <CalendarDays className="mr-2 h-3.5 w-3.5 text-orange-600" /> Rekap Tahunan
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -834,6 +851,7 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
       {!isLaporanBbm && <FuelPriceSettings
         isOpen={isPriceSettingsOpen}
         onClose={() => setIsPriceSettingsOpen(false)}
+        isPusat={isAdminBbmPusat}
       />}
       <TrashDialog
         isOpen={isTrashOpen}

@@ -6,8 +6,10 @@ export type Resource =
   | 'reports'
   | 'work_plans'
   | 'fuel_reports'
+  | 'fuel_reports_pusat'
   | 'fuel_spj_reports'
   | 'fuel_prices'
+  | 'fuel_prices_pusat'
   | 'spj_bbm'
   | 'spj_oli'
   | 'nota_dinas'
@@ -59,6 +61,12 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'fuel_reports', action: 'read' },
     { resource: 'fuel_reports', action: 'update' },
     { resource: 'fuel_reports', action: 'delete' },
+    { resource: 'fuel_reports_pusat', action: 'create' },
+    { resource: 'fuel_reports_pusat', action: 'read' },
+    { resource: 'fuel_reports_pusat', action: 'update' },
+    { resource: 'fuel_reports_pusat', action: 'delete' },
+    { resource: 'fuel_prices_pusat', action: 'read' },
+    { resource: 'fuel_prices_pusat', action: 'update' },
     { resource: 'fuel_spj_reports', action: 'create' },
     { resource: 'fuel_spj_reports', action: 'read' },
     { resource: 'fuel_spj_reports', action: 'update' },
@@ -170,6 +178,17 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'fuel_reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'fuel_reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'fuel_prices', action: 'read' },
+    { resource: 'profiles', action: 'read' },
+  ],
+
+  // Admin BBM Pusat – akses penuh ke tabel BBM Pusat di semua wilayah.
+  [USER_ROLES.ADMIN_BBM_PUSAT]: [
+    { resource: 'fuel_reports_pusat', action: 'create' },
+    { resource: 'fuel_reports_pusat', action: 'read' },
+    { resource: 'fuel_reports_pusat', action: 'update' },
+    { resource: 'fuel_reports_pusat', action: 'delete' },
+    { resource: 'fuel_prices_pusat', action: 'read' },
+    { resource: 'fuel_prices_pusat', action: 'update' },
     { resource: 'profiles', action: 'read' },
   ],
 

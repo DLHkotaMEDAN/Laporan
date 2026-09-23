@@ -350,6 +350,10 @@ const App = () => (
             <Route path="/fuel-reports/weekly-rekap" element={<FuelReportRoute><FuelWeeklyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/monthly-rekap" element={<FuelReportRoute><FuelMonthlyRecap /></FuelReportRoute>} />
             <Route path="/fuel-reports/yearly-rekap" element={<FuelReportRoute><FuelYearlyRecap /></FuelReportRoute>} />
+            <Route path="/fuel-reports-pusat" element={<FuelReportRoute><FuelReportList reportType="admin_bbm_pusat" /></FuelReportRoute>} />
+            <Route path="/fuel-reports-pusat/create" element={<FuelReportRoute><CreateFuelReport reportType="admin_bbm_pusat" /></FuelReportRoute>} />
+            <Route path="/fuel-reports-pusat/edit/:id" element={<FuelReportRoute><EditFuelReport reportType="admin_bbm_pusat" /></FuelReportRoute>} />
+            <Route path="/fuel-reports-pusat/:id" element={<FuelReportRoute><FuelReportDetail reportType="admin_bbm_pusat" /></FuelReportRoute>} />
             <Route path="/laporan-bbm" element={<LaporanBbmRoute><LaporanBbmList /></LaporanBbmRoute>} />
             <Route path="/laporan-bbm/create" element={<LaporanBbmRoute><CreateLaporanBbm /></LaporanBbmRoute>} />
             <Route path="/laporan-bbm/edit/:id" element={<LaporanBbmRoute><EditLaporanBbm /></LaporanBbmRoute>} />

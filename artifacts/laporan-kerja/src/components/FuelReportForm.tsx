@@ -17,8 +17,10 @@ import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { FuelReport, FuelReportType, FuelType } from '@/types/fuelReport';
 import { fuelService } from '@/services/fuelService';
+import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { fuelPriceService } from '@/services/fuelPriceService';
+import { fuelPusatPriceService } from '@/services/fuelPusatPriceService';
 import { medanDistricts } from '@/data/medan-districts';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
@@ -145,6 +147,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
 
   const canEditPrice = profile?.role === 'admin'
     || profile?.role === 'admin_bbm'
+    || profile?.role === 'admin_bbm_pusat'
     || profile?.role === 'admin_rencana_kerja_bbm'
     || profile?.role === 'admin_wilayah_bbm'
     || profile?.role === 'admin_laporan_bbm'
@@ -159,6 +162,8 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     || profile?.role === 'admin_laporan_bbm'
   ) && !isSuperAdmin;
   const isLaporanBbm = reportType === 'laporan_bbm';
+  const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
+  const routeBase = reportType === 'admin_bbm_pusat' ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -213,7 +218,9 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         const regionId = isRegionalFuelAdmin ? profile?.region_id || "__unassigned__" : null;
         const reports = isLaporanBbm
           ? await laporanBbmService.getAllReports(false, regionId)
-          : await fuelService.getAllReports(false, regionId);
+          : isAdminBbmPusat
+            ? await fuelPusatService.getAllReports(false, regionId)
+            : await fuelService.getAllReports(false, regionId, reportType);
         const vehicles = new Map<string, string>();
         const noPolisi = new Map<string, string>();
         const streets = new Map<string, string>();
@@ -248,7 +255,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
 
   const fetchPrices = async () => {
     try {
-      const data = await fuelPriceService.getPrices();
+      const data = await (isAdminBbmPusat ? fuelPusatPriceService : fuelPriceService).getPrices();
       const p = data.find(x => x.type === 'Pertamax')?.price || 13500;
       const d = data.find(x => x.type === 'Dexlite')?.price || 14500;
       if (form.getValues("price_pertamax") === 13500) form.setValue("price_pertamax", p);
@@ -381,6 +388,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       ? isSuperAdmin || profile?.role === 'admin_laporan_bbm'
       : profile?.role === 'admin'
         || profile?.role === 'admin_bbm'
+        || profile?.role === 'admin_bbm_pusat'
         || profile?.role === 'admin_rencana_kerja_bbm'
         || profile?.role === 'admin_wilayah_bbm'
         || session?.user?.email === 'admin@gmail.com';
@@ -466,6 +474,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
             .map(entry => ({ ...base, ...entry, amount: entry.fuel_type === 'Oli' ? entry.amount_liter : entry.amount_rp }));
         }),
         remarks: values.remarks,
+        report_type: reportType,
         ...(isLaporanBbm ? { no_spj: values.no_spj.trim() } : {}),
       };
 
@@ -477,6 +486,8 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       if (isEditing && initialData) {
         if (isLaporanBbm) {
           await laporanBbmService.updateReport(initialData.id, finalData);
+        } else if (isAdminBbmPusat) {
+          await fuelPusatService.updateReport(initialData.id, finalData);
         } else {
           await fuelService.updateReport(initialData.id, finalData);
         }
@@ -484,13 +495,15 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       } else {
         if (isLaporanBbm) {
           await laporanBbmService.createReport(finalData);
+        } else if (isAdminBbmPusat) {
+          await fuelPusatService.createReport(finalData);
         } else {
           await fuelService.createReport(finalData);
         }
         showSuccess("Laporan BBM disimpan");
       }
       await clearDraft();
-      navigate(isLaporanBbm ? '/laporan-bbm' : '/fuel-reports');
+      navigate(routeBase);
     } catch (error: any) {
       const message = error?.message || "Terjadi kesalahan database";
       if (/refresh token|jwt|unauthorized|not authenticated/i.test(message)) {
@@ -520,7 +533,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
           </Button>
           <div className="text-left sm:text-center">
             <h1 className="text-2xl font-bold tracking-tight text-primary sm:text-3xl">
-              {isEditing ? (isLaporanBbm ? "Edit Laporan BBM" : "Edit Laporan BBM & Oli") : (isLaporanBbm ? "Input Laporan BBM" : "Input Laporan BBM & Oli")}
+              {isEditing ? (isLaporanBbm ? "Edit Laporan BBM" : isAdminBbmPusat ? "Edit Admin BBM Pusat" : "Edit Laporan BBM & Oli") : (isLaporanBbm ? "Input Laporan BBM" : isAdminBbmPusat ? "Input Admin BBM Pusat" : "Input Laporan BBM & Oli")}
             </h1>
             <p className="mt-1 text-xs text-slate-500">{lastSavedAt ? "Draft tersimpan otomatis" : "Draft akan tersimpan otomatis"}</p>
           </div>
