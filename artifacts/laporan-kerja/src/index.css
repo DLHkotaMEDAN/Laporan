@@ -171,47 +171,51 @@
     display: inline !important;
   }
 
-  /* Keep toolbar controls in their natural horizontal order. The toolbar is
-     itself a swipe surface, so users can discover every filter and action by
-     dragging left/right instead of receiving a tall, rearranged stack. */
+  /* Keep every filter and action visible in the toolbar. On phones/tablets,
+     every control gets its own row; only the wide report result may scroll. */
   .recap-sticky-toolbar {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
+    overflow-x: visible;
   }
 
   .recap-sticky-toolbar > .flex,
   .recap-sticky-toolbar > header,
-  .recap-sticky-toolbar .flex,
-  .recap-sticky-toolbar .flex.flex-wrap {
-    min-width: max-content;
-    width: max-content;
-    max-width: none;
-    flex-wrap: nowrap;
+  .recap-sticky-toolbar .flex {
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .recap-sticky-toolbar .flex > *,
+  .recap-sticky-toolbar > header > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
   }
 
   .recap-sticky-toolbar [data-slot="select-trigger"]:has(span),
   .recap-sticky-toolbar [role="combobox"] {
-    width: min(100%, 18rem) !important;
+    width: 100% !important;
     min-width: 0;
   }
 
   .recap-sticky-toolbar [data-slot="button"][class~="w-10"]:has(span) {
-    width: auto !important;
+    width: 100% !important;
     min-width: 0;
     padding-inline: 0.75rem !important;
   }
 
-  .recap-sticky-toolbar .flex.flex-wrap > [data-slot="button"],
-  .recap-sticky-toolbar .flex.flex-wrap > [data-slot="select-trigger"],
-  .recap-sticky-toolbar .flex.flex-wrap > [role="combobox"] {
+  .recap-sticky-toolbar .flex > [data-slot="button"],
+  .recap-sticky-toolbar .flex > [data-slot="select-trigger"],
+  .recap-sticky-toolbar .flex > [role="combobox"] {
     flex: 0 0 auto;
-    max-width: none;
+    max-width: 100%;
   }
 
   .recap-sticky-toolbar [data-slot="select-trigger"] {
-    width: min(100%, 16rem);
+    width: 100%;
   }
 
   [data-slot="dropdown-menu-content"],
@@ -233,12 +237,12 @@
     padding: 0.75rem;
   }
 
-  .recap-sticky-toolbar .flex.flex-wrap {
+  .recap-sticky-toolbar .flex {
     align-items: stretch;
   }
 
-  .recap-sticky-toolbar .flex.flex-wrap > * {
-    flex: 1 1 auto;
+  .recap-sticky-toolbar .flex > * {
+    flex: 0 0 auto;
   }
 }
 
