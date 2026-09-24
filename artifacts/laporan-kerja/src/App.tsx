@@ -44,6 +44,7 @@ import EditOvertime from "./pages/EditOvertime";
 
 import SpjOli from "./pages/SpjOli";
 import SpjOliRecap from "./pages/SpjOliRecap";
+import NotaDinasRecap from "./pages/NotaDinasRecap";
 import {
   USER_ROLES,
   canAccessFuelArea,
@@ -54,6 +55,7 @@ import {
   isAdminBbmAccess,
   isLaporanBbmAdmin,
   isAdminRencanaKerjaAccess,
+  isNotaDinasAdmin,
 } from "@/constants/access-control";
 import { AuthorizeRoute } from "@/components/AuthorizeRoute";
 import { auditLogService } from "@/services/auditLogService";
@@ -241,6 +243,16 @@ const SpjOliRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const NotaDinasRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  const isAllowed = isSuperAdminAccess(profile?.role, session.user.email) || isNotaDinasAdmin(profile?.role);
+  return isAllowed ? <>{children}</> : <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+};
+
 const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => {
   const { profile, loading } = useAuth();
 
@@ -344,6 +356,9 @@ const App = () => (
             <Route path="/spj-oli/daily-rekap" element={<SpjOliRoute><SpjOliRecap period="daily" /></SpjOliRoute>} />
             <Route path="/spj-oli/weekly-rekap" element={<SpjOliRoute><SpjOliRecap period="weekly" /></SpjOliRoute>} />
             <Route path="/spj-oli/monthly-rekap" element={<SpjOliRoute><SpjOliRecap period="monthly" /></SpjOliRoute>} />
+            <Route path="/nota-dinas/daily-rekap" element={<NotaDinasRoute><NotaDinasRecap period="daily" /></NotaDinasRoute>} />
+            <Route path="/nota-dinas/weekly-rekap" element={<NotaDinasRoute><NotaDinasRecap period="weekly" /></NotaDinasRoute>} />
+            <Route path="/nota-dinas/monthly-rekap" element={<NotaDinasRoute><NotaDinasRecap period="monthly" /></NotaDinasRoute>} />
             
             <Route path="/create" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditReport /></ProtectedRoute>} />

@@ -14,7 +14,15 @@ const isUuid = (value: string | undefined): value is string =>
 
 const toRecord = (row: NotaDinasRow): NotaDinasRecord => ({
   id: row.id,
-  form: row.form,
+  // Dokumen lama belum memiliki kategori; anggap sebagai Permintaan Alat.
+  form: {
+    ...row.form,
+    jenisDokumen: row.form.jenisDokumen === 'perbaikan' ? 'permintaan' : row.form.jenisDokumen,
+    jenisNotaDinas: row.form.jenisDokumen === 'perbaikan' || row.form.jenisNotaDinas === 'perbaikan'
+      ? 'perbaikan'
+      : row.form.jenisNotaDinas ?? 'permintaan_alat',
+    kodeSurat: row.form.jenisDokumen === 'perbaikan' || row.form.jenisNotaDinas === 'perbaikan' ? 'SPm-PM' : 'SPB',
+  },
   regionId: row.region_id,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -67,6 +75,15 @@ export const notaDinasService = {
 
     if (error) throw error;
     return toRecord(data as NotaDinasRow);
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('nota_dinas_records')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   async save(form: NotaDinasForm, id?: string, createdAt?: string, regionId?: string | null) {

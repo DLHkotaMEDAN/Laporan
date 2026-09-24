@@ -1052,6 +1052,19 @@ const Index = () => {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {activeTab === 'nota_dinas' && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/nota-dinas/daily-rekap')} className="py-3 cursor-pointer">
+                        <CalendarDays className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Nota Dinas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/nota-dinas/weekly-rekap')} className="py-3 cursor-pointer">
+                        <Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Nota Dinas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/nota-dinas/monthly-rekap')} className="py-3 cursor-pointer">
+                        <FileText className="mr-3 h-4 w-4 text-orange-600" /> Rekap Bulanan Nota Dinas
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
                 </DropdownMenu>
               </div>

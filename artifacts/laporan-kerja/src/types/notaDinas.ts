@@ -1,13 +1,17 @@
 export type NotaDinasItem = {
   jenis: string;
   jumlah: string;
+  satuan?: string;
+  bkKendaraan?: string;
   keterangan: string;
 };
 
-export type NotaDinasKind = "permintaan" | "lanjutan";
+export type NotaDinasKind = "permintaan" | "lanjutan" | "perbaikan" | "";
+export type NotaDinasCategory = "permintaan_alat" | "permintaan_bunga_bahan" | "perbaikan" | "";
 
 export type NotaDinasForm = {
   jenisDokumen: NotaDinasKind;
+  jenisNotaDinas: NotaDinasCategory;
   kepada: string;
   dari: string;
   nomorUrut: string;
@@ -21,6 +25,7 @@ export type NotaDinasForm = {
   gunakanNomorOtomatisLanjutan: boolean;
   nomorManualLanjutan: string;
   tanggal: string;
+  tanggalLanjutan: string;
   hal: string;
   wilayah: string;
   jumlahKecamatan: string;
@@ -37,6 +42,15 @@ export type NotaDinasForm = {
   koordinatorRujukan: string;
   gunakanRujukanOtomatis: boolean;
   nomorRujukan: string;
+  tanggalRujukan: string;
+  halRujukan: string;
+  perbaikanPlatKendaraan: string;
+  perbaikanJenisKendaraan: string;
+  perbaikanSupir: string;
+  perbaikanNoHp: string;
+  perbaikanUraianPemeriksaan: string;
+  perbaikanLokasi: string;
+  perbaikanKegiatan: string;
   penutup: string;
   jabatanPenandatangan: string;
   kantorPenandatangan: string;
