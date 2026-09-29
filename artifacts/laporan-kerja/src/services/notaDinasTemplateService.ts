@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from '@/types/notaDinas';
-import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN } from '@/types/notaDinas';
+import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from '@/types/notaDinas';
 
 type TemplateRow = {
   id: string;
@@ -16,6 +16,7 @@ type TemplateRow = {
   paragraf_lanjutan_alat: string;
   paragraf_kalimat_penutup: string;
   kolom_perbaikan: KolomTabel[] | null;
+  kolom_permintaan: KolomTabel[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -34,6 +35,7 @@ const toTemplate = (row: TemplateRow): NotaDinasTemplate => ({
   paragrafLanjutanAlat: row.paragraf_lanjutan_alat,
   paragrafKalimatPenutup: row.paragraf_kalimat_penutup ?? '',
   kolomPerbaikan: row.kolom_perbaikan ?? null,
+  kolomPermintaan: row.kolom_permintaan ?? null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -75,7 +77,8 @@ export const notaDinasTemplateService = {
 
   /**
    * Ambil semua template untuk kategori+wilayah tertentu.
-   * Digunakan di halaman manajemen template dan dropdown pilih template di form.
+   * Digunakan di dropdown pilih template pada form Nota Dinas.
+   * Menggabungkan template wilayah + template global (untuk fallback di form).
    */
   async getTemplatesByKategori(kategori: NotaDinasCategory, regionId: string | null): Promise<NotaDinasTemplate[]> {
     let query = supabase
@@ -88,6 +91,31 @@ export const notaDinasTemplateService = {
       query = query.or(`region_id.eq.${regionId},region_id.is.null`);
     } else {
       // Hanya template global
+      query = query.is('region_id', null);
+    }
+
+    const { data, error } = await query.order('nama');
+    if (error) throw error;
+    return ((data || []) as TemplateRow[]).map(toTemplate);
+  },
+
+  /**
+   * Ambil HANYA template milik sendiri untuk kategori tertentu.
+   * Digunakan di halaman Pengaturan Template agar setiap login hanya
+   * melihat dan mengelola template mereka sendiri:
+   * - super admin (regionId = null)  → hanya template global
+   * - admin_nota_dinas (regionId = uuid) → hanya template wilayah sendiri
+   * Template pihak lain tidak ikut ditampilkan.
+   */
+  async getOwnTemplates(kategori: NotaDinasCategory, regionId: string | null): Promise<NotaDinasTemplate[]> {
+    let query = supabase
+      .from('nota_dinas_templates')
+      .select('*')
+      .eq('kategori', kategori || 'permintaan_alat');
+
+    if (regionId) {
+      query = query.eq('region_id', regionId);
+    } else {
       query = query.is('region_id', null);
     }
 
@@ -129,6 +157,7 @@ export const notaDinasTemplateService = {
       paragraf_lanjutan_alat: template.paragrafLanjutanAlat,
       paragraf_kalimat_penutup: template.paragrafKalimatPenutup,
       kolom_perbaikan: template.kolomPerbaikan ?? null,
+      kolom_permintaan: template.kolomPermintaan ?? null,
       updated_at: new Date().toISOString(),
     };
 
@@ -226,6 +255,7 @@ export const notaDinasTemplateService = {
       isDefault: true,
       ...defaults,
       kolomPerbaikan: null,
+      kolomPermintaan: null,
       createdAt: '',
       updatedAt: '',
     };

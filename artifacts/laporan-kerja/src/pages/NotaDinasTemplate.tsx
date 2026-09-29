@@ -11,7 +11,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { isSuperAdminAccess, isNotaDinasAdmin } from "@/constants/access-control";
 import { notaDinasTemplateService } from "@/services/notaDinasTemplateService";
-import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN } from "@/types/notaDinas";
+import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
 import { supabase } from "@/lib/supabase";
 import KolomPerbaikanEditor from "@/components/KolomPerbaikanEditor";
@@ -104,25 +104,40 @@ const NotaDinasTemplate = () => {
   const [saving, setSaving] = useState(false);
   const [regionName, setRegionName] = useState<string>("");
 
-  const regionId = isRegionalAdmin && !isSuperAdmin ? (profile?.region_id ?? null) : null;
+  /**
+   * Aturan regionId:
+   * - Super admin di halaman ini → kelola template global (null).
+   *   Pengaturan per-wilayah sepenuhnya diserahkan ke admin masing-masing wilayah.
+   * - admin_nota_dinas → dikunci ke profile.region_id (wilayah sendiri).
+   *   Template wilayah ini independen — tidak mempengaruhi wilayah lain.
+   */
+  const effectiveRegionId: string | null = isSuperAdmin
+    ? null
+    : isRegionalAdmin
+      ? (profile?.region_id ?? null)
+      : null;
 
-  // Muat nama wilayah akun
+  // Muat nama wilayah untuk admin_nota_dinas
   useEffect(() => {
-    if (!regionId) { setRegionName(""); return; }
+    if (!isRegionalAdmin || isSuperAdmin || !effectiveRegionId) {
+      setRegionName("");
+      return;
+    }
     void supabase
       .from("regions")
       .select("name")
-      .eq("id", regionId)
+      .eq("id", effectiveRegionId)
       .maybeSingle()
       .then(({ data }) => setRegionName(data?.name || ""));
-  }, [regionId]);
+  }, [effectiveRegionId, isRegionalAdmin, isSuperAdmin]);
 
-  // Muat daftar template saat kategori berubah
+  // Muat daftar template saat kategori atau auth berubah
   const loadTemplates = () => {
     if (authLoading || (!isSuperAdmin && !isRegionalAdmin)) return;
     setLoading(true);
     void notaDinasTemplateService
-      .getTemplatesByKategori(kategori, regionId)
+      // Gunakan getOwnTemplates agar hanya melihat template milik sendiri
+      .getOwnTemplates(kategori, effectiveRegionId)
       .then((tpls) => setTemplates(tpls))
       .catch((err) => { console.error(err); setTemplates([]); })
       .finally(() => setLoading(false));
@@ -130,18 +145,17 @@ const NotaDinasTemplate = () => {
 
   useEffect(() => {
     loadTemplates();
-    // tutup form edit saat ganti kategori
     setEditingTemplate(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kategori, regionId, authLoading, isSuperAdmin, isRegionalAdmin]);
+  }, [kategori, effectiveRegionId, authLoading, isSuperAdmin, isRegionalAdmin]);
 
   const handleCreateNew = () => {
     const defaults = DEFAULT_NOTA_TEMPLATES[kategori || "permintaan_alat"];
     setEditingTemplate({
       nama: "",
       kategori,
-      regionId,
-      isDefault: templates.length === 0, // auto-default jika belum ada template
+      regionId: effectiveRegionId,
+      isDefault: templates.length === 0,
       ...defaults,
     });
   };
@@ -200,7 +214,7 @@ const NotaDinasTemplate = () => {
       await notaDinasTemplateService.save({
         id: editingTemplate.id,
         nama: editingTemplate.nama ?? "Template Baru",
-        regionId: regionId,
+        regionId: effectiveRegionId,
         kategori,
         isDefault: editingTemplate.isDefault ?? false,
         paragrafPembuka: editingTemplate.paragrafPembuka ?? "",
@@ -211,6 +225,7 @@ const NotaDinasTemplate = () => {
         paragrafLanjutanAlat: editingTemplate.paragrafLanjutanAlat ?? "",
         paragrafKalimatPenutup: editingTemplate.paragrafKalimatPenutup ?? "",
         kolomPerbaikan: kategori === "perbaikan" ? (editingTemplate.kolomPerbaikan ?? null) : null,
+        kolomPermintaan: (kategori === "permintaan_alat" || kategori === "permintaan_bunga_bahan") ? (editingTemplate.kolomPermintaan ?? null) : null,
       });
       showSuccess("Template berhasil disimpan.");
       loadTemplates();
@@ -234,6 +249,15 @@ const NotaDinasTemplate = () => {
 
   const visibleFields = FIELDS.filter((f) => f.showFor.includes(kategori));
 
+  // Label konteks yang ditampilkan di info banner
+  const contextLabel = isSuperAdmin
+    ? "Template Default Global"
+    : `Template Wilayah: ${regionName || "..."}`;
+
+  const contextDescription = isSuperAdmin
+    ? "Perubahan di sini berlaku sebagai fallback untuk semua wilayah yang belum memiliki template sendiri. Template ini tidak mempengaruhi wilayah yang sudah punya template sendiri."
+    : "Template ini hanya berlaku untuk wilayah Anda dan tidak mempengaruhi wilayah lain. Jika belum ada template, sistem akan menggunakan template default global sebagai fallback.";
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl space-y-6">
@@ -249,16 +273,10 @@ const NotaDinasTemplate = () => {
           <div className="w-24" />
         </div>
 
-        {/* Info wilayah */}
+        {/* Info konteks */}
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 px-5 py-4">
-          <p className="font-black text-indigo-900">
-            {isSuperAdmin ? "Template Default Global" : `Template Wilayah: ${regionName || "..."}`}
-          </p>
-          <p className="mt-1 text-sm text-indigo-700/80">
-            {isSuperAdmin
-              ? "Perubahan di sini berlaku sebagai default untuk semua wilayah yang belum punya template sendiri."
-              : "Perubahan di sini hanya berlaku untuk wilayah Anda. Jika tidak ada template, sistem akan menggunakan template default global."}
-          </p>
+          <p className="font-black text-indigo-900">{contextLabel}</p>
+          <p className="mt-1 text-sm text-indigo-700/80">{contextDescription}</p>
         </div>
 
         {/* Pilih kategori */}
@@ -310,7 +328,6 @@ const NotaDinasTemplate = () => {
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
                     {tpl.nama}
                     {tpl.isDefault && <span className="ml-2 text-xs font-normal text-amber-600">(Default)</span>}
-                    {tpl.regionId === null && <span className="ml-2 text-xs font-normal text-slate-400">(Global)</span>}
                   </span>
                   <div className="flex shrink-0 gap-1">
                     {!tpl.isDefault && (
@@ -381,7 +398,7 @@ const NotaDinasTemplate = () => {
                 onChange={(e) => setEditField("isDefault", e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 accent-indigo-600"
               />
-              <label htmlFor="is-default-chk" className="text-sm font-semibold text-slate-700 cursor-pointer">
+              <label htmlFor="is-default-chk" className="cursor-pointer text-sm font-semibold text-slate-700">
                 Jadikan template default untuk kategori ini
               </label>
             </div>
@@ -405,13 +422,24 @@ const NotaDinasTemplate = () => {
               ))}
             </div>
 
-            {/* Editor kolom tabel — hanya untuk kategori perbaikan */}
+            {/* Editor kolom tabel perbaikan */}
             {kategori === "perbaikan" && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">Konfigurasi Kolom Tabel Perbaikan</h3>
                 <KolomPerbaikanEditor
                   kolom={editingTemplate.kolomPerbaikan ?? [...DEFAULT_KOLOM_PERBAIKAN]}
                   onChange={(kolom) => setEditField("kolomPerbaikan" as any, kolom as any)}
+                />
+              </div>
+            )}
+
+            {/* Editor kolom tabel permintaan */}
+            {(kategori === "permintaan_alat" || kategori === "permintaan_bunga_bahan") && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">Konfigurasi Kolom Tabel Permintaan</h3>
+                <KolomPerbaikanEditor
+                  kolom={editingTemplate.kolomPermintaan ?? [...DEFAULT_KOLOM_PERMINTAAN]}
+                  onChange={(kolom) => setEditField("kolomPermintaan" as any, kolom as any)}
                 />
               </div>
             )}

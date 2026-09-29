@@ -27,6 +27,17 @@ export const DEFAULT_KOLOM_PERBAIKAN: KolomTabel[] = [
   { id: "perbaikan", judul: "Perbaikan",         lebar: 69, rowspan: false },
 ];
 
+/**
+ * Kolom default tabel permintaan alat / bunga & bahan jika belum dikustomisasi.
+ * Kolom "nomor" di-render otomatis (1, 2, 3, …) sehingga tidak perlu rowspan.
+ */
+export const DEFAULT_KOLOM_PERMINTAAN: KolomTabel[] = [
+  { id: "nomor",      judul: "No.",         lebar: 8,  rowspan: false },
+  { id: "jenis",      judul: "Jenis",       lebar: 42, rowspan: false },
+  { id: "jumlah",     judul: "Jumlah",      lebar: 25, rowspan: false },
+  { id: "keterangan", judul: "Keterangan",  lebar: 25, rowspan: false },
+];
+
 export type NotaDinasKind = "permintaan" | "lanjutan" | "perbaikan" | "";
 export type NotaDinasCategory = "permintaan_alat" | "permintaan_bunga_bahan" | "perbaikan" | "";
 
@@ -63,6 +74,8 @@ export type NotaDinasTemplate = {
   paragrafKalimatPenutup: string;
   /** Konfigurasi kolom tabel perbaikan — null berarti pakai DEFAULT_KOLOM_PERBAIKAN */
   kolomPerbaikan: KolomTabel[] | null;
+  /** Konfigurasi kolom tabel permintaan alat/bunga — null berarti pakai DEFAULT_KOLOM_PERMINTAAN */
+  kolomPermintaan: KolomTabel[] | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -80,6 +93,7 @@ export const DEFAULT_NOTA_TEMPLATES: Record<NotaDinasCategory, Omit<NotaDinasTem
     paragrafLanjutanAlat: 'Menindaklanjuti Surat dari {koordinatorRujukan} Nomor : {nomorRujukan} Tanggal {tanggalRujukan} Perihal {halRujukan}. Untuk Keperluan dan Kelancaran Kerja di Lapangan telah dilakukan Penelaahan dan Pemeriksaan bahwa telah Habisnya Alat Kerja tersebut.',
     paragrafKalimatPenutup: 'Demikian kami sampaikan kepada {penerima}, atas arahan dan petunjuk selanjutnya diucapkan terimakasih.',
     kolomPerbaikan: null,
+    kolomPermintaan: null,
   },
   permintaan_bunga_bahan: {
     nama: 'Template Permintaan Bunga dan Bahan',
@@ -92,6 +106,7 @@ export const DEFAULT_NOTA_TEMPLATES: Record<NotaDinasCategory, Omit<NotaDinasTem
     paragrafLanjutanAlat: 'Menindaklanjuti Surat dari {koordinatorRujukan} Nomor : {nomorRujukan} Tanggal {tanggalRujukan} Perihal {halRujukan}. Untuk Keperluan dan Kelancaran Kerja di Lapangan telah dilakukan Penelaahan dan Pemeriksaan bahwa telah Habisnya persediaan bunga dan bahan tersebut.',
     paragrafKalimatPenutup: 'Demikian kami sampaikan kepada {penerima}, atas arahan dan petunjuk selanjutnya diucapkan terimakasih.',
     kolomPerbaikan: null,
+    kolomPermintaan: null,
   },
   perbaikan: {
     nama: 'Template Perbaikan',
@@ -104,6 +119,7 @@ export const DEFAULT_NOTA_TEMPLATES: Record<NotaDinasCategory, Omit<NotaDinasTem
     paragrafLanjutanAlat: '',
     paragrafKalimatPenutup: 'Demikian kami sampaikan kepada {penerima}, atas arahan dan petunjuk selanjutnya diucapkan terimakasih.',
     kolomPerbaikan: null,
+    kolomPermintaan: null,
   },
   '': {
     nama: '',
@@ -116,6 +132,7 @@ export const DEFAULT_NOTA_TEMPLATES: Record<NotaDinasCategory, Omit<NotaDinasTem
     paragrafLanjutanAlat: '',
     paragrafKalimatPenutup: '',
     kolomPerbaikan: null,
+    kolomPermintaan: null,
   },
 };
 

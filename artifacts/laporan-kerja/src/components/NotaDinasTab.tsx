@@ -14,7 +14,7 @@ import { isSuperAdminAccess } from "@/constants/access-control";
 import { useValueDraft } from "@/hooks/useFormDraft";
 import TotalRecordLabel from "@/components/TotalRecordLabel";
 import type { NotaDinasCategory, NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
-import { DEFAULT_KOLOM_PERBAIKAN } from "@/types/notaDinas";
+import { DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 
 type SortDirection = "asc" | "desc";
 type NotaDinasSortKey = "requestNumber" | "continuationNumber" | "date" | "subject" | "region" | "items";
@@ -420,6 +420,8 @@ type NotaDinasSheetProps = {
   templateParagrafKalimatPenutup?: string;
   /** Konfigurasi kolom tabel perbaikan dari template */
   kolomPerbaikan?: KolomTabel[] | null;
+  /** Konfigurasi kolom tabel permintaan alat/bunga dari template */
+  kolomPermintaan?: KolomTabel[] | null;
 };
 
 const NotaDinasSheet = ({
@@ -437,11 +439,17 @@ const NotaDinasSheet = ({
   templateParagrafLanjutanAlat,
   templateParagrafKalimatPenutup,
   kolomPerbaikan,
+  kolomPermintaan,
 }: NotaDinasSheetProps) => {
   // Kolom tabel perbaikan — pakai dari template atau default
   const activeKolom: KolomTabel[] = kolomPerbaikan && kolomPerbaikan.length > 0
     ? kolomPerbaikan
     : DEFAULT_KOLOM_PERBAIKAN;
+
+  // Kolom tabel permintaan — pakai dari template atau default
+  const activeKolomPermintaan: KolomTabel[] = kolomPermintaan && kolomPermintaan.length > 0
+    ? kolomPermintaan
+    : DEFAULT_KOLOM_PERMINTAAN;
 
   // Nilai placeholder untuk substitusi template
   const placeholders: Record<string, string> = {
@@ -547,10 +555,32 @@ const NotaDinasSheet = ({
           </tbody>
         </table>
       );
-    })() : <table className="nota-dinas-table">
-      <thead><tr><th>No.</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th></tr></thead>
-      <tbody>{items.map((item, index) => <tr key={index}><td>{index + 1}.</td><td>{printValue(item.jenis)}</td><td>{printValue(`${item.jumlah}${item.satuan ? ` ${item.satuan}` : ""}`)}</td><td>{printValue(item.keterangan)}</td></tr>)}</tbody>
-    </table>}
+    })() : (() => {
+      // Render tabel permintaan dinamis berdasarkan konfigurasi kolom dari template
+      const displayItems = items.length > 0 ? items : [{ jenis: "", jumlah: "", satuan: "", keterangan: "" }];
+      return (
+        <table className="nota-dinas-table">
+          <thead>
+            <tr>
+              {activeKolomPermintaan.map((k) => (
+                <th key={k.id} style={{ width: `${k.lebar}%` }}>{k.judul}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayItems.map((item, index) => (
+              <tr key={index}>
+                {activeKolomPermintaan.map((k) => {
+                  if (k.id === "nomor") return <td key={k.id}>{index + 1}.</td>;
+                  if (k.id === "jumlah") return <td key={k.id}>{printValue(`${item.jumlah || ""}${item.satuan ? ` ${item.satuan}` : ""}`)}</td>;
+                  return <td key={k.id}>{printValue((item[k.id] as string) || "")}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    })()}
 
     {!isLanjutan && !isRepair && <p className="nota-dinas-body nota-dinas-closing">{ph(tPenutupPermintaan)}</p>}
     {isRepair ? <p className="nota-dinas-body nota-dinas-repair-paragraph nota-dinas-closing">{ph(tKalimatPenutup)}</p> : <p className={`nota-dinas-final${isLanjutan ? " nota-dinas-final-lanjutan" : ""}`}>{ph(tKalimatPenutup)}</p>}
@@ -692,7 +722,21 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
       .then((tpls) => {
         if (!active) return;
         setAvailableTemplates(tpls);
-        const defaultTpl = tpls.find((t) => t.isDefault) ?? tpls[0];
+
+        // Prioritas pemilihan template aktif:
+        // 1. Template wilayah sendiri yang isDefault=true
+        // 2. Template wilayah sendiri yang pertama (jika ada)
+        // 3. Template global yang isDefault=true (fallback jika tidak ada template wilayah)
+        // 4. Template global pertama (fallback terakhir)
+        const ownTemplates = regionId ? tpls.filter((t) => t.regionId === regionId) : tpls.filter((t) => t.regionId === null);
+        const globalTemplates = regionId ? tpls.filter((t) => t.regionId === null) : [];
+
+        const defaultTpl =
+          ownTemplates.find((t) => t.isDefault) ??
+          ownTemplates[0] ??
+          globalTemplates.find((t) => t.isDefault) ??
+          globalTemplates[0];
+
         if (defaultTpl) {
           setSelectedTemplateId(defaultTpl.id);
           setSheetTemplate(defaultTpl);
@@ -1378,7 +1422,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                   <div className="mb-2 flex items-center justify-between"><span className="text-xs font-black uppercase tracking-wider text-slate-400">{isRepair ? "Perbaikan" : "Barang"} {index + 1}</span>{form.items.length > 1 && <button type="button" onClick={() => removeItem(index)} className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={`Hapus ${isRepair ? "perbaikan" : "barang"} ${index + 1}`}><Trash2 className="h-4 w-4" /></button>}</div>
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                     {isRepair ? (
-                      // Render input dinamis per kolom non-rowspan
+                      // Render input dinamis per kolom non-rowspan (perbaikan)
                       (sheetTemplate.kolomPerbaikan ?? DEFAULT_KOLOM_PERBAIKAN)
                         .filter((k) => !k.rowspan)
                         .map((k) => (
@@ -1391,12 +1435,25 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                             onChange={(event) => updateItem(index, k.id === "perbaikan" ? "jenis" : k.id, event.target.value)}
                           />
                         ))
-                    ) : <>
-                      <Input list="nota-dinas-item-catalog" aria-label={`Nama barang atau bunga ${index + 1}`} placeholder="Nama barang / bunga" value={item.jenis} onChange={(event) => updateItem(index, "jenis", event.target.value)} />
-                      <Input aria-label={`Jumlah barang ${index + 1}`} placeholder="Jumlah" value={item.jumlah} onChange={(event) => updateItem(index, "jumlah", event.target.value)} />
-                      <Input aria-label={`Satuan barang ${index + 1}`} placeholder="Satuan" value={item.satuan || ""} onChange={(event) => updateItem(index, "satuan", event.target.value)} />
-                      <Input aria-label={`Keterangan barang ${index + 1}`} placeholder="Keterangan" value={item.keterangan} onChange={(event) => updateItem(index, "keterangan", event.target.value)} />
-                    </>}
+                    ) : (
+                      // Render input dinamis per kolom (permintaan alat / bunga)
+                      (sheetTemplate.kolomPermintaan ?? DEFAULT_KOLOM_PERMINTAAN)
+                        .filter((k) => k.id !== "nomor") // kolom nomor auto-generated, skip input
+                        .map((k) => (
+                          <Input
+                            key={k.id}
+                            list={k.id === "jenis" ? "nota-dinas-item-catalog" : undefined}
+                            aria-label={`${k.judul} ${index + 1}`}
+                            placeholder={k.judul}
+                            value={k.id === "jumlah"
+                              ? (item.jumlah || "")
+                              : k.id === "satuan"
+                                ? (item.satuan || "")
+                                : (item[k.id] as string || "")}
+                            onChange={(event) => updateItem(index, k.id, event.target.value)}
+                          />
+                        ))
+                    )}
                   </div>
                 </div>
               ))}
@@ -1467,6 +1524,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
             templateParagrafLanjutanAlat={sheetTemplate.paragrafLanjutanAlat}
             templateParagrafKalimatPenutup={sheetTemplate.paragrafKalimatPenutup}
             kolomPerbaikan={sheetTemplate.kolomPerbaikan}
+            kolomPermintaan={sheetTemplate.kolomPermintaan}
           />
           <NotaDinasSheet
             kepada={form.lanjutanKepada}
@@ -1506,6 +1564,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
             templateParagrafLanjutanAlat={sheetTemplate.paragrafLanjutanAlat}
             templateParagrafKalimatPenutup={sheetTemplate.paragrafKalimatPenutup}
             kolomPerbaikan={sheetTemplate.kolomPerbaikan}
+            kolomPermintaan={sheetTemplate.kolomPermintaan}
           />
         </div>
       </div>

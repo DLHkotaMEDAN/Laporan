@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { isSuperAdminAccess } from "@/constants/access-control";
 import { notaDinasTemplateService } from "@/services/notaDinasTemplateService";
-import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN } from "@/types/notaDinas";
+import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
 import KolomPerbaikanEditor from "@/components/KolomPerbaikanEditor";
 
@@ -18,8 +19,6 @@ const KATEGORI_OPTIONS: { value: NotaDinasCategory; label: string }[] = [
   { value: "permintaan_bunga_bahan", label: "Permintaan Bunga dan Bahan" },
   { value: "perbaikan", label: "Perbaikan" },
 ];
-
-type RegionOption = { id: string | null; name: string };
 
 type FieldDef = {
   key: keyof Omit<NotaDinasTemplate, 'id' | 'nama' | 'regionId' | 'kategori' | 'isDefault' | 'createdAt' | 'updatedAt'>;
@@ -74,51 +73,41 @@ const FIELDS: FieldDef[] = [
 ];
 
 const NotaDinasTemplateManagement = () => {
-  const [regions, setRegions] = useState<RegionOption[]>([]);
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const { profile, session } = useAuth();
+  const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
+
   const [kategori, setKategori] = useState<NotaDinasCategory>("permintaan_alat");
   const [templates, setTemplates] = useState<NotaDinasTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<Partial<NotaDinasTemplate> | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Muat daftar wilayah
-  useEffect(() => {
-    void supabase
-      .from("regions")
-      .select("id, name")
-      .order("name")
-      .then(({ data }) => {
-        const opts: RegionOption[] = [
-          { id: null, name: "Default Global (semua wilayah)" },
-          ...((data || []) as { id: string; name: string }[]).map((r) => ({ id: r.id, name: r.name })),
-        ];
-        setRegions(opts);
-      });
-  }, []);
+  // Template global ini hanya untuk super admin — regionId selalu null
+  const GLOBAL_REGION_ID = null;
 
-  // Muat daftar template saat wilayah atau kategori berubah
+  // Muat daftar template saat kategori berubah — hanya template global
   const loadTemplates = () => {
     setLoading(true);
     void notaDinasTemplateService
-      .getTemplatesByKategori(kategori, selectedRegionId)
+      .getTemplatesByKategori(kategori, GLOBAL_REGION_ID)
       .then((tpls) => setTemplates(tpls))
       .catch(() => setTemplates([]))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
     loadTemplates();
     setEditingTemplate(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kategori, selectedRegionId]);
+  }, [kategori, isSuperAdmin]);
 
   const handleCreateNew = () => {
     const defaults = DEFAULT_NOTA_TEMPLATES[kategori || "permintaan_alat"];
     setEditingTemplate({
       nama: "",
       kategori,
-      regionId: selectedRegionId,
+      regionId: GLOBAL_REGION_ID,
       isDefault: templates.length === 0,
       ...defaults,
     });
@@ -178,7 +167,7 @@ const NotaDinasTemplateManagement = () => {
       await notaDinasTemplateService.save({
         id: editingTemplate.id,
         nama: editingTemplate.nama ?? "Template Baru",
-        regionId: selectedRegionId,
+        regionId: GLOBAL_REGION_ID,
         kategori,
         isDefault: editingTemplate.isDefault ?? false,
         paragrafPembuka: editingTemplate.paragrafPembuka ?? "",
@@ -189,6 +178,7 @@ const NotaDinasTemplateManagement = () => {
         paragrafLanjutanAlat: editingTemplate.paragrafLanjutanAlat ?? "",
         paragrafKalimatPenutup: editingTemplate.paragrafKalimatPenutup ?? "",
         kolomPerbaikan: kategori === "perbaikan" ? (editingTemplate.kolomPerbaikan ?? null) : null,
+        kolomPermintaan: (kategori === "permintaan_alat" || kategori === "permintaan_bunga_bahan") ? (editingTemplate.kolomPermintaan ?? null) : null,
       });
       showSuccess("Template berhasil disimpan.");
       loadTemplates();
@@ -204,24 +194,24 @@ const NotaDinasTemplateManagement = () => {
 
   const visibleFields = FIELDS.filter((f) => f.showFor.includes(kategori));
 
+  // Hanya super admin yang boleh mengakses komponen ini
+  if (!isSuperAdmin) {
+    return (
+      <p className="py-4 text-center text-sm text-slate-400">
+        Akses ditolak. Hanya Super Admin yang dapat mengelola template global.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* Filter wilayah + kategori */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block space-y-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500">Wilayah</span>
-          <Select
-            value={selectedRegionId ?? "global"}
-            onValueChange={(v) => setSelectedRegionId(v === "global" ? null : v)}
-          >
-            <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {regions.map((r) => (
-                <SelectItem key={r.id ?? "global"} value={r.id ?? "global"}>{r.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
+      {/* Info konteks */}
+      <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-800">
+        <strong>Template Default Global</strong> — berlaku sebagai fallback untuk semua wilayah yang belum memiliki template sendiri.
+      </div>
+
+      {/* Filter kategori saja */}
+      <div>
         <label className="block space-y-1.5">
           <span className="text-xs font-black uppercase tracking-wider text-slate-500">Kategori</span>
           <Select value={kategori} onValueChange={(v) => setKategori(v as NotaDinasCategory)}>
@@ -269,7 +259,6 @@ const NotaDinasTemplateManagement = () => {
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
                   {tpl.nama}
                   {tpl.isDefault && <span className="ml-1.5 text-xs font-normal text-amber-600">(Default)</span>}
-                  {tpl.regionId === null && <span className="ml-1.5 text-xs font-normal text-slate-400">(Global)</span>}
                 </span>
                 <div className="flex shrink-0 gap-1">
                   {!tpl.isDefault && (
@@ -363,13 +352,24 @@ const NotaDinasTemplateManagement = () => {
             ))}
           </div>
 
-          {/* Editor kolom tabel — hanya untuk kategori perbaikan */}
+          {/* Editor kolom tabel perbaikan */}
           {kategori === "perbaikan" && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
               <h4 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Konfigurasi Kolom Tabel</h4>
               <KolomPerbaikanEditor
                 kolom={editingTemplate.kolomPerbaikan ?? [...DEFAULT_KOLOM_PERBAIKAN]}
                 onChange={(kolom) => setEditField("kolomPerbaikan" as any, kolom as any)}
+              />
+            </div>
+          )}
+
+          {/* Editor kolom tabel permintaan */}
+          {(kategori === "permintaan_alat" || kategori === "permintaan_bunga_bahan") && (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+              <h4 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Konfigurasi Kolom Tabel</h4>
+              <KolomPerbaikanEditor
+                kolom={editingTemplate.kolomPermintaan ?? [...DEFAULT_KOLOM_PERMINTAAN]}
+                onChange={(kolom) => setEditField("kolomPermintaan" as any, kolom as any)}
               />
             </div>
           )}
