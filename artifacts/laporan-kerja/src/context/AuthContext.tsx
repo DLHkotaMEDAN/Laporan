@@ -34,8 +34,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const loginAuditUsers = useRef(new Set<string>());
+  const fetchingProfileRef = useRef<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
+    if (fetchingProfileRef.current === userId) return;
+    fetchingProfileRef.current = userId;
     setLoading(true);
 
     // Kegagalan jaringan singkat saat login sebelumnya membuat profil tetap
@@ -57,6 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           if (createError) throw createError;
           setProfile(newData);
+          fetchingProfileRef.current = null;
           setLoading(false);
           return;
         }
@@ -64,6 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error) throw error;
 
         setProfile(data);
+        fetchingProfileRef.current = null;
         setLoading(false);
         return;
       } catch (error) {
@@ -76,6 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     setProfile(null);
+    fetchingProfileRef.current = null;
     setLoading(false);
   };
 

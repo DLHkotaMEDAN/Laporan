@@ -79,7 +79,27 @@ export const auditLogService = {
     entityType: EntityType;
     entityId?: string;
     details?: Record<string, unknown>;
+    // Parameter opsional — jika disediakan, skip query DB
+    userId?: string;
+    username?: string | null;
+    userEmail?: string | null;
+    role?: string | null;
   }) {
+    // Jika data user sudah disediakan oleh pemanggil, skip query DB
+    if (params.userId) {
+      return auditLogService.logAction({
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        details: params.details || {},
+        userId: params.userId,
+        username: params.username || params.userEmail || 'User',
+        userEmail: params.userEmail || null,
+        role: params.role || null,
+      });
+    }
+
+    // Fallback: ambil dari DB jika data tidak disediakan (untuk pemanggil dari services)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 

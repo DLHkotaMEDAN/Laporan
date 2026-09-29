@@ -1,6 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 
+/** Menghasilkan ID unik per tab browser menggunakan sessionStorage.
+ *  sessionStorage berbeda antar tab tapi bertahan selama tab tidak ditutup. */
+const getTabId = (): string => {
+  try {
+    let tabId = sessionStorage.getItem('draft-tab-id');
+    if (!tabId) {
+      tabId = Math.random().toString(36).slice(2, 9);
+      sessionStorage.setItem('draft-tab-id', tabId);
+    }
+    return tabId;
+  } catch {
+    // Fallback jika sessionStorage tidak tersedia (misal: mode incognito ketat)
+    return 'default';
+  }
+};
+
+/** Menambahkan tab identifier ke draft key agar setiap tab punya draft terisolasi. */
+const withTabId = (key: string): string => `${key}:tab-${getTabId()}`;
+
 const DATABASE_NAME = "dlh-form-drafts";
 const STORE_NAME = "drafts";
 const EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
@@ -129,6 +148,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
   const savingRef = useRef(false);
   const pendingSaveRef = useRef(false);
   const shouldPersistRef = useRef(Boolean(key));
+  const clearedRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
   const save = useCallback(async () => {
@@ -141,9 +161,9 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
     pendingSaveRef.current = false;
     const savedAt = Date.now();
     try {
-      await writeDraft(key, { savedAt, values: form.getValues(), view: captureViewState() });
+      await writeDraft(withTabId(key), { savedAt, values: form.getValues(), view: captureViewState() });
       if (!shouldPersistRef.current) {
-        await deleteDraft(key);
+        await deleteDraft(withTabId(key));
         return;
       }
       setLastSavedAt(savedAt);
@@ -162,6 +182,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
     let active = true;
     readyRef.current = !key;
     shouldPersistRef.current = Boolean(key);
+    clearedRef.current = false;
     setIsReady(!key);
     setRestoredAt(null);
 
@@ -169,15 +190,20 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
 
     void (async () => {
       try {
-        const draft = await readDraft<T>(key);
+        const draft = await readDraft<T>(withTabId(key));
         if (!active) return;
+        if (clearedRef.current) {
+          readyRef.current = true;
+          setIsReady(true);
+          return;
+        }
         if (draft && Date.now() - draft.savedAt <= EXPIRY_MS) {
           form.reset(draft.values);
           setRestoredAt(draft.savedAt);
           setLastSavedAt(draft.savedAt);
           restoreViewState(draft.view);
         } else if (draft) {
-          await deleteDraft(key);
+          await deleteDraft(withTabId(key));
         }
       } catch (error) {
         console.warn("Tidak dapat memuat draf formulir", error);
@@ -219,8 +245,9 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
   const clearDraft = useCallback(async () => {
     if (!key) return;
     shouldPersistRef.current = false;
+    clearedRef.current = true;
     try {
-      await deleteDraft(key);
+      await deleteDraft(withTabId(key));
       setLastSavedAt(null);
     } catch (error) {
       console.warn("Tidak dapat menghapus draf formulir", error);
@@ -239,6 +266,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
   const restoreRef = useRef(restore);
   const readyRef = useRef(!key);
   const shouldPersistRef = useRef(Boolean(key));
+  const clearedRef = useRef(false);
   const savingRef = useRef(false);
   const pendingSaveRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
@@ -256,7 +284,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
     pendingSaveRef.current = false;
     const savedAt = Date.now();
     try {
-      await writeDraft(key, { savedAt, values: valuesRef.current, view: captureViewState() });
+      await writeDraft(withTabId(key), { savedAt, values: valuesRef.current, view: captureViewState() });
       setLastSavedAt(savedAt);
     } catch (error) {
       console.warn("Tidak dapat menyimpan draf formulir", error);
@@ -270,21 +298,23 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
     let active = true;
     readyRef.current = !key;
     shouldPersistRef.current = Boolean(key);
+    clearedRef.current = false;
     setIsReady(!key);
     setRestoredAt(null);
     if (!key) return;
 
     void (async () => {
       try {
-        const draft = await readDraft<T>(key);
+        const draft = await readDraft<T>(withTabId(key));
         if (!active || !draft) return;
+        if (clearedRef.current) return;
         if (Date.now() - draft.savedAt <= EXPIRY_MS) {
           restoreRef.current(draft.values);
           setRestoredAt(draft.savedAt);
           setLastSavedAt(draft.savedAt);
           restoreViewState(draft.view);
         } else {
-          await deleteDraft(key);
+          await deleteDraft(withTabId(key));
         }
       } catch (error) {
         console.warn("Tidak dapat memuat draf formulir", error);
@@ -326,8 +356,9 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
   const clearDraft = useCallback(async () => {
     if (!key) return;
     shouldPersistRef.current = false;
+    clearedRef.current = true;
     try {
-      await deleteDraft(key);
+      await deleteDraft(withTabId(key));
       setLastSavedAt(null);
     } catch (error) {
       console.warn("Tidak dapat menghapus draf formulir", error);

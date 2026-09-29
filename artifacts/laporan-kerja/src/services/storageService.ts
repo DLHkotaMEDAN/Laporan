@@ -3,6 +3,18 @@ import { auditLogService } from '@/services/auditLogService';
 
 export const storageService = {
   async uploadPhoto(base64: string, fileName: string): Promise<string> {
+    // Deteksi MIME type dari prefix Base64 (format: data:image/xxx;base64,...)
+    const mimeMatch = base64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+    const mimeType = mimeMatch?.[1] ?? 'image/jpeg';
+    const extMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+    };
+    const ext = extMap[mimeType] ?? 'jpg';
+
     // Konversi Base64 ke Blob
     const base64Data = base64.split(',')[1];
     const byteCharacters = atob(base64Data);
@@ -11,14 +23,14 @@ export const storageService = {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
     const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'image/jpeg' });
+    const blob = new Blob([byteArray], { type: mimeType });
 
-    const filePath = `${Date.now()}_${fileName}.jpg`;
+    const filePath = `${Date.now()}_${fileName}.${ext}`;
 
     const { data, error } = await supabase.storage
       .from('report-photos')
       .upload(filePath, blob, {
-        contentType: 'image/jpeg',
+        contentType: mimeType,
         upsert: true
       });
 
@@ -36,7 +48,7 @@ export const storageService = {
       action: 'CREATE',
       entityType: 'REPORT_PHOTO',
       entityId: filePath,
-      details: { bucket: 'report-photos', file_name: filePath, source_name: fileName },
+      details: { bucket: 'report-photos', file_name: filePath, source_name: fileName, mime_type: mimeType },
     });
     return publicUrl;
   },
@@ -45,25 +57,29 @@ export const storageService = {
     if (!url || !url.includes('report-photos')) return;
 
     try {
-      // Ekstrak nama file dari URL
-      // URL format: .../storage/v1/object/public/report-photos/filename.jpg
-      const parts = url.split('/');
-      const fileName = parts[parts.length - 1];
+      // Ekstrak path lengkap setelah nama bucket dari URL
+      // URL format: .../storage/v1/object/public/report-photos/subfolder/filename.jpg
+      // filePath yang dibutuhkan: "subfolder/filename.jpg"
+      const bucketMarker = '/report-photos/';
+      const bucketIndex = url.indexOf(bucketMarker);
+      const filePath = bucketIndex !== -1
+        ? url.slice(bucketIndex + bucketMarker.length)
+        : url.split('/').pop() ?? '';
 
-      if (fileName) {
+      if (filePath) {
         const { error } = await supabase.storage
           .from('report-photos')
-          .remove([fileName]);
+          .remove([filePath]);
         
         if (error) {
           console.error("Gagal menghapus file dari storage:", error);
         } else {
-          console.log(`[storage] Berhasil menghapus foto lama: ${fileName}`);
+          console.log(`[storage] Berhasil menghapus foto lama: ${filePath}`);
           void auditLogService.logCurrentUser({
             action: 'DELETE',
             entityType: 'REPORT_PHOTO',
-            entityId: fileName,
-            details: { bucket: 'report-photos', file_name: fileName, mode: 'replace_or_cleanup' },
+            entityId: filePath,
+            details: { bucket: 'report-photos', file_name: filePath, mode: 'replace_or_cleanup' },
           });
         }
       }

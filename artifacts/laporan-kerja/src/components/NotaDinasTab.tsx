@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, ChevronDown, ChevronUp, FilePlus2, FileText, Filter, Loader2, Pencil, Plus, Printer, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ArrowUpDown, ChevronDown, ChevronUp, Eye, FilePlus2, FileText, Filter, Loader2, Pencil, Plus, Printer, Settings2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
 import { notaDinasService } from "@/services/notaDinasService";
+import { notaDinasTemplateService } from "@/services/notaDinasTemplateService";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { isSuperAdminAccess } from "@/constants/access-control";
 import { useValueDraft } from "@/hooks/useFormDraft";
 import TotalRecordLabel from "@/components/TotalRecordLabel";
-import type { NotaDinasCategory, NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord } from "@/types/notaDinas";
+import type { NotaDinasCategory, NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
+import { DEFAULT_KOLOM_PERBAIKAN } from "@/types/notaDinas";
 
 type SortDirection = "asc" | "desc";
 type NotaDinasSortKey = "requestNumber" | "continuationNumber" | "date" | "subject" | "region" | "items";
@@ -81,6 +84,60 @@ const SAMPLE_FORM: NotaDinasForm = {
     { jenis: "Sarung Tangan", jumlah: "10 Pasang", keterangan: "3 Kecamatan" },
     { jenis: "Plastik Sampah", jumlah: "20 Buah", keterangan: "3 Kecamatan" },
   ],
+};
+
+/**
+ * Form kosong untuk membuat Nota Dinas baru — tidak ada nilai contoh.
+ * Hanya field yang bersifat teknis (toggle otomatis, tanggal hari ini) yang diisi.
+ */
+const EMPTY_FORM: NotaDinasForm = {
+  jenisDokumen: "permintaan",
+  jenisNotaDinas: "permintaan_alat",
+  kepada: "",
+  dari: "",
+  nomorUrut: "",
+  nomorLanjutanUrut: "",
+  kodeSurat: "SPB",
+  kodeWilayah: "",
+  gunakanNomorOtomatis: true,
+  nomorManual: "",
+  gunakanNomorOtomatisPertama: true,
+  nomorManualPertama: "",
+  gunakanNomorOtomatisLanjutan: true,
+  nomorManualLanjutan: "",
+  tanggal: getCurrentDate(),
+  tanggalLanjutan: getCurrentDate(),
+  hal: "Permintaan Alat Kerja",
+  wilayah: "",
+  jumlahKecamatan: "",
+  kecamatan: "",
+  penerima: "",
+  lanjutanKepada: "",
+  lanjutanDari: "",
+  lanjutanHal: "",
+  lanjutanPenutup: "",
+  lanjutanJabatanPenandatangan: "",
+  lanjutanKantorPenandatangan: "",
+  lanjutanNamaPenandatangan: "",
+  lanjutanNipPenandatangan: "",
+  koordinatorRujukan: "",
+  gunakanRujukanOtomatis: true,
+  nomorRujukan: "",
+  tanggalRujukan: getCurrentDate(),
+  halRujukan: "",
+  perbaikanPlatKendaraan: "",
+  perbaikanJenisKendaraan: "",
+  perbaikanSupir: "",
+  perbaikanNoHp: "",
+  perbaikanUraianPemeriksaan: "",
+  perbaikanLokasi: "",
+  perbaikanKegiatan: "",
+  penutup: "",
+  jabatanPenandatangan: "",
+  kantorPenandatangan: "",
+  namaPenandatangan: "",
+  nipPenandatangan: "",
+  items: [{ jenis: "", jumlah: "", keterangan: "" }],
 };
 
 const REPAIR_SAMPLE_FORM: Partial<NotaDinasForm> = {
@@ -353,6 +410,16 @@ type NotaDinasSheetProps = {
   items: NotaDinasItem[];
   isLanjutan: boolean;
   showTitle: boolean;
+  /** Teks paragraf dari template — menggantikan teks hardcoded */
+  templateParagrafPembuka?: string;
+  templateParagrafSubJudul?: string;
+  templateParagrafPenutup?: string;
+  templateParagrafPerbaikanPermintaan?: string;
+  templateParagrafPerbaikanLanjutan?: string;
+  templateParagrafLanjutanAlat?: string;
+  templateParagrafKalimatPenutup?: string;
+  /** Konfigurasi kolom tabel perbaikan dari template */
+  kolomPerbaikan?: KolomTabel[] | null;
 };
 
 const NotaDinasSheet = ({
@@ -362,7 +429,56 @@ const NotaDinasSheet = ({
   penutup, jabatanPenandatangan,
   kantorPenandatangan, namaPenandatangan, nipPenandatangan, items, isLanjutan,
   showTitle,
-}: NotaDinasSheetProps) => (
+  templateParagrafPembuka,
+  templateParagrafSubJudul,
+  templateParagrafPenutup,
+  templateParagrafPerbaikanPermintaan,
+  templateParagrafPerbaikanLanjutan,
+  templateParagrafLanjutanAlat,
+  templateParagrafKalimatPenutup,
+  kolomPerbaikan,
+}: NotaDinasSheetProps) => {
+  // Kolom tabel perbaikan — pakai dari template atau default
+  const activeKolom: KolomTabel[] = kolomPerbaikan && kolomPerbaikan.length > 0
+    ? kolomPerbaikan
+    : DEFAULT_KOLOM_PERBAIKAN;
+
+  // Nilai placeholder untuk substitusi template
+  const placeholders: Record<string, string> = {
+    wilayah, jumlahKecamatan, kecamatan,
+    penerima: penerima || "",
+    kepada,
+    koordinatorRujukan,
+    nomorRujukan: referenceNumber,
+    tanggalRujukan: referenceDate,
+    halRujukan: referenceHal,
+    jenisKendaraan, platKendaraan,
+    uraianPemeriksaan, lokasiKejadian, kegiatanKejadian,
+  };
+  const ph = (text: string) => Object.entries(placeholders).reduce(
+    (s, [k, v]) => s.replaceAll(`{${k}}`, v || "......"), text
+  );
+
+  // Gunakan template jika tersedia, fallback ke teks default
+  const tPembuka = templateParagrafPembuka
+    ?? `Sehubungan telah habisnya persediaan alat kerja di {wilayah}, Untuk {jumlahKecamatan} Kecamatan ({kecamatan}). Maka dibutuhkan penambahan alat kerja untuk kelancaran operasional di {wilayah}.`;
+  const tSubJudul = templateParagrafSubJudul
+    ?? `Adapun Permintaan Barang yang dibutuhkan sebagai berikut :`;
+  const tPenutupPermintaan = templateParagrafPenutup
+    ?? `Berkenaan dengan hal tersebut dimohon kepada {penerima} {kepada}, Agar kiranya memberikan Alat kerja tersebut.`;
+  const tPerbaikanPermintaan = templateParagrafPerbaikanPermintaan
+    ?? `Sehubungan untuk kelancaran pekerjaan operasional di {wilayah}, dengan ini kami melaporkan kerusakan kendaraan/Peralatan Mesin Kerja Nota Dinas Permintaan Perbaikan Kendaraan {jenisKendaraan} {platKendaraan} antara lain :`;
+  const tPerbaikanLanjutan = templateParagrafPerbaikanLanjutan
+    ?? `Menindaklanjuti surat dari {koordinatorRujukan} dengan Nomor : {nomorRujukan} Tanggal {tanggalRujukan}, Perihal {halRujukan}. Setelah dilakukan penelaahan dan pemeriksaan bahwa {uraianPemeriksaan}, pada saat kerja di {lokasiKejadian} ({kegiatanKejadian}).`;
+  const tLanjutanAlat = templateParagrafLanjutanAlat
+    ?? `Menindaklanjuti Surat dari {koordinatorRujukan} Nomor : {nomorRujukan} Tanggal {tanggalRujukan} Perihal {halRujukan}. Untuk Keperluan dan Kelancaran Kerja di Lapangan telah dilakukan Penelaahan dan Pemeriksaan bahwa telah Habisnya Alat Kerja tersebut.`;
+
+  // Kalimat penutup surat: pakai dari form jika sudah diisi, fallback ke template
+  const tKalimatPenutup = penutup?.trim()
+    ? penutup
+    : (templateParagrafKalimatPenutup ?? "");
+
+  return (
   <article className={`nota-dinas-sheet${isRepair ? " nota-dinas-repair-sheet" : ""} mx-auto bg-white text-black shadow-xl`}>
     {showTitle && <h1 className="nota-dinas-title">NOTA DINAS</h1>}
 
@@ -377,33 +493,67 @@ const NotaDinasSheet = ({
     <div className="nota-dinas-rule" />
 
     {isRepair ? (isLanjutan ? <>
-      <p className="nota-dinas-body nota-dinas-repair-paragraph">Menindaklanjuti surat dari <span>{printValue(koordinatorRujukan)}</span> dengan Nomor : <span>{printValue(referenceNumber)}</span> Tanggal <span>{printValue(referenceDate)}</span>, Perihal <span>{printValue(referenceHal)}</span>. Setelah dilakukan penelaahan dan pemeriksaan bahwa <span>{printValue(uraianPemeriksaan)}</span>, pada saat kerja di <span>{printValue(lokasiKejadian)}</span> ({printValue(kegiatanKejadian)}).</p>
+      <p className="nota-dinas-body nota-dinas-repair-paragraph">{ph(tPerbaikanLanjutan)}</p>
       <div className="nota-dinas-driver"><div className="nota-dinas-driver-row"><span>Supir</span><b>:</b><span>{printValue(supir)}</span></div><div className="nota-dinas-driver-row"><span>No. HP</span><b>:</b><span>{printValue(noHp)}</span></div></div>
     </> : <>
-      <p className="nota-dinas-body nota-dinas-repair-paragraph">Sehubungan untuk kelancaran pekerjaan operasional di <span>{printValue(wilayah)}</span>, dengan ini kami melaporkan kerusakan kendaraan/Peralatan Mesin Kerja Nota Dinas Permintaan Perbaikan Kendaraan <span>{printValue(jenisKendaraan)} {printValue(platKendaraan)}</span> antara lain :</p>
+      <p className="nota-dinas-body nota-dinas-repair-paragraph">{ph(tPerbaikanPermintaan)}</p>
       <div className="nota-dinas-driver"><div className="nota-dinas-driver-row"><span>Supir</span><b>:</b><span>{printValue(supir)}</span></div><div className="nota-dinas-driver-row"><span>No. HP</span><b>:</b><span>{printValue(noHp)}</span></div></div>
     </>) : isLanjutan ? <>
-      <p className="nota-dinas-body">Menindaklanjuti Surat dari <span>{printValue(koordinatorRujukan)}</span> Nomor : <span>{printValue(referenceNumber)}</span> Tanggal <span>{printValue(referenceDate)}</span> Perihal <span>{printValue(referenceHal)}</span>. Untuk Keperluan dan Kelancaran Kerja di Lapangan telah dilakukan Penelaahan dan Pemeriksaan bahwa telah Habisnya Alat Kerja tersebut.</p>
-      <p className="nota-dinas-request">Adapun Permintaan Barang yang dibutuhkan sebagai berikut :</p>
+      <p className="nota-dinas-body">{ph(tLanjutanAlat)}</p>
+      <p className="nota-dinas-request">{ph(tSubJudul)}</p>
     </> : <>
-      <p className="nota-dinas-body">Sehubungan telah habisnya persediaan alat kerja di <span>{printValue(wilayah)}</span>, Untuk <span>{printValue(jumlahKecamatan)} Kecamatan ({printValue(kecamatan)})</span>. Maka dibutuhkan penambahan alat kerja untuk kelancaran operasional di <span>{printValue(wilayah)}</span>.</p>
-      <p className="nota-dinas-request">Adapun Permintaan Barang yang dibutuhkan sebagai berikut :</p>
+      <p className="nota-dinas-body">{ph(tPembuka)}</p>
+      <p className="nota-dinas-request">{ph(tSubJudul)}</p>
     </>}
 
-    {isRepair ? <table className="nota-dinas-table nota-dinas-repair-table">
-      <thead><tr><th>Plat Kendaraan</th><th>Jenis Kendaraan</th><th>Perbaikan</th></tr></thead>
-      <tbody>{(items.length > 0 ? items : [{ jenis: "", jumlah: "", satuan: "", keterangan: "" }]).map((item, index, repairItems) => <tr key={index}>
-        {index === 0 && <td rowSpan={repairItems.length}>{printValue(platKendaraan)}</td>}
-        {index === 0 && <td rowSpan={repairItems.length}>{printValue(jenisKendaraan)}</td>}
-        <td>{printValue(item.jenis)}</td>
-      </tr>)}</tbody>
-    </table> : <table className="nota-dinas-table">
+    {isRepair ? (() => {
+      // Render tabel perbaikan dinamis berdasarkan konfigurasi kolom dari template
+      const rowspanKolom = activeKolom.filter((k) => k.rowspan);
+      const nonRowspanKolom = activeKolom.filter((k) => !k.rowspan);
+      const displayItems = items.length > 0 ? items : [{ jenis: "", jumlah: "", satuan: "", keterangan: "" }];
+      // Nilai untuk kolom rowspan — ambil dari form atau item pertama
+      const rowspanValues: Record<string, string> = {};
+      rowspanKolom.forEach((k) => {
+        if (k.id === "plat") rowspanValues[k.id] = platKendaraan;
+        else if (k.id === "jenis") rowspanValues[k.id] = jenisKendaraan;
+        else rowspanValues[k.id] = displayItems[0]?.[k.id] || "";
+      });
+      return (
+        <table className="nota-dinas-table nota-dinas-repair-table">
+          <thead>
+            <tr>
+              {activeKolom.map((k) => (
+                <th key={k.id} style={{ width: `${k.lebar}%` }}>{k.judul}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayItems.map((item, index) => (
+              <tr key={index}>
+                {rowspanKolom.map((k) =>
+                  index === 0 ? (
+                    <td key={k.id} rowSpan={displayItems.length}>
+                      {printValue(rowspanValues[k.id] || "")}
+                    </td>
+                  ) : null
+                )}
+                {nonRowspanKolom.map((k) => (
+                  <td key={k.id} className="nota-dinas-repair-item">
+                    {k.id === "perbaikan" ? printValue(item.jenis) : printValue(item[k.id] || "")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    })() : <table className="nota-dinas-table">
       <thead><tr><th>No.</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th></tr></thead>
       <tbody>{items.map((item, index) => <tr key={index}><td>{index + 1}.</td><td>{printValue(item.jenis)}</td><td>{printValue(`${item.jumlah}${item.satuan ? ` ${item.satuan}` : ""}`)}</td><td>{printValue(item.keterangan)}</td></tr>)}</tbody>
     </table>}
 
-    {!isLanjutan && !isRepair && <p className="nota-dinas-body nota-dinas-closing">Berkenaan dengan hal tersebut dimohon kepada <span>{printValue(penerima)}</span>, Agar kiranya memberikan Alat kerja tersebut.</p>}
-    {isRepair ? <p className="nota-dinas-body nota-dinas-repair-paragraph nota-dinas-closing">{printValue(penutup)}</p> : <p className={`nota-dinas-final${isLanjutan ? " nota-dinas-final-lanjutan" : ""}`}>{printValue(penutup)}</p>}
+    {!isLanjutan && !isRepair && <p className="nota-dinas-body nota-dinas-closing">{ph(tPenutupPermintaan)}</p>}
+    {isRepair ? <p className="nota-dinas-body nota-dinas-repair-paragraph nota-dinas-closing">{ph(tKalimatPenutup)}</p> : <p className={`nota-dinas-final${isLanjutan ? " nota-dinas-final-lanjutan" : ""}`}>{ph(tKalimatPenutup)}</p>}
 
     <div className="nota-dinas-signature">
       <span>{printValue(jabatanPenandatangan)}</span>
@@ -413,9 +563,12 @@ const NotaDinasSheet = ({
       <span>NIP {printValue(nipPenandatangan)}</span>
     </div>
   </article>
-);
+  );
+};
 
 const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; isActive?: boolean }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { profile, session } = useAuth();
   const viewStorageKey = session?.user?.id ? `nota-dinas:view:${session.user.id}` : undefined;
   const [form, setForm] = useState<NotaDinasForm>(readDraft);
@@ -426,10 +579,14 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
   const [saving, setSaving] = useState(false);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [view, setViewState] = useState<"list" | "form">("list");
+  const [viewMode, setViewMode] = useState<"view" | "edit">("edit");
   const [sort, setSort] = useState<{ key: NotaDinasSortKey; direction: SortDirection } | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<NotaDinasCategory | "semua">("semua");
   const [accountRegion, setAccountRegion] = useState<{ id: string; name: string; notaCode: string } | null>(null);
   const [accountRegionReady, setAccountRegionReady] = useState(false);
+  const [sheetTemplate, setSheetTemplate] = useState(() => notaDinasTemplateService.buildDefaultTemplate("permintaan_alat"));
+  const [availableTemplates, setAvailableTemplates] = useState<NotaDinasTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const isLanjutan = form.jenisDokumen === "lanjutan";
   const isRepair = form.jenisNotaDinas === "perbaikan";
   const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
@@ -524,6 +681,36 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
       ? current
       : applyAccountRegion(current));
   }, [accountRegion]);
+
+  // Load template saat kategori nota, wilayah akun, tab aktif, atau kembali dari halaman template
+  useEffect(() => {
+    const kategori = form.jenisNotaDinas || "permintaan_alat";
+    const regionId = accountRegion?.id ?? null;
+    let active = true;
+    void notaDinasTemplateService
+      .getTemplatesByKategori(kategori, regionId)
+      .then((tpls) => {
+        if (!active) return;
+        setAvailableTemplates(tpls);
+        const defaultTpl = tpls.find((t) => t.isDefault) ?? tpls[0];
+        if (defaultTpl) {
+          setSelectedTemplateId(defaultTpl.id);
+          setSheetTemplate(defaultTpl);
+        } else {
+          setSelectedTemplateId('');
+          setSheetTemplate(notaDinasTemplateService.buildDefaultTemplate(kategori));
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setAvailableTemplates([]);
+        setSelectedTemplateId('');
+        setSheetTemplate(notaDinasTemplateService.buildDefaultTemplate(kategori));
+      });
+    return () => { active = false; };
+  // isActive dan location.pathname memastikan reload saat kembali dari halaman template
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.jenisNotaDinas, accountRegion, isActive, location.pathname]);
 
   useEffect(() => {
     const nextItems = Array.from(new Set([
@@ -648,9 +835,19 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
 
   const setActiveField = (field: "kepada" | "dari" | "hal" | "penutup" | "jabatanPenandatangan" | "kantorPenandatangan" | "namaPenandatangan" | "nipPenandatangan", value: string) => {
     const targetField = isLanjutan ? `lanjutan${field.charAt(0).toUpperCase()}${field.slice(1)}` : field;
-    setForm((current) => !isLanjutan && field === "hal"
-      ? { ...current, hal: value, lanjutanHal: getRenderedHal(value, current.wilayah), halRujukan: value }
-      : { ...current, [targetField]: value });
+    setForm((current) => {
+      if (!isLanjutan && field === "hal") {
+        return { ...current, hal: value, lanjutanHal: getRenderedHal(value, current.wilayah), halRujukan: value };
+      }
+      // Saat field "dari" diubah, jabatan penandatangan otomatis ikut nilai "dari"
+      // Jika sedang di mode lanjutan, pengirim surat rujukan juga ikut
+      if (field === "dari") {
+        return isLanjutan
+          ? { ...current, lanjutanDari: value, lanjutanJabatanPenandatangan: value }
+          : { ...current, dari: value, jabatanPenandatangan: value, koordinatorRujukan: value };
+      }
+      return { ...current, [targetField]: value };
+    });
   };
 
   const setActiveDate = (value: string) => setForm((current) => isLanjutan
@@ -664,7 +861,11 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
       ...current,
       jenisDokumen: value,
       kodeSurat: getLetterTypeForCategory(current.jenisNotaDinas),
-      ...(value === "lanjutan" ? { lanjutanHal: getRenderedHal(current.hal, current.wilayah) } : {}),
+      ...(value === "lanjutan" ? {
+        lanjutanHal: getRenderedHal(current.hal, current.wilayah),
+        // Pengirim surat rujukan otomatis dari field "Dari" surat pertama
+        koordinatorRujukan: current.dari || current.koordinatorRujukan,
+      } : {}),
     }));
   };
   const handleNotaCategoryChange = (value: NotaDinasCategory) => {
@@ -691,6 +892,11 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
   const setField = <K extends keyof NotaDinasForm>(key: K, value: NotaDinasForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const tpl = availableTemplates.find((t) => t.id === templateId);
+    if (tpl) setSheetTemplate(tpl);
+  };
   const updateItem = (index: number, key: keyof NotaDinasItem, value: string) => {
     setForm((current) => ({
       ...current,
@@ -703,74 +909,52 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
   const removeItem = (index: number) => {
     setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }));
   };
-  const resetForm = () => {
-    setForm(applyAccountRegion({ ...SAMPLE_FORM, nomorUrut: nextRequestSequence, tanggal: getCurrentDate(), tanggalLanjutan: getCurrentDate(), tanggalRujukan: getCurrentDate() }));
-    setActiveRecordId(null);
-    void clearDraft();
-    showSuccess("Form Nota Dinas dikembalikan ke contoh");
-  };
-
-  const clearSample = () => {
-    setForm((current) => applyAccountRegion({
-      ...current,
-      jenisDokumen: "",
-      jenisNotaDinas: "",
-      kodeSurat: "",
-      kodeWilayah: isSuperAdmin ? "" : current.kodeWilayah,
-      wilayah: isSuperAdmin ? "" : current.wilayah,
-      kepada: "",
-      dari: "",
-      nomorUrut: "",
-      nomorLanjutanUrut: "",
-      gunakanNomorOtomatis: false,
-      nomorManual: "",
-      gunakanNomorOtomatisPertama: false,
-      nomorManualPertama: "",
-      gunakanNomorOtomatisLanjutan: false,
-      nomorManualLanjutan: "",
-      tanggal: getCurrentDate(),
-      tanggalLanjutan: "",
-      hal: "",
-      jumlahKecamatan: "",
-      kecamatan: "",
-      penerima: "",
-      lanjutanKepada: "",
-      lanjutanDari: "",
-      lanjutanHal: "",
-      lanjutanJabatanPenandatangan: "",
-      lanjutanKantorPenandatangan: "",
-      lanjutanNamaPenandatangan: "",
-      lanjutanNipPenandatangan: "",
-      koordinatorRujukan: "",
-      gunakanRujukanOtomatis: false,
-      nomorRujukan: "",
-      tanggalRujukan: getCurrentDate(),
-      halRujukan: "",
-      perbaikanPlatKendaraan: "",
-      perbaikanJenisKendaraan: "",
-      perbaikanSupir: "",
-      perbaikanNoHp: "",
-      perbaikanUraianPemeriksaan: "",
-      perbaikanLokasi: "",
-      perbaikanKegiatan: "",
-      jabatanPenandatangan: "",
-      kantorPenandatangan: "",
-      namaPenandatangan: "",
-      nipPenandatangan: "",
-      items: [{ jenis: "", jumlah: "", satuan: "", bkKendaraan: "", keterangan: "" }],
-    }));
-    setActiveRecordId(null);
-    void clearDraft();
-    showSuccess("Contoh dihapus. Isi data baru untuk menggantikan tanda titik.");
-  };
-
   const createNew = () => {
-    setForm(applyAccountRegion({ ...SAMPLE_FORM, nomorUrut: nextRequestSequence, tanggal: getCurrentDate(), tanggalLanjutan: getCurrentDate(), tanggalRujukan: getCurrentDate() }));
+    const penutupFromTemplate = sheetTemplate.paragrafKalimatPenutup || "";
+    // Ambil data header dan tanda tangan dari record terakhir yang tersimpan
+    const lastRecord = records[0]; // records diurutkan desc by updatedAt
+    const prevKepada = lastRecord?.form.kepada || "";
+    const prevDari = lastRecord?.form.dari || "";
+    const prevJabatan = lastRecord?.form.jabatanPenandatangan || prevDari;
+    const prevKantor = lastRecord?.form.kantorPenandatangan || "";
+    const prevNama = lastRecord?.form.namaPenandatangan || "";
+    const prevNip = lastRecord?.form.nipPenandatangan || "";
+    const prevLanjutanKepada = lastRecord?.form.lanjutanKepada || "";
+    const prevLanjutanDari = lastRecord?.form.lanjutanDari || "";
+    const prevLanjutanJabatan = lastRecord?.form.lanjutanJabatanPenandatangan || prevLanjutanDari;
+    const prevLanjutanKantor = lastRecord?.form.lanjutanKantorPenandatangan || "";
+    const prevLanjutanNama = lastRecord?.form.lanjutanNamaPenandatangan || "";
+    const prevLanjutanNip = lastRecord?.form.lanjutanNipPenandatangan || "";
+
+    setForm(applyAccountRegion({
+      ...EMPTY_FORM,
+      // Header nota dinas — ambil dari record terakhir
+      kepada: prevKepada,
+      dari: prevDari,
+      lanjutanKepada: prevLanjutanKepada,
+      lanjutanDari: prevLanjutanDari,
+      // Tanda tangan — ambil dari record terakhir
+      jabatanPenandatangan: prevJabatan,
+      kantorPenandatangan: prevKantor,
+      namaPenandatangan: prevNama,
+      nipPenandatangan: prevNip,
+      lanjutanJabatanPenandatangan: prevLanjutanJabatan,
+      lanjutanKantorPenandatangan: prevLanjutanKantor,
+      lanjutanNamaPenandatangan: prevLanjutanNama,
+      lanjutanNipPenandatangan: prevLanjutanNip,
+      // Nomor urut otomatis lanjutan dari terakhir, bisa diedit
+      nomorUrut: nextRequestSequence,
+      tanggal: getCurrentDate(),
+      tanggalLanjutan: getCurrentDate(),
+      tanggalRujukan: getCurrentDate(),
+      penutup: penutupFromTemplate,
+      lanjutanPenutup: penutupFromTemplate,
+    }));
     setActiveRecordId(null);
     setView("form");
   };
 
-  const openRecord = (record: NotaDinasRecord) => {
+  const openRecord = (record: NotaDinasRecord, mode: "view" | "edit" = "edit") => {
     setForm(applyAccountRegion({
       ...SAMPLE_FORM,
       ...record.form,
@@ -782,7 +966,32 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
       halRujukan: record.form.halRujukan || record.form.hal,
     }));
     setActiveRecordId(record.id);
+    setViewMode(mode);
     setView("form");
+  };
+
+  const duplicateRecord = () => {
+    // Salin isi form yang sedang terbuka, tapi perlakukan sebagai dokumen BARU:
+    // - activeRecordId di-reset ke null → simpan akan buat record baru
+    // - nomorUrut dilanjutkan dari nomor terakhir agar tidak bentrok
+    // - tanggal diperbarui ke hari ini
+    setForm((current) => applyAccountRegion({
+      ...current,
+      nomorUrut: nextRequestSequence,
+      nomorLanjutanUrut: "",
+      tanggal: getCurrentDate(),
+      tanggalLanjutan: getCurrentDate(),
+      tanggalRujukan: getCurrentDate(),
+      gunakanNomorOtomatisPertama: true,
+      nomorManualPertama: "",
+      gunakanNomorOtomatisLanjutan: true,
+      nomorManualLanjutan: "",
+      gunakanRujukanOtomatis: true,
+      nomorRujukan: "",
+    }));
+    setActiveRecordId(null);
+    void clearDraft();
+    showSuccess("Form diduplikat sebagai Nota Dinas baru. Data asli tidak berubah.");
   };
 
   const deleteRecord = async (record: NotaDinasRecord) => {
@@ -888,9 +1097,14 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
               <p className="mt-0.5 text-sm text-indigo-800/80">Kelola Nota Dinas Permintaan dan Nota Dinas Lanjutan dalam satu dokumen PDF dua halaman.</p>
             </div>
           </div>
-          <Button type="button" onClick={createNew} className="h-10 shrink-0 rounded-xl bg-indigo-600 font-bold hover:bg-indigo-700">
-            <FilePlus2 className="mr-2 h-4 w-4" /> Tambah Nota Dinas
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate("/nota-dinas/template")} className="h-10 shrink-0 rounded-xl border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50">
+              <Settings2 className="mr-2 h-4 w-4" /> Pengaturan Template
+            </Button>
+            <Button type="button" onClick={createNew} className="h-10 shrink-0 rounded-xl bg-indigo-600 font-bold hover:bg-indigo-700">
+              <FilePlus2 className="mr-2 h-4 w-4" /> Tambah Nota Dinas
+            </Button>
+          </div>
         </div>
 
         <TotalRecordLabel count={recordCount === undefined ? records.length : recordCount} />
@@ -957,7 +1171,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                       <td className="px-3 py-4 text-slate-700 sm:px-5"><span className="line-clamp-2">{record.form.hal || "-"}</span><span className="mt-1 block text-[10px] text-slate-400 sm:hidden">{formatLongDate(record.form.tanggal)}</span></td>
                       <td className="hidden px-3 py-4 text-slate-700 lg:table-cell sm:px-5">{record.form.wilayah || "-"}</td>
                       <td className="hidden px-3 py-4 text-center font-semibold text-slate-700 md:table-cell sm:px-5">{record.form.items.length}</td>
-                      <td className="px-3 py-4 text-right sm:px-5"><div className="flex justify-end gap-2"><Button type="button" variant="outline" size="sm" onClick={() => openRecord(record)} className="border-indigo-200 px-2 text-indigo-700 hover:bg-indigo-50 sm:px-3"><Pencil className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Buka</span></Button><Button type="button" variant="outline" size="sm" onClick={() => void deleteRecord(record)} aria-label="Hapus Nota Dinas" title="Hapus Nota Dinas" className="border-red-200 px-2 text-red-600 hover:bg-red-50 sm:px-3"><Trash2 className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Hapus</span></Button></div></td>
+                      <td className="px-3 py-4 text-right sm:px-5"><div className="flex justify-end gap-2"><Button type="button" variant="outline" size="sm" onClick={() => openRecord(record, "view")} className="border-indigo-200 px-2 text-indigo-700 hover:bg-indigo-50 sm:px-3"><Eye className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Buka</span></Button><Button type="button" variant="outline" size="sm" onClick={() => openRecord(record, "edit")} className="border-emerald-200 px-2 text-emerald-700 hover:bg-emerald-50 sm:px-3"><Pencil className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Edit</span></Button><Button type="button" variant="outline" size="sm" onClick={() => void deleteRecord(record)} aria-label="Hapus Nota Dinas" title="Hapus Nota Dinas" className="border-red-200 px-2 text-red-600 hover:bg-red-50 sm:px-3"><Trash2 className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Hapus</span></Button></div></td>
                     </tr>;
                   })}
                 </tbody>
@@ -984,15 +1198,42 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
           <Button type="button" variant="outline" onClick={() => setView("list")} className="h-10 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-100">
             Kembali ke Data
           </Button>
-          <Button type="button" variant="outline" onClick={resetForm} className="h-10 rounded-xl border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-100">
-            <RotateCcw className="mr-2 h-4 w-4" /> Reset Contoh
-          </Button>
-          <Button type="button" variant="outline" onClick={clearSample} className="h-10 rounded-xl border-slate-300 bg-white text-slate-700 hover:bg-slate-100">
-            <Trash2 className="mr-2 h-4 w-4" /> Clear Contoh
-          </Button>
-          <Button type="button" onClick={saveRecord} disabled={saving} className="h-10 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-700">
+          {activeRecordId && viewMode === "view" && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setViewMode("edit")}
+              className="h-10 rounded-xl border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
+            >
+              <Pencil className="mr-2 h-4 w-4" /> Edit Nota Dinas
+            </Button>
+          )}
+          {activeRecordId && viewMode === "edit" && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const record = records.find((r) => r.id === activeRecordId);
+                if (record) void deleteRecord(record);
+              }}
+              className="h-10 rounded-xl border-red-200 bg-white text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Hapus
+            </Button>
+          )}
+          {activeRecordId && viewMode === "edit" && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={duplicateRecord}
+              className="h-10 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+            >
+              <FilePlus2 className="mr-2 h-4 w-4" /> Duplikat
+            </Button>
+          )}
+          {viewMode === "edit" && <Button type="button" onClick={saveRecord} disabled={saving} className="h-10 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-700">
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} {saving ? "Menyimpan..." : "Simpan Nota Dinas"}
-          </Button>
+          </Button>}
           <Button type="button" onClick={() => window.print()} className="h-10 rounded-xl bg-indigo-600 font-bold hover:bg-indigo-700">
             <Printer className="mr-2 h-4 w-4" /> Cetak / Simpan PDF
           </Button>
@@ -1000,7 +1241,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
       </div>
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
+        {viewMode === "edit" && <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
           <div>
             <h3 className="text-lg font-black text-slate-950">Input Nota Dinas</h3>
             <p className="mt-1 text-sm text-slate-500">Isi atau ubah data yang dicetak tebal pada pratinjau. <span className="text-xs text-slate-400">{lastSavedAt ? "Draft tersimpan" : "Draft akan tersimpan otomatis"}</span></p>
@@ -1013,6 +1254,26 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                 <SelectContent>{NOTA_DINAS_CATEGORIES.map((category) => <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
+            {availableTemplates.length > 1 && (
+              <Field label="Pilih Template" className="sm:col-span-2 xl:col-span-1">
+                <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                  <SelectTrigger><SelectValue placeholder="Pilih template..." /></SelectTrigger>
+                  <SelectContent>
+                    {availableTemplates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {tpl.nama}{tpl.isDefault ? " (Default)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+            {!isLanjutan && <Field label="Jenis Nota">
+              <Select value={form.kodeSurat} disabled>
+                <SelectTrigger><SelectValue placeholder="Pilih jenis nota" /></SelectTrigger>
+                <SelectContent>{LETTER_TYPES.map((letterType) => <SelectItem key={letterType.code} value={letterType.code}>{letterType.code} - {letterType.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>}
             <Field label="Jenis Dokumen" className="sm:col-span-2 xl:col-span-1">
               <Select value={form.jenisDokumen} onValueChange={(value) => handleDocumentTypeChange(value as NotaDinasKind)}>
                 <SelectTrigger><SelectValue placeholder="Pilih jenis dokumen" /></SelectTrigger>
@@ -1023,32 +1284,6 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
             <Field label="Dari"><Input list="nota-dinas-dari-options" value={activeDari} onChange={(event) => setActiveField("dari", event.target.value)} /></Field>
             {!isLanjutan && <Field label="Nomor Urut Surat Permintaan"><Input value={form.nomorUrut} onChange={(event) => setField("nomorUrut", event.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" maxLength={3} placeholder="001" /><span className="block text-[11px] text-slate-400">{activeRecordId ? "Nomor tersimpan dapat diedit manual." : `Otomatis melanjutkan nomor terakhir: ${nextRequestSequence}. Tetap dapat diedit manual.`}</span></Field>}
             {isLanjutan && <Field label="Nomor Urut Nota Lanjutan"><Input value={form.nomorLanjutanUrut} onChange={(event) => setField("nomorLanjutanUrut", event.target.value)} placeholder="Isi nomor urut" /></Field>}
-            {!isLanjutan && <Field label="Jenis Nota">
-              <Select value={form.kodeSurat} disabled>
-                <SelectTrigger><SelectValue placeholder="Pilih jenis nota" /></SelectTrigger>
-                <SelectContent>{LETTER_TYPES.map((letterType) => <SelectItem key={letterType.code} value={letterType.code}>{letterType.code} - {letterType.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </Field>}
-            {isSuperAdmin && !isLanjutan && <Field label="Pilihan Wilayah">
-              <Select value={form.kodeWilayah} onValueChange={handleRegionChange} disabled={!isSuperAdmin}>
-                <SelectTrigger><SelectValue placeholder="Pilih kode wilayah" /></SelectTrigger>
-                <SelectContent>{REGION_CODES.map((region) => <SelectItem key={region.code} value={region.code}>{region.code} - {region.label}</SelectItem>)}</SelectContent>
-              </Select>
-              <span className="block text-[11px] text-indigo-600">Pilih wilayah untuk Nota Dinas.</span>
-            </Field>}
-            <Field label={`Tanggal Surat ${isLanjutan ? "Lanjutan" : "Pertama"}`}><Input type="date" value={activeDateValue} onChange={(event) => setActiveDate(event.target.value)} /><span className="block text-[11px] text-slate-400">Kode bulan dan tahun nomor dibuat otomatis: {getLetterMonth(activeDateValue)} / {getLetterYear(activeDateValue)}</span></Field>
-            {isLanjutan && <>
-              <Field label="Pengirim Surat Rujukan"><Input list="nota-dinas-dari-options" value={form.koordinatorRujukan} onChange={(event) => setField("koordinatorRujukan", event.target.value)} /></Field>
-              <Field label="Nomor Surat Rujukan" className="sm:col-span-2 xl:col-span-1">
-                <div className="flex gap-2">
-                  <Input className="min-w-0 flex-1" value={referenceNumber} readOnly={form.gunakanRujukanOtomatis} onChange={(event) => setForm((current) => ({ ...current, gunakanRujukanOtomatis: false, nomorRujukan: event.target.value }))} />
-                  <Button type="button" variant="outline" size="sm" onClick={() => setForm((current) => ({ ...current, gunakanRujukanOtomatis: !current.gunakanRujukanOtomatis, nomorRujukan: current.gunakanRujukanOtomatis ? referenceNumber : "" }))} className="shrink-0 rounded-lg border-indigo-200 bg-white px-2.5 text-indigo-700 hover:bg-indigo-100">
-                    {form.gunakanRujukanOtomatis ? "Edit" : "Auto"}
-                  </Button>
-                </div>
-                <span className="block text-[11px] text-slate-400">Otomatis mengikuti nomor Nota Permintaan atau dapat diedit manual.</span>
-              </Field>
-            </>}
             <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 sm:col-span-2 xl:col-span-1">
               <div className="flex items-center justify-between gap-3">
                 <div><p className="text-[11px] font-black uppercase tracking-wider text-indigo-700">Nomor Surat</p><p className="mt-1 text-xs text-indigo-900/70">{activeAutoNumber ? "Format otomatis aktif" : "Mode edit manual aktif"}</p></div>
@@ -1069,6 +1304,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                 <p><span className="font-bold text-slate-800">Dinas-LH</span> = nilai tetap</p>
               </> : <p><span className="font-bold text-slate-800">Katim / PL</span> = nilai tetap pada Nota Dinas Lanjutan</p>}
             </div>
+            <Field label={`Tanggal Surat ${isLanjutan ? "Lanjutan" : "Pertama"}`}><Input type="date" value={activeDateValue} onChange={(event) => setActiveDate(event.target.value)} /><span className="block text-[11px] text-slate-400">Kode bulan dan tahun nomor dibuat otomatis: {getLetterMonth(activeDateValue)} / {getLetterYear(activeDateValue)}</span></Field>
             {!isLanjutan && <Field label="Hal" className="sm:col-span-2 xl:col-span-1">
               <Select value={activeHalOption} onValueChange={handleHalOptionChange}>
                 <SelectTrigger><SelectValue placeholder="Pilih Hal" /></SelectTrigger>
@@ -1079,6 +1315,28 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
               </Select>
               {activeHalOption === "manual" && <Textarea className="mt-2" rows={2} value={activeHal} onChange={(event) => setActiveField("hal", event.target.value)} placeholder="Tulis Hal secara manual" />}
             </Field>}
+            {isSuperAdmin && !isLanjutan && <Field label="Pilihan Wilayah">
+              <Select value={form.kodeWilayah} onValueChange={handleRegionChange} disabled={!isSuperAdmin}>
+                <SelectTrigger><SelectValue placeholder="Pilih kode wilayah" /></SelectTrigger>
+                <SelectContent>{REGION_CODES.map((region) => <SelectItem key={region.code} value={region.code}>{region.code} - {region.label}</SelectItem>)}</SelectContent>
+              </Select>
+              <span className="block text-[11px] text-indigo-600">Pilih wilayah untuk Nota Dinas.</span>
+            </Field>}
+            {isLanjutan && <>
+              <Field label="Pengirim Surat Rujukan">
+                <Input list="nota-dinas-dari-options" value={form.koordinatorRujukan} onChange={(event) => setField("koordinatorRujukan", event.target.value)} />
+                <span className="block text-[11px] text-slate-400">Otomatis dari field "Dari" surat permintaan. Bisa diedit manual jika berbeda.</span>
+              </Field>
+              <Field label="Nomor Surat Rujukan" className="sm:col-span-2 xl:col-span-1">
+                <div className="flex gap-2">
+                  <Input className="min-w-0 flex-1" value={referenceNumber} readOnly={form.gunakanRujukanOtomatis} onChange={(event) => setForm((current) => ({ ...current, gunakanRujukanOtomatis: false, nomorRujukan: event.target.value }))} />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm((current) => ({ ...current, gunakanRujukanOtomatis: !current.gunakanRujukanOtomatis, nomorRujukan: current.gunakanRujukanOtomatis ? referenceNumber : "" }))} className="shrink-0 rounded-lg border-indigo-200 bg-white px-2.5 text-indigo-700 hover:bg-indigo-100">
+                    {form.gunakanRujukanOtomatis ? "Edit" : "Auto"}
+                  </Button>
+                </div>
+                <span className="block text-[11px] text-slate-400">Otomatis mengikuti nomor Nota Permintaan atau dapat diedit manual.</span>
+              </Field>
+            </>}
             {isRepair ? <>
               {!isLanjutan && <>
                 <Field label="Wilayah Operasional"><Input value={form.wilayah} readOnly disabled /></Field>
@@ -1097,7 +1355,15 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                 <Field label="Wilayah"><Input value={form.wilayah} readOnly disabled /></Field>
                 <Field label="Jumlah Kecamatan"><Input value={form.jumlahKecamatan} onChange={(event) => setField("jumlahKecamatan", event.target.value)} /></Field>
                 <Field label="Nama Kecamatan" className="sm:col-span-2 xl:col-span-1"><Textarea rows={2} value={form.kecamatan} onChange={(event) => setField("kecamatan", event.target.value)} /></Field>
-                <Field label="Penerima Permintaan" className="sm:col-span-2 xl:col-span-1"><Input list="nota-dinas-penerima-options" value={form.penerima} onChange={(event) => setField("penerima", event.target.value)} /></Field>
+                <Field label="Dimohon Kepada" className="sm:col-span-2 xl:col-span-1">
+                  <Select value={form.penerima} onValueChange={(value) => setField("penerima", value)}>
+                    <SelectTrigger><SelectValue placeholder="Pilih sapaan" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Bapak">Bapak</SelectItem>
+                      <SelectItem value="Ibu">Ibu</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
               </>}
             </>}
           </div>
@@ -1111,8 +1377,22 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
                 <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                   <div className="mb-2 flex items-center justify-between"><span className="text-xs font-black uppercase tracking-wider text-slate-400">{isRepair ? "Perbaikan" : "Barang"} {index + 1}</span>{form.items.length > 1 && <button type="button" onClick={() => removeItem(index)} className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={`Hapus ${isRepair ? "perbaikan" : "barang"} ${index + 1}`}><Trash2 className="h-4 w-4" /></button>}</div>
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                    <Input list="nota-dinas-item-catalog" aria-label={`${isRepair ? "Jenis perbaikan" : "Nama barang atau bunga"} ${index + 1}`} placeholder={isRepair ? "Jenis Perbaikan" : "Nama barang / bunga"} value={item.jenis} onChange={(event) => updateItem(index, "jenis", event.target.value)} />
-                    {!isRepair && <>
+                    {isRepair ? (
+                      // Render input dinamis per kolom non-rowspan
+                      (sheetTemplate.kolomPerbaikan ?? DEFAULT_KOLOM_PERBAIKAN)
+                        .filter((k) => !k.rowspan)
+                        .map((k) => (
+                          <Input
+                            key={k.id}
+                            list="nota-dinas-item-catalog"
+                            aria-label={`${k.judul} ${index + 1}`}
+                            placeholder={k.judul}
+                            value={k.id === "perbaikan" ? (item.jenis || "") : (item[k.id] || "")}
+                            onChange={(event) => updateItem(index, k.id === "perbaikan" ? "jenis" : k.id, event.target.value)}
+                          />
+                        ))
+                    ) : <>
+                      <Input list="nota-dinas-item-catalog" aria-label={`Nama barang atau bunga ${index + 1}`} placeholder="Nama barang / bunga" value={item.jenis} onChange={(event) => updateItem(index, "jenis", event.target.value)} />
                       <Input aria-label={`Jumlah barang ${index + 1}`} placeholder="Jumlah" value={item.jumlah} onChange={(event) => updateItem(index, "jumlah", event.target.value)} />
                       <Input aria-label={`Satuan barang ${index + 1}`} placeholder="Satuan" value={item.satuan || ""} onChange={(event) => updateItem(index, "satuan", event.target.value)} />
                       <Input aria-label={`Keterangan barang ${index + 1}`} placeholder="Keterangan" value={item.keterangan} onChange={(event) => updateItem(index, "keterangan", event.target.value)} />
@@ -1126,15 +1406,16 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
           </div>}
 
           <div className="grid gap-4 border-t border-slate-100 pt-5">
-            <Field label="Kalimat Penutup"><Textarea rows={2} value={activePenutup} onChange={(event) => setActiveField("penutup", event.target.value)} /></Field>
-            <Field label="Jabatan Penandatangan"><Input list="nota-dinas-jabatan-options" value={activeJabatanPenandatangan} onChange={(event) => setActiveField("jabatanPenandatangan", event.target.value)} /></Field>
+            <Field label="Jabatan Penandatangan">
+              <Input value={activeJabatanPenandatangan} readOnly disabled className="bg-slate-50 text-slate-500" />
+              <span className="block text-[11px] text-slate-400">Otomatis diambil dari field "Dari".</span>
+            </Field>
             <Field label="Kantor / Wilayah Penandatangan"><Input list="nota-dinas-kantor-options" value={activeKantorPenandatangan} onChange={(event) => setActiveField("kantorPenandatangan", event.target.value)} /></Field>
             <Field label="Nama Penandatangan"><Input list="nota-dinas-nama-options" value={activeNamaPenandatangan} onChange={(event) => setActiveField("namaPenandatangan", event.target.value)} /></Field>
             <Field label="NIP"><Input list="nota-dinas-nip-options" value={activeNipPenandatangan} onChange={(event) => setActiveField("nipPenandatangan", event.target.value)} /></Field>
           </div>
           <datalist id="nota-dinas-kepada-options">{savedChoices.kepada.map((value) => <option key={value} value={value} />)}</datalist>
           <datalist id="nota-dinas-dari-options">{savedChoices.dari.map((value) => <option key={value} value={value} />)}</datalist>
-          <datalist id="nota-dinas-penerima-options">{savedChoices.penerima.map((value) => <option key={value} value={value} />)}</datalist>
           <datalist id="nota-dinas-kendaraan-options">{savedChoices.kendaraan.map((value) => <option key={value} value={value} />)}</datalist>
           <datalist id="nota-dinas-jenis-kendaraan-options">{savedChoices.jenisKendaraan.map((value) => <option key={value} value={value} />)}</datalist>
           <datalist id="nota-dinas-supir-options">{savedChoices.supir.map((value) => <option key={value} value={value} />)}</datalist>
@@ -1145,9 +1426,9 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
           <datalist id="nota-dinas-kantor-options">{savedChoices.kantor.map((value) => <option key={value} value={value} />)}</datalist>
           <datalist id="nota-dinas-nama-options">{savedChoices.nama.map((value) => <option key={value} value={value} />)}</datalist>
           <datalist id="nota-dinas-nip-options">{savedChoices.nip.map((value) => <option key={value} value={value} />)}</datalist>
-        </div>
+        </div>}
 
-        <div className="nota-dinas-preview-wrap overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-2 shadow-inner sm:p-6">
+        <div className={viewMode === "view" ? "xl:col-span-full nota-dinas-preview-wrap overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-2 shadow-inner sm:p-6" : "nota-dinas-preview-wrap overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-2 shadow-inner sm:p-6"}>
           <NotaDinasSheet
             kepada={form.kepada}
             dari={form.dari}
@@ -1178,6 +1459,14 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
             items={form.items}
             isLanjutan={false}
             showTitle
+            templateParagrafPembuka={sheetTemplate.paragrafPembuka}
+            templateParagrafSubJudul={sheetTemplate.paragrafSubJudul}
+            templateParagrafPenutup={sheetTemplate.paragrafPenutup}
+            templateParagrafPerbaikanPermintaan={sheetTemplate.paragrafPerbaikanPermintaan}
+            templateParagrafPerbaikanLanjutan={sheetTemplate.paragrafPerbaikanLanjutan}
+            templateParagrafLanjutanAlat={sheetTemplate.paragrafLanjutanAlat}
+            templateParagrafKalimatPenutup={sheetTemplate.paragrafKalimatPenutup}
+            kolomPerbaikan={sheetTemplate.kolomPerbaikan}
           />
           <NotaDinasSheet
             kepada={form.lanjutanKepada}
@@ -1209,6 +1498,14 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
             items={form.items}
             isLanjutan
             showTitle
+            templateParagrafPembuka={sheetTemplate.paragrafPembuka}
+            templateParagrafSubJudul={sheetTemplate.paragrafSubJudul}
+            templateParagrafPenutup={sheetTemplate.paragrafPenutup}
+            templateParagrafPerbaikanPermintaan={sheetTemplate.paragrafPerbaikanPermintaan}
+            templateParagrafPerbaikanLanjutan={sheetTemplate.paragrafPerbaikanLanjutan}
+            templateParagrafLanjutanAlat={sheetTemplate.paragrafLanjutanAlat}
+            templateParagrafKalimatPenutup={sheetTemplate.paragrafKalimatPenutup}
+            kolomPerbaikan={sheetTemplate.kolomPerbaikan}
           />
         </div>
       </div>
@@ -1243,7 +1540,9 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
         .nota-dinas-repair-table { font-family: Calibri, Arial, sans-serif; }
         .nota-dinas-repair-table th:nth-child(1), .nota-dinas-repair-table td:nth-child(1) { width: 16.2%; text-align: center; }
         .nota-dinas-repair-table th:nth-child(2), .nota-dinas-repair-table td:nth-child(2) { width: 14.5%; text-align: center; }
-        .nota-dinas-repair-table th:nth-child(3), .nota-dinas-repair-table td:nth-child(3) { width: 69.3%; }
+        .nota-dinas-repair-table th:nth-child(3) { width: 69.3%; text-align: center; }
+        .nota-dinas-repair-table td:nth-child(3) { width: 69.3%; text-align: left; }
+        .nota-dinas-repair-table td.nota-dinas-repair-item { text-align: left; }
         .nota-dinas-repair-table th, .nota-dinas-repair-table td { box-sizing: border-box; font-size: 11pt; overflow-wrap: anywhere; word-break: normal; }
         .nota-dinas-repair-table th { font-weight: 700; }
         .nota-dinas-repair-table tr { break-inside: avoid; page-break-inside: avoid; }

@@ -29,6 +29,21 @@ const toRecord = (row: NotaDinasRow): NotaDinasRecord => ({
 });
 
 export const notaDinasService = {
+  /** Resolve region_id dari form.wilayah (nama wilayah) jika regionId tidak disediakan */
+  async resolveRegionId(form: NotaDinasForm, regionId?: string | null): Promise<string | null> {
+    if (regionId) return regionId;
+    if (!form.wilayah) return null;
+
+    // Cari region berdasarkan nama wilayah yang tersimpan di form
+    const { data } = await supabase
+      .from('regions')
+      .select('id')
+      .ilike('name', form.wilayah.trim())
+      .maybeSingle();
+
+    return data?.id ?? null;
+  },
+
   async getAll() {
     const { data, error } = await supabase
       .from('nota_dinas_records')
@@ -43,15 +58,15 @@ export const notaDinasService = {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw new Error('Sesi login tidak ditemukan.');
 
+    // Jika regionId tidak diberikan, coba resolve dari kodeWilayah di form
+    const resolvedRegionId = await notaDinasService.resolveRegionId(form, regionId);
+
     const payload = {
-      // Older browser-only records may have used a non-UUID id. Let
-      // PostgreSQL generate an id for those records instead of rejecting the
-      // whole migration.
       ...(isUuid(id) ? { id } : {}),
       form,
       ...(createdAt ? { created_at: createdAt } : {}),
       ...(updatedAt ? { updated_at: updatedAt } : {}),
-      ...(regionId ? { region_id: regionId } : {}),
+      ...(resolvedRegionId ? { region_id: resolvedRegionId } : {}),
       created_by: userData.user.id,
     };
 
@@ -66,9 +81,16 @@ export const notaDinasService = {
   },
 
   async update(id: string, form: NotaDinasForm, updatedAt?: string, regionId?: string | null) {
+    // Jika regionId tidak diberikan, coba resolve dari kodeWilayah di form
+    const resolvedRegionId = await notaDinasService.resolveRegionId(form, regionId);
+
     const { data, error } = await supabase
       .from('nota_dinas_records')
-      .update({ form, updated_at: updatedAt || new Date().toISOString(), ...(regionId ? { region_id: regionId } : {}) })
+      .update({
+        form,
+        updated_at: updatedAt || new Date().toISOString(),
+        ...(resolvedRegionId ? { region_id: resolvedRegionId } : {}),
+      })
       .eq('id', id)
       .select('id, form, region_id, created_at, updated_at')
       .single();

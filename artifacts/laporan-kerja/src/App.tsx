@@ -45,6 +45,7 @@ import EditOvertime from "./pages/EditOvertime";
 import SpjOli from "./pages/SpjOli";
 import SpjOliRecap from "./pages/SpjOliRecap";
 import NotaDinasRecap from "./pages/NotaDinasRecap";
+import NotaDinasTemplate from "./pages/NotaDinasTemplate";
 import {
   USER_ROLES,
   canAccessFuelArea,
@@ -359,6 +360,7 @@ const App = () => (
             <Route path="/nota-dinas/daily-rekap" element={<NotaDinasRoute><NotaDinasRecap period="daily" /></NotaDinasRoute>} />
             <Route path="/nota-dinas/weekly-rekap" element={<NotaDinasRoute><NotaDinasRecap period="weekly" /></NotaDinasRoute>} />
             <Route path="/nota-dinas/monthly-rekap" element={<NotaDinasRoute><NotaDinasRecap period="monthly" /></NotaDinasRoute>} />
+            <Route path="/nota-dinas/template" element={<NotaDinasRoute><NotaDinasTemplate /></NotaDinasRoute>} />
             
             <Route path="/create" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditReport /></ProtectedRoute>} />

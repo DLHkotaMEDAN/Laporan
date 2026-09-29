@@ -15,7 +15,7 @@ import { fuelService } from '@/services/fuelService';
 import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
-import { isGlobalFuelAdmin, isLaporanBbmAdmin } from '@/constants/access-control';
+import { isGlobalFuelAdmin, isLaporanBbmAdmin, isSuperAdminAccess, isPimpinanAccess, isAdminBbmAccess, isAdminBbmPusatAccess } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
@@ -138,15 +138,15 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const routeBase = isAdminBbmPusat ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
   const recapQuery = isAdminBbmPusat ? '?reportType=admin_bbm_pusat' : '';
 
-  const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
-  const isAdminBbmPusatRole = profile?.role === 'admin_bbm_pusat';
+  const isAdminBbm = isAdminBbmAccess(profile?.role);
+  const isAdminBbmPusatRole = isAdminBbmPusatAccess(profile?.role);
   const isAdminLaporanBbm = isLaporanBbmAdmin(profile?.role);
-  const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
   const fuelRegionId = (isAdminBbm || isAdminLaporanBbm) && !isSuperAdmin && !isGlobalFuelAdmin(profile?.role) ? profile?.region_id || "__unassigned__" : null;
   const isAdmin = isSuperAdmin;
   const isAccountActive = profile?.is_active !== false;
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
   const canInputFuelReport = isAccountActive && (isLaporanBbm
     ? isSuperAdmin || isAdminLaporanBbm
     : isAdminBbmPusat
@@ -232,6 +232,7 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
 
       // Ambil seluruh data aktif sebagai pembanding sehingga filter tidak
       // membuat salah satu pasangan duplikat hilang dari analisis.
+      if (id !== reqIdRef.current) return;
       const duplicateSource = await getAllReports();
       if (id !== reqIdRef.current) return;
       setReports(data);

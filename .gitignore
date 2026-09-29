@@ -49,6 +49,11 @@ Thumbs.db
 .local/
 .dyad/
 
+# Environment variables (jangan commit credentials)
+.env
+.env.local
+.env.*.local
+
 # Local migration backups / database dumps
 .migration-backup/
 **/supabase/.temp/

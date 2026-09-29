@@ -2,7 +2,7 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { userHasPermission } from '@/lib/acl';
+import { hasPermission } from '@/lib/acl';
 import type { AuthContext, Action, Resource } from '@/constants/permissions';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -69,11 +69,7 @@ export const AuthorizeRoute = ({
         }
       }
 
-      const allowed = await userHasPermission(resource, action, {
-        resourceId: effectiveId,
-        resourceRegionId: ctx.resourceRegionId ?? undefined,
-        resourceTeamId: ctx.resourceTeamId ?? undefined,
-      });
+      const allowed = hasPermission(ctx, resource, action);
 
       if (!cancelled) {
         setAuthorizing(false);

@@ -26,7 +26,7 @@ export const useRegionFilterOptions = (enabled: boolean, regionId: string) => {
     };
     void loadRegions();
     return () => { active = false; };
-  }, [enabled]);
+  }, [enabled, regionId]);
 
   useEffect(() => {
     let active = true;

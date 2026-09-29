@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Save, ArrowLeft, FileText, Fuel, Image as ImageIcon, Truck, Users, Wrench, Loader2, MessageSquare, MapPin, Lock, Unlock, ClipboardCheck, HelpCircle, Copy, AlertCircle, X } from 'lucide-react';
@@ -297,7 +298,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   };
 
   const uploadTaskPhotos = async (tasks: any[]) => {
-    const updatedTasks = [...tasks];
+    const updatedTasks = tasks.map((task: any) => ({ ...task }));
     for (let i = 0; i < updatedTasks.length; i++) {
       const task = updatedTasks[i];
       setUploadProgress(`Mengunggah foto #${i + 1}...`);
@@ -530,7 +531,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
                 <CardContent className="p-6 space-y-8">
                   <div className="flex justify-between items-center border-b pb-4"><Badge variant="secondary" className="bg-blue-600 text-white px-3 py-1">Kegiatan #{taskIndex + 1}</Badge>{taskFields.length > 1 && <Button type="button" variant="ghost" size="sm" className={cn("text-red-500 hover:bg-red-50 px-2 md:px-3", isPimpinan && "opacity-50 cursor-not-allowed")} disabled={isPimpinan} onClick={() => removeTask(taskIndex)}><Trash2 className="h-4 w-4 md:mr-1" /> <span className="hidden md:inline">Hapus Kegiatan</span></Button>}</div>
                   <div className="space-y-4">
-                    <FormField control={form.control} name={`tasks.${taskIndex}.description`} render={({ field }) => (<FormItem><FormLabel className="font-bold">Uraian Kegiatan</FormLabel><FormControl><Input {...field} list="history-descriptions" placeholder="Contoh: Pemangkasan pohon mahoni..." /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name={`tasks.${taskIndex}.description`} render={({ field }) => (<FormItem><FormLabel className="font-bold">Uraian Kegiatan</FormLabel><FormControl><Textarea rows={2} {...field} list="history-descriptions" placeholder="Contoh: Pemangkasan pohon mahoni..." className="resize-none" /></FormControl></FormItem>)} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField control={form.control} name={`tasks.${taskIndex}.location.street`} render={({ field }) => (<FormItem><FormLabel>Nama Jalan</FormLabel><FormControl><Input {...field} list="history-streets" /></FormControl></FormItem>)} />
                       <FormField control={form.control} name={`tasks.${taskIndex}.location.subDistrict`} render={({ field }) => (<FormItem><FormLabel>Kecamatan {selectedCategory === "Tim Siram" && <span className="text-[10px] text-slate-400 font-normal ml-1">(Opsional)</span>}</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{Object.keys(medanDistricts).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />

@@ -199,20 +199,6 @@ const NotaDinasRecap = ({ period }: { period: NotaDinasRecapPeriod }) => {
         cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
       });
     });
-    const dataStartRow = 6;
-    const mergeColumns: Record<MergeColumn, string> = { date: "B", number: "C", detail: "D" };
-    (Object.keys(mergeColumns) as MergeColumn[]).forEach((column) => {
-      let start = 0;
-      while (start < rows.length) {
-        const value = getMergeValue(rows[start], column, isRepair);
-        let end = start;
-        while (end + 1 < rows.length && getMergeValue(rows[end + 1], column, isRepair) === value) end += 1;
-        if (end > start) {
-          worksheet.mergeCells(`${mergeColumns[column]}${dataStartRow + start}:${mergeColumns[column]}${dataStartRow + end}`);
-        }
-        start = end + 1;
-      }
-    });
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `rekap-nota-dinas-${period}-${selectedCategory}.xlsx`);
     showSuccess("Rekap Nota Dinas berhasil diekspor ke Excel.");

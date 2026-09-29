@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useValueDraft } from '@/hooks/useFormDraft';
-import { isGlobalFuelAdmin } from '@/constants/access-control';
+import { isGlobalFuelAdmin, isSuperAdminAccess } from '@/constants/access-control';
 import TotalRecordLabel from '@/components/TotalRecordLabel';
 
 const months = [
@@ -183,6 +183,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
   const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
   const routeBase = reportType === 'admin_bbm_pusat' ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
   const [reports, setReports] = useState<FuelReport[]>([]);
+  const [allActiveReports, setAllActiveReports] = useState<FuelReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
@@ -195,7 +196,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
   const [selectedTeam, setSelectedTeam] = useState("semua");
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
-  const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
   const { regions, teams: regionTeams } = useRegionFilterOptions(canFilterByRegionTeam, selectedRegion);
 
@@ -284,7 +285,11 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
       }
 
       if (id !== reqIdRef.current) return;
+      // Ambil semua data aktif untuk deteksi duplikat lintas filter
+      const allActive = await getAllReports();
+      if (id !== reqIdRef.current) return;
       setReports(data);
+      setAllActiveReports(allActive);
       setCurrentPage(1);
     } catch (error) {
       if (id !== reqIdRef.current) return;
@@ -359,6 +364,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
         await fuelService.deleteReport(id);
       }
       setReports(prev => prev.filter(r => r.id !== id));
+      setAllActiveReports(prev => prev.filter(r => r.id !== id));
       showSuccess("Laporan dihapus");
     } catch (error) {
       showError("Gagal menghapus");
@@ -367,13 +373,13 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
 
   const duplicateReportKeys = useMemo(() => {
     const counts = new Map<string, number>();
-    reports.forEach((report) => {
+    allActiveReports.forEach((report) => {
       const key = getFuelReportDuplicateKey(report);
       counts.set(key, (counts.get(key) || 0) + 1);
     });
 
     return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
-  }, [reports]);
+  }, [allActiveReports]);
 
   const duplicateReportCount = useMemo(() => {
     return reports.filter((report) => duplicateReportKeys.has(getFuelReportDuplicateKey(report))).length;

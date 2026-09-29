@@ -12,6 +12,9 @@ import { Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { showError } from '@/utils/toast';
 import { getRoleLandingPath } from '@/constants/access-control';
 
+// Email valid: harus ada karakter sebelum @, domain setelah @, dan TLD minimal 2 karakter
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 const Login = () => {
   const { session, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -28,7 +31,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!username.trim() || !password) {
       showError("Username dan Password wajib diisi");
       return;
     }
@@ -36,7 +39,7 @@ const Login = () => {
     setLoading(true);
     try {
       // Menangani input username agar otomatis menjadi email gmail jika tidak ada @
-      const email = username.includes('@') ? username : `${username}@gmail.com`;
+      const email = EMAIL_REGEX.test(username.trim()) ? username.trim() : `${username.trim()}@gmail.com`;
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,

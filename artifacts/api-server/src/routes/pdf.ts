@@ -1,27 +1,23 @@
 import { Router } from "express";
 import { chromium } from "playwright";
 import { existsSync } from "node:fs";
+import {
+  safeFileName,
+  validatePdfPayload,
+  PDF_PRINT_STYLES,
+  PDF_THEAD_SCRIPT,
+  PDF_PAGE_OPTIONS,
+} from "../lib/pdf-core.js";
 
 const router = Router();
-const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;
 const LOCAL_CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-
-const safeFileName = (value: unknown) => {
-  const name = typeof value === "string" ? value : "rekap";
-  const sanitized = name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
-  return `${sanitized.replace(/\.pdf$/i, "") || "rekap"}.pdf`;
-};
 
 router.post("/render-pdf", async (req, res) => {
   const { documentHtml, fileName } = req.body ?? {};
 
-  if (typeof documentHtml !== "string" || !documentHtml.includes("recap-print-area")) {
-    res.status(400).json({ message: "Dokumen rekap untuk dicetak tidak valid." });
-    return;
-  }
-
-  if (Buffer.byteLength(documentHtml, "utf8") > MAX_DOCUMENT_SIZE) {
-    res.status(413).json({ message: "Dokumen rekap terlalu besar untuk dibuatkan PDF." });
+  const validationError = validatePdfPayload(documentHtml);
+  if (validationError) {
+    res.status(validationError.includes("besar") ? 413 : 400).json({ message: validationError });
     return;
   }
 
@@ -32,60 +28,15 @@ router.post("/render-pdf", async (req, res) => {
       ...(existsSync(LOCAL_CHROME_PATH) ? { executablePath: LOCAL_CHROME_PATH } : {}),
       args: ["--disable-gpu", "--disable-software-rasterizer", "--no-sandbox"],
     });
-    // Snapshot sudah membuang tag skrip. JavaScript tetap diaktifkan di konteks
-    // ini karena Playwright memerlukannya untuk menerapkan style cetak.
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.setContent(documentHtml, { waitUntil: "load", timeout: 45_000 });
-    await page.emulateMedia({ media: "print" });
-    await page.addStyleTag({ content: `
-      .pdf-export {
-        border: 0 !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        max-width: none !important;
-        min-height: 0 !important;
-        overflow: visible !important;
-        padding: 0 !important;
-        width: 100% !important;
-      }
-      .pdf-export .recap-table-scroll {
-        overflow: visible !important;
-      }
-    .pdf-export table {
-      table-layout: fixed !important;
-      width: 100% !important;
-    }
-    .pdf-export table,
-    .pdf-export th,
-    .pdf-export td {
-      box-sizing: border-box !important;
-      min-width: 0 !important;
-      max-width: 100% !important;
-      overflow-wrap: anywhere !important;
-    }
-    @page { size: A3 landscape; margin: 10mm; }
-    html, body { margin: 0 !important; padding: 0 !important; }
-      .pdf-export table.min-w-\\[1200px\\],
-      .pdf-export table.min-w-\\[297mm\\],
-      .pdf-export table.min-w-\\[420mm\\] {
-        min-width: 0 !important;
-      }
-      @media print {
-        table:not(.continuation-table) thead { display: table-header-group !important; }
-        table.continuation-table thead { display: none !important; }
-        table tr { break-inside: avoid; page-break-inside: avoid; }
-      }
-    ` });
-    await page.evaluate("document.querySelectorAll('table:not(.continuation-table) thead').forEach((header) => header.style.setProperty('display', 'table-header-group', 'important'))");
 
-    const pdf = await page.pdf({
-      format: "A3",
-      landscape: true,
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: "15mm", right: "15mm", bottom: "15mm", left: "15mm" },
-    });
+    // JavaScript diaktifkan agar Playwright bisa menerapkan style cetak.
+    const page = await browser.newContext().then((ctx) => ctx.newPage());
+    await page.setContent(documentHtml as string, { waitUntil: "load", timeout: 45_000 });
+    await page.emulateMedia({ media: "print" });
+    await page.addStyleTag({ content: PDF_PRINT_STYLES });
+    await page.evaluate(PDF_THEAD_SCRIPT);
+
+    const pdf = await page.pdf(PDF_PAGE_OPTIONS);
 
     res.set({
       "Content-Type": "application/pdf",

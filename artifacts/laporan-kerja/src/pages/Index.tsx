@@ -15,8 +15,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Report } from '@/types/report';
 import { WorkPlan } from '@/types/workPlan';
 import { showSuccess, showError } from '@/utils/toast';
-import { reportService } from '@/services/reportService';
-import { workPlanService } from '@/services/workPlanService';
+import { reportService, ReportFilters } from '@/services/reportService';
+import { workPlanService, WorkPlanFilters } from '@/services/workPlanService';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
@@ -325,6 +325,15 @@ const Index = () => {
     }
   }, [profile, isLoggedIn, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId]);
 
+  // Re-fetch saat filter utama (tanggal/bulan/tahun/kategori) berubah.
+  // selectedRegion dan searchQuery tidak memicu fetch — dihandle client-side.
+  useEffect(() => {
+    if (authLoading || !isLoggedIn) return;
+    if (isAdminSpj || isAdminSpjOli || isAdminLaporanBbm || isNotaDinasOnly) return;
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, selectedMonth, selectedYear, selectedCategory]);
+
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
     const savedTab = savedViewStateRef.current.activeTab;
@@ -411,17 +420,54 @@ const Index = () => {
     }
   }, [categories, isUserRestricted, profile?.category, selectedCategory]);
 
+  const buildDateFilter = (): ReportFilters['dateFilter'] => {
+    if (selectedDate) return { type: 'date', value: selectedDate };
+    if (selectedMonth !== 'semua' && selectedYear !== 'semua') return { type: 'month', month: selectedMonth, year: selectedYear };
+    if (selectedYear !== 'semua') return { type: 'year', year: selectedYear };
+    return null;
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
+
+      // Kategori untuk user yang dibatasi selalu dari profile, bukan dari filter UI
+      const effectiveCategory = isUserRestricted
+        ? (profile?.category ?? null)
+        : (selectedCategory !== 'semua' ? selectedCategory : null);
+
+      // Region: user dengan region_id tetap di-scope ke region mereka,
+      // admin bisa memilih region via selectedRegion (filter UI)
+      const effectiveRegionId = accountRegionId
+        ?? (isAdmin && selectedRegion !== 'semua' ? selectedRegion : null);
+
+      const dateFilter = buildDateFilter();
+
+      const reportFilters: ReportFilters = {
+        dateFilter,
+        category: effectiveCategory,
+        regionId: effectiveRegionId,
+      };
+      const workPlanFilters: WorkPlanFilters = {
+        dateFilter,
+        category: effectiveCategory,
+        regionId: effectiveRegionId,
+      };
+
       const [reportsData, workPlansData] = await Promise.all([
-        reportService.getAllReports(undefined, false, accountRegionId),
-        workPlanService.getAllWorkPlans(undefined, false, accountRegionId)
+        reportService.getFilteredReports(reportFilters),
+        workPlanService.getFilteredWorkPlans(workPlanFilters),
       ]);
+
       setReports(reportsData);
       setWorkPlans(workPlansData);
-      setRecordCounts(current => ({ ...current, reports: reportsData.length, workplans: workPlansData.length }));
-      if (accountRegionId) {
+      setRecordCounts(current => ({
+        ...current,
+        reports: reportsData.length,
+        workplans: workPlansData.length,
+      }));
+
+      if (accountRegionId && selectedRegion !== accountRegionId) {
         setSelectedRegion(accountRegionId);
       } else if (!isAdmin) {
         setSelectedRegion('semua');
@@ -499,46 +545,35 @@ const Index = () => {
   const filteredReports = useMemo(() => {
     return reports.filter(report => {
       const search = searchQuery.toLowerCase();
-      const reportDate = new Date(report.date);
-      const m = (reportDate.getMonth() + 1).toString();
-      const y = reportDate.getFullYear().toString();
-      
+
+      // Search tetap client-side (multi-kolom, termasuk tasks JSON)
       const searchableTasks = Array.isArray(report.tasks) ? report.tasks : [];
       const matchSearch = !search || [
         report.description,
         formatLocation(report.location),
         ...searchableTasks.flatMap(task => [task.description, formatLocation(task.location)]),
       ].some(value => value?.toLowerCase().includes(search));
-      const matchSpecificDate = !selectedDate || report.date === selectedDate;
-      const matchMonth = selectedMonth === "semua" || m === selectedMonth;
-      const matchYear = selectedYear === "semua" || y === selectedYear;
-      const matchCategory = selectedCategory === "semua" || report.category === selectedCategory;
-      const restrictionMatch = !isUserRestricted || report.category === profile?.category;
-      const regionMatch = !accountRegionId && (!isAdmin || selectedRegion === "semua" || report.region_id === selectedRegion)
-        || (!!accountRegionId && report.region_id === accountRegionId);
-      
-      if (selectedDate) return matchSearch && matchSpecificDate && matchCategory && restrictionMatch && regionMatch;
-      return matchSearch && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
+
+      // Region filter hanya berlaku untuk admin yang bisa switch region di UI.
+      // User ber-region sudah di-filter server-side via accountRegionId.
+      const matchRegion = !isAdmin || selectedRegion === 'semua' || report.region_id === selectedRegion;
+
+      return matchSearch && matchRegion;
     });
-  }, [reports, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, isAdmin, selectedRegion, accountRegionId]);
+  }, [reports, searchQuery, isAdmin, selectedRegion]);
 
   const filteredWorkPlans = useMemo(() => {
     return workPlans.filter(plan => {
       const search = searchQuery.toLowerCase().trim();
-      const matchSearch = !search || (Array.isArray(plan.items) && plan.items.some(item => 
+      const matchSearch = !search || (Array.isArray(plan.items) && plan.items.some(item =>
         [item.description, formatLocation(item.location)].some(value => value?.toLowerCase().includes(search))
       ));
-      const matchSpecificDate = !selectedDate || plan.date === selectedDate;
-      const matchMonth = selectedMonth === "semua" || (new Date(plan.date).getMonth() + 1).toString() === selectedMonth;
-      const matchYear = selectedYear === "semua" || new Date(plan.date).getFullYear().toString() === selectedYear;
-      const matchCategory = selectedCategory === "semua" || plan.category === selectedCategory;
-      const restrictionMatch = !isUserRestricted || plan.category === profile?.category;
-      const regionMatch = !accountRegionId && (!canFilterWorkPlanRegions || selectedRegion === "semua" || plan.region_id === selectedRegion)
-        || (!!accountRegionId && plan.region_id === accountRegionId);
-      
-      return matchSearch && matchSpecificDate && matchMonth && matchYear && matchCategory && restrictionMatch && regionMatch;
+
+      const matchRegion = !canFilterWorkPlanRegions || selectedRegion === 'semua' || plan.region_id === selectedRegion;
+
+      return matchSearch && matchRegion;
     });
-  }, [workPlans, searchQuery, selectedDate, selectedMonth, selectedYear, selectedCategory, isUserRestricted, profile, canFilterWorkPlanRegions, selectedRegion, accountRegionId]);
+  }, [workPlans, searchQuery, canFilterWorkPlanRegions, selectedRegion]);
 
   const formatReportLocation = (report: Report) => {
     return formatLocation(report.location);
@@ -552,10 +587,15 @@ const Index = () => {
     const canShowWorkPlans = !isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly;
 
     if (canShowReports) {
-      jobs.reports = Promise.resolve(reports.length);
+      // Gunakan length dari state jika sudah ada, fallback ke count DB
+      jobs.reports = reports.length > 0
+        ? Promise.resolve(reports.length)
+        : getDatabaseRecordCount('reports', { regionId: accountRegionId ?? undefined, softDeleted: false });
     }
     if (canShowWorkPlans) {
-      jobs.workplans = Promise.resolve(workPlans.length);
+      jobs.workplans = workPlans.length > 0
+        ? Promise.resolve(workPlans.length)
+        : getDatabaseRecordCount('work_plans', { regionId: accountRegionId ?? undefined, softDeleted: false });
     }
     if (canViewOvertime && !isAdminHarian) {
       jobs.overtime = getDatabaseRecordCount('overtime_records', { regionId: accountRegionId, softDeleted: false });

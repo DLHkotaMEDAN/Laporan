@@ -57,10 +57,10 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
 ];
 
 export const SYSTEM_EMAILS = {
-  superAdmin: ['admin@gmail.com'],
-  pimpinan: ['pimpinan@gmail.com'],
-  adminHarian: ['sakinah@gmail.com', 'admin.laporan@gmail.com'],
-} as const;
+  superAdmin: (import.meta.env.VITE_SUPER_ADMIN_EMAILS ?? '').split(',').map((e: string) => e.trim()).filter(Boolean),
+  pimpinan: (import.meta.env.VITE_PIMPINAN_EMAILS ?? '').split(',').map((e: string) => e.trim()).filter(Boolean),
+  adminHarian: (import.meta.env.VITE_ADMIN_HARIAN_EMAILS ?? '').split(',').map((e: string) => e.trim()).filter(Boolean),
+};
 
 export type RecapPeriod = 'daily' | 'weekly' | 'monthly';
 

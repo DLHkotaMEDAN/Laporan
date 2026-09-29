@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
@@ -251,7 +252,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     };
     fetchHistory();
     if (!isEditing) fetchPrices();
-  }, [isEditing, isRegionalFuelAdmin, profile?.region_id, reportType]);
+  }, [isEditing, isRegionalFuelAdmin, profile?.region_id, reportType, isLaporanBbm, isAdminBbmPusat]);
 
   const fetchPrices = async () => {
     try {
@@ -407,7 +408,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         showError("Admin BBM belum memiliki wilayah. Atur wilayah akun di Manajemen Pengguna.");
         return;
       }
-      if (isRegionalFuelAdmin && profileRegion && values.region !== profileRegion.name) {
+      if (isRegionalFuelAdmin && profileRegion && selectedRegionId !== profile?.region_id) {
         showError("Admin BBM hanya dapat menginput sesuai wilayah akun.");
         return;
       }
@@ -442,9 +443,11 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         return;
       }
 
+      const canonicalRegionName = regions.find(r => r.id === selectedRegionId)?.name ?? values.region;
+
       const finalData = {
         date: values.date,
-        region: values.region,
+        region: canonicalRegionName,
         team: values.team,
         region_id: selectedRegionId,
         team_id: selectedTeamId,
@@ -792,7 +795,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
                       <FormField control={form.control} name={`items.${locationOwnerIndex}.activity_detail`} render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-semibold text-slate-600">Detail Kegiatan</FormLabel>
-                          <FormControl><Input className="h-10 bg-white" placeholder="Jelaskan detail kegiatan..." {...field} /></FormControl>
+                          <FormControl><Textarea rows={2} className="bg-white resize-none" placeholder="Jelaskan detail kegiatan..." {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />

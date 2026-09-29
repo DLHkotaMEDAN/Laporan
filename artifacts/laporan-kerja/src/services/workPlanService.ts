@@ -20,7 +20,65 @@ const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
   return rows;
 };
 
+export type WorkPlanDateFilter =
+  | { type: 'date'; value: string }
+  | { type: 'month'; month: string; year: string }
+  | { type: 'year'; year: string };
+
+export interface WorkPlanFilters {
+  dateFilter?: WorkPlanDateFilter | null;
+  category?: string | null;
+  regionId?: string | null;
+  includeDeleted?: boolean;
+}
+
 export const workPlanService = {
+  /**
+   * Mengambil rencana kerja dengan filter yang dikirim ke Supabase (server-side).
+   * Gunakan method ini di Index.tsx menggantikan getAllWorkPlans.
+   */
+  async getFilteredWorkPlans(filters: WorkPlanFilters = {}) {
+    const { dateFilter, category, regionId, includeDeleted = false } = filters;
+
+    return fetchAllPages<WorkPlan>(() => {
+      let query = supabase
+        .from('work_plans')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (dateFilter?.type === 'date') {
+        query = query.eq('date', dateFilter.value);
+      } else if (dateFilter?.type === 'month') {
+        const y = parseInt(dateFilter.year, 10);
+        const m = parseInt(dateFilter.month, 10);
+        const firstDay = `${y}-${String(m).padStart(2, '0')}-01`;
+        const lastDay = new Date(y, m, 0);
+        const lastDayStr = `${y}-${String(m).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+        query = query.gte('date', firstDay).lte('date', lastDayStr);
+      } else if (dateFilter?.type === 'year') {
+        const y = dateFilter.year;
+        query = query.gte('date', `${y}-01-01`).lte('date', `${y}-12-31`);
+      }
+
+      if (category && category !== 'semua') {
+        query = query.eq('category', category);
+      }
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      } else {
+        query = query.not('deleted_at', 'is', null);
+      }
+
+      return query;
+    });
+  },
+
   async getAllWorkPlans(categoryFilter?: string | null, includeDeleted = false, regionId?: string | null) {
     return fetchAllPages<WorkPlan>(() => {
       let query = supabase
