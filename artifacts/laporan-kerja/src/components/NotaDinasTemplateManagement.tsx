@@ -197,6 +197,7 @@ const NotaDinasTemplateManagement = () => {
   }
 
   return (
+    <>
     <div className="space-y-5">
       {/* Info konteks */}
       <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-800">
@@ -405,6 +406,7 @@ const NotaDinasTemplateManagement = () => {
         }
       }}
     />
+    </>
   );
 };
 
