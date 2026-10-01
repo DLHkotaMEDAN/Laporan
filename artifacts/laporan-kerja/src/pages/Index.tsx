@@ -28,7 +28,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isAdminBbmPusatAccess, isGlobalWorkPlanAdmin, isLaporanBbmAdmin, isNotaDinasAdmin, roleRequiresRegion } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isAdminBbmPusatAccess, isGlobalWorkPlanAdmin, isLaporanBbmAdmin, isNotaDinasAdmin, roleRequiresRegion, isSuperAdminAccess, isPimpinanAccess, isAdminHarianAccess } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -264,7 +264,7 @@ const Index = () => {
   const [workPlanSortDirection, setWorkPlanSortDirection] = useState<SortDirection>("desc");
 
   const isLoggedIn = !!session;
-  const isAdmin = profile?.role === 'admin' || (session?.user?.email === 'admin@gmail.com');
+  const isAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
   const canFilterWorkPlanRegions = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminBbmPusat = isAdminBbmPusatAccess(profile?.role);
@@ -272,8 +272,8 @@ const Index = () => {
   const isAdminSpj = profile?.role === 'admin_spj_bbm';
   const isAdminSpjOli = profile?.role === 'admin_spj_oli';
   const isNotaDinasOnly = isNotaDinasAdmin(profile?.role);
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
+  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
   const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
   const accountRegionId = !isAdmin && (roleRequiresRegion(profile?.role) || isAdminSpjOli) ? profile?.region_id || "__unassigned__" : null;

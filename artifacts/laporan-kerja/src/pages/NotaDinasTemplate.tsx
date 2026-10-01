@@ -152,11 +152,11 @@ const NotaDinasTemplate = () => {
   const handleCreateNew = () => {
     const defaults = DEFAULT_NOTA_TEMPLATES[kategori || "permintaan_alat"];
     setEditingTemplate({
+      ...defaults,
       nama: "",
       kategori,
       regionId: effectiveRegionId,
       isDefault: templates.length === 0,
-      ...defaults,
     });
   };
 

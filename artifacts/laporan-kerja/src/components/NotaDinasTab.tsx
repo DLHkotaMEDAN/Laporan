@@ -507,11 +507,11 @@ const NotaDinasSheet = ({
       <p className="nota-dinas-body nota-dinas-repair-paragraph">{ph(tPerbaikanPermintaan)}</p>
       <div className="nota-dinas-driver"><div className="nota-dinas-driver-row"><span>Supir</span><b>:</b><span>{printValue(supir)}</span></div><div className="nota-dinas-driver-row"><span>No. HP</span><b>:</b><span>{printValue(noHp)}</span></div></div>
     </>) : isLanjutan ? <>
-      <p className="nota-dinas-body">{ph(tLanjutanAlat)}</p>
-      <p className="nota-dinas-request">{ph(tSubJudul)}</p>
+      <p style={{ margin: "0 0 23px", textAlign: "justify", textIndent: "12.7mm" }}>{ph(tLanjutanAlat)}</p>
+      <p style={{ margin: "0 0 23px", textAlign: "justify", textIndent: "12.7mm" }}>{ph(tSubJudul)}</p>
     </> : <>
-      <p className="nota-dinas-body">{ph(tPembuka)}</p>
-      <p className="nota-dinas-request">{ph(tSubJudul)}</p>
+      <p style={{ margin: "0 0 23px", textAlign: "justify", textIndent: "12.7mm" }}>{ph(tPembuka)}</p>
+      <p style={{ margin: "0 0 23px", textAlign: "justify", textIndent: "12.7mm" }}>{ph(tSubJudul)}</p>
     </>}
 
     {isRepair ? (() => {
@@ -582,8 +582,11 @@ const NotaDinasSheet = ({
       );
     })()}
 
-    {!isLanjutan && !isRepair && <p className="nota-dinas-body nota-dinas-closing">{ph(tPenutupPermintaan)}</p>}
-    {isRepair ? <p className="nota-dinas-body nota-dinas-repair-paragraph nota-dinas-closing">{ph(tKalimatPenutup)}</p> : <p className={`nota-dinas-final${isLanjutan ? " nota-dinas-final-lanjutan" : ""}`}>{ph(tKalimatPenutup)}</p>}
+    {!isLanjutan && !isRepair && <p style={{ margin: "0 0 24px", textAlign: "justify", textIndent: "12.7mm" }}>{ph(tPenutupPermintaan)}</p>}
+    {isRepair
+      ? <p className="nota-dinas-body nota-dinas-repair-paragraph nota-dinas-closing">{ph(tKalimatPenutup)}</p>
+      : <p style={{ margin: "0 0 24px", textAlign: "justify", textIndent: "12.7mm" }}>{ph(tKalimatPenutup)}</p>
+    }
 
     <div className="nota-dinas-signature">
       <span>{printValue(jabatanPenandatangan)}</span>

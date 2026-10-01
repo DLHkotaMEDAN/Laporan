@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Save, ArrowLeft, FileText, Fuel, Image as ImageIcon, Truck, Users, Wrench, Loader2, MessageSquare, MapPin, Lock, Unlock, ClipboardCheck, HelpCircle, Copy, AlertCircle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showWarning } from '@/utils/toast';
 import { Report, ReportCategory, Task, FuelUsage, Location, Equipment, HeavyEquipment } from '@/types/report';
 import { WorkPlan } from '@/types/workPlan';
 import { medanDistricts } from '@/data/medan-districts';
@@ -28,6 +28,7 @@ import { useAuth } from '@/context/AuthContext';
 import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { isPimpinanAccess, isAdminHarianAccess, isSuperAdminAccess } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -138,13 +139,20 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   const [duplicateDate, setDuplicateDate] = useState("");
   const [isDuplicateMode, setIsDuplicateMode] = useState(false);
 
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
+  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
   const isUserRestricted = profile?.role === 'user' && !isPimpinan && !isAdminHarian;
   const activeRegionId = profile?.region_id ?? initialData?.region_id ?? null;
   const { teams } = useAvailableTeams(activeRegionId);
   
-  const canEditPrice = profile?.role?.startsWith('admin') === true || session?.user?.email === 'admin@gmail.com';
+  // Hanya admin BBM, admin bbm pusat, dan super admin yang boleh mengubah harga
+  // BBM secara manual dalam laporan. Menggunakan role.startsWith('admin') terlalu
+  // luas karena mencakup role admin lain yang tidak perlu akses ini.
+  const canEditPrice = isSuperAdminAccess(profile?.role, session?.user?.email)
+    || profile?.role === 'admin_bbm'
+    || profile?.role === 'admin_bbm_pusat'
+    || profile?.role === 'admin_wilayah_bbm'
+    || profile?.role === 'admin_rencana_kerja_bbm';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -297,25 +305,76 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
     showSuccess("Data disinkronkan");
   };
 
-  const uploadTaskPhotos = async (tasks: any[]) => {
-    const updatedTasks = tasks.map((task: any) => ({ ...task }));
-    for (let i = 0; i < updatedTasks.length; i++) {
-      const task = updatedTasks[i];
-      setUploadProgress(`Mengunggah foto #${i + 1}...`);
-      if (task.photos.zero?.startsWith('data:image')) {
-        if (isEditing && !isDuplicateMode && initialData?.tasks[i]?.photos.zero) await storageService.deletePhotoByUrl(initialData.tasks[i].photos.zero);
-        task.photos.zero = await storageService.uploadPhoto(task.photos.zero, `task_${i}_0`);
-      }
-      if (task.photos.fifty?.startsWith('data:image')) {
-        if (isEditing && !isDuplicateMode && initialData?.tasks[i]?.photos.fifty) await storageService.deletePhotoByUrl(initialData.tasks[i].photos.fifty);
-        task.photos.fifty = await storageService.uploadPhoto(task.photos.fifty, `task_${i}_50`);
-      }
-      if (task.photos.hundred?.startsWith('data:image')) {
-        if (isEditing && !isDuplicateMode && initialData?.tasks[i]?.photos.hundred) await storageService.deletePhotoByUrl(initialData.tasks[i].photos.hundred);
-        task.photos.hundred = await storageService.uploadPhoto(task.photos.hundred, `task_${i}_100`);
+  // Helper: upload satu foto dengan retry otomatis maksimal 2 kali
+  const uploadPhotoWithRetry = async (
+    base64: string,
+    fileName: string,
+    maxRetry = 2,
+  ): Promise<string> => {
+    for (let attempt = 1; attempt <= maxRetry; attempt++) {
+      try {
+        return await storageService.uploadPhoto(base64, fileName);
+      } catch (err) {
+        if (attempt === maxRetry) throw err;
+        // Tunggu sebelum retry: 500ms, 1000ms, dst
+        await new Promise<void>((resolve) => setTimeout(resolve, attempt * 500));
       }
     }
-    return updatedTasks;
+    throw new Error('Upload gagal setelah retry');
+  };
+
+  // Upload semua foto secara paralel (semua task & semua slot foto serentak).
+  // Menggunakan Promise.allSettled agar 1 foto gagal tidak membatalkan seluruh submit.
+  // Mengembalikan { updatedTasks, failedPhotos } — pemanggil bertanggung jawab
+  // menampilkan peringatan jika failedPhotos tidak kosong.
+  const uploadTaskPhotos = async (tasks: any[]): Promise<{
+    updatedTasks: any[];
+    failedPhotos: string[];
+  }> => {
+    const updatedTasks = tasks.map((task: any) => ({ ...task, photos: { ...task.photos } }));
+    const failedPhotos: string[] = [];
+
+    setUploadProgress('Mengunggah foto...');
+
+    await Promise.all(
+      updatedTasks.map(async (task, i) => {
+        const slots = [
+          { key: 'zero' as const,    label: `0%`,   fileName: `task_${i}_0`   },
+          { key: 'fifty' as const,   label: `50%`,  fileName: `task_${i}_50`  },
+          { key: 'hundred' as const, label: `100%`, fileName: `task_${i}_100` },
+        ];
+
+        await Promise.all(
+          slots.map(async ({ key, label, fileName }) => {
+            if (!task.photos[key]?.startsWith('data:image')) return;
+
+            // Hapus foto lama saat edit (tidak perlu await — non-blocking)
+            if (isEditing && !isDuplicateMode && initialData?.tasks[i]?.photos[key]) {
+              void storageService.deletePhotoByUrl(initialData.tasks[i].photos[key]);
+            }
+
+            const result = await (async () => {
+              try {
+                return { status: 'fulfilled' as const, value: await uploadPhotoWithRetry(task.photos[key], fileName) };
+              } catch (err) {
+                return { status: 'rejected' as const, reason: err };
+              }
+            })();
+
+            if (result.status === 'fulfilled') {
+              task.photos[key] = result.value;
+            } else {
+              task.photos[key] = '';
+              failedPhotos.push(`Foto ${label} kegiatan ke-${i + 1}`);
+              console.warn(`Upload gagal: ${fileName}`, result.reason);
+            }
+          }),
+        );
+      }),
+    );
+
+    setUploadProgress('');
+    return { updatedTasks, failedPhotos };
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -326,7 +385,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
     if (isPimpinan) { showError("Akses ditolak"); return; }
     setIsSubmitting(true);
     try {
-      const processedTasksWithUrls = await uploadTaskPhotos(values.tasks);
+      const { updatedTasks: processedTasksWithUrls, failedPhotos } = await uploadTaskPhotos(values.tasks);
       let totalVolume = 0;
       let totalFuel: FuelUsage = { pertamax: 0, pertamax_liter: 0, dexlite: 0, dexlite_liter: 0, solar: 0, solar_liter: 0 };
       let allEquipment: Equipment[] = [];
@@ -382,7 +441,11 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
             username: profile?.username || session.user.email || "User"
           });
         }
-        showSuccess("Laporan diperbarui!");
+        if (failedPhotos.length > 0) {
+          showWarning(`Laporan diperbarui, namun ${failedPhotos.length} foto gagal diupload: ${failedPhotos.join(', ')}. Silakan edit laporan dan upload ulang foto tersebut.`);
+        } else {
+          showSuccess("Laporan diperbarui!");
+        }
       } else {
         result = await reportService.createReport(reportData);
         if (session?.user) {
@@ -395,7 +458,11 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
             username: profile?.username || session.user.email || "User"
           });
         }
-        showSuccess(isDuplicateMode ? "Laporan baru berhasil dibuat dari duplikat!" : "Laporan disimpan!");
+        if (failedPhotos.length > 0) {
+          showWarning(`Laporan tersimpan, namun ${failedPhotos.length} foto gagal diupload: ${failedPhotos.join(', ')}. Silakan edit laporan dan upload ulang foto tersebut.`);
+        } else {
+          showSuccess(isDuplicateMode ? "Laporan baru berhasil dibuat dari duplikat!" : "Laporan disimpan!");
+        }
       }
       await clearDraft();
       navigate('/');

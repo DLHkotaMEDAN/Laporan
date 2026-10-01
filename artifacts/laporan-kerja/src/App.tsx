@@ -61,6 +61,8 @@ import {
 import { AuthorizeRoute } from "@/components/AuthorizeRoute";
 import { auditLogService } from "@/services/auditLogService";
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
 const queryClient = new QueryClient();
 
 /**
@@ -157,12 +159,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
-  
+
+  // admin_wilayah_bbm boleh membuat/edit laporan harian (combined workspace),
+  // sehingga dikecualikan dari redirect meski masuk isAdminBbmAccess &
+  // isAdminRencanaKerjaAccess.
+  const isWilayahBbm = profile?.role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
   if (
-    isAdminBbmAccess(profile?.role)
+    (!isWilayahBbm && isAdminBbmAccess(profile?.role))
     || isLaporanBbmAdmin(profile?.role)
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
-    || isAdminRencanaKerjaAccess(profile?.role)
+    || (!isWilayahBbm && isAdminRencanaKerjaAccess(profile?.role))
   ) {
     return <Navigate to={getRoleLandingPath(profile.role)} />;
   }
@@ -178,8 +185,13 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (isAdminHarianAccess(profile?.role, session.user.email)) return <Navigate to="/" replace />;
 
+  // admin_wilayah_bbm boleh membuat/edit rencana kerja (combined workspace).
+  // isAdminBbmAccess mencakup admin_wilayah_bbm, jadi perlu dikecualikan agar tidak
+  // ter-redirect ke landing BBM.
+  const isWilayahBbm = profile?.role === USER_ROLES.ADMIN_WILAYAH_BBM;
+
   if (
-    isAdminBbmAccess(profile?.role)
+    (!isWilayahBbm && isAdminBbmAccess(profile?.role))
     || isLaporanBbmAdmin(profile?.role)
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
   ) {
@@ -255,9 +267,11 @@ const NotaDinasRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => {
-  const { profile, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  // BUG FIX: cek sesi login agar halaman rekap & detail tidak bisa diakses tanpa login
+  if (!session) return <Navigate to="/login" replace />;
   if (isAdminBbmAccess(profile?.role) || isLaporanBbmAdmin(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_OLI) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
@@ -283,9 +297,8 @@ const OvertimeAccessRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  const isAllowed = profile?.role === USER_ROLES.ADMIN
-    || profile?.role === USER_ROLES.ADMIN_REKAP_LEMBUR
-    || session.user.email === 'admin@gmail.com';
+  const isAllowed = isSuperAdminAccess(profile?.role, session?.user?.email)
+    || profile?.role === USER_ROLES.ADMIN_REKAP_LEMBUR;
   return isAllowed ? <>{children}</> : <Navigate to="/" replace />;
 };
 
@@ -310,7 +323,8 @@ const App = () => (
         <BrowserRouter>
           <RouteScrollReset />
           <ActivityTracker />
-          <Routes>
+          <ErrorBoundary>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Index />} />
             <Route path="/pdf-preview" element={<PdfPreview />} />
@@ -369,6 +383,7 @@ const App = () => (
             
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

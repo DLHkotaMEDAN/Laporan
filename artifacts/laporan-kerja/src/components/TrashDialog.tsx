@@ -14,6 +14,7 @@ import { laporanBbmService } from '@/services/laporanBbmService';
 import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
+import { isPimpinanAccess, isAdminHarianAccess, isSuperAdminAccess } from '@/constants/access-control';
 import { Report } from '@/types/report';
 import { WorkPlan } from '@/types/workPlan';
 import { FuelReport, FuelReportType } from '@/types/fuelReport';
@@ -35,9 +36,9 @@ const TrashDialog = ({ isOpen, onClose, onRefresh, fuelReportType = 'admin_bbm' 
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const role = profile?.role;
-  const isPimpinan = role === 'pimpinan' || session?.user?.email === 'pimpinan@gmail.com';
-  const isAdminHarian = role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com';
-  const isAdmin = role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isPimpinan = isPimpinanAccess(role, session?.user?.email);
+  const isAdminHarian = isAdminHarianAccess(role, session?.user?.email);
+  const isAdmin = isSuperAdminAccess(role, session?.user?.email);
   const isFuelAdmin = role === 'admin_bbm' || role === 'admin_rencana_kerja_bbm' || role === 'admin_wilayah_bbm';
   const isPusatFuelAdmin = role === 'admin_bbm_pusat';
   const isLaporanFuelAdmin = role === 'admin_laporan_bbm';

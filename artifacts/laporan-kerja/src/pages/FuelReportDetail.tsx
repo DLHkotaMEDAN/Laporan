@@ -10,6 +10,7 @@ import { fuelService } from '@/services/fuelService';
 import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
+import { isPimpinanAccess } from '@/constants/access-control';
 import { Badge } from "@/components/ui/badge";
 import { showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
   const [loading, setLoading] = useState(true);
 
   const isLoggedIn = !!session;
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
   const isLaporanBbm = reportType === 'laporan_bbm';
   const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
   const routeBase = isAdminBbmPusat ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';

@@ -13,6 +13,15 @@ if (Number.isNaN(port) || port <= 0) {
 
 const basePath = process.env.BASE_PATH ?? "/";
 
+// Security headers untuk dev server dan preview
+const securityHeaders = {
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "X-XSS-Protection": "1; mode=block",
+};
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -64,6 +73,7 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    headers: securityHeaders,
     proxy: {
       "/api": {
         target: process.env.PDF_API_URL ?? "http://127.0.0.1:19762",
@@ -78,5 +88,6 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    headers: securityHeaders,
   },
 });

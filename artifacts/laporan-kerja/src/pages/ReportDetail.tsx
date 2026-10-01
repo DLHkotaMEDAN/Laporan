@@ -9,6 +9,7 @@ import { showError } from '@/utils/toast';
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { reportService } from '@/services/reportService';
 import { useAuth } from '@/context/AuthContext';
+import { isPimpinanAccess } from '@/constants/access-control';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
@@ -21,7 +22,7 @@ const ReportDetail = () => {
   const [loading, setLoading] = useState(true);
 
   const isLoggedIn = !!session;
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
 
   useEffect(() => { if (id) loadReport(id); }, [id]);
 

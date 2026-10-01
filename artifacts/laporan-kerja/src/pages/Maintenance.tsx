@@ -17,6 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
+import { isSuperAdminAccess } from '@/constants/access-control';
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,7 @@ const Maintenance = () => {
   const DB_LIMIT = 500 * 1024 * 1024; 
   const AUTH_LIMIT = 50000;
 
-  const isAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+  const isAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
 
   const logUsers = useMemo(() => Array.from(new Map(logs.map((log) => [log.user_id, log.username || log.user_email || 'System'])).entries()), [logs]);
   const visibleLogs = useMemo(() => logs.filter((log) => {
@@ -175,11 +176,10 @@ const Maintenance = () => {
     setAnalyzing(true);
     try {
       const now = new Date();
-      const { data: reports, error: dbError } = await supabase
-        .from('reports')
-        .select('tasks, date, category');
-      
-      if (dbError) throw dbError;
+      // Gunakan reportService.getAllReports() agar seluruh data diambil dengan
+      // paginasi otomatis — query langsung ke Supabase hanya mengembalikan
+      // max 1000 baris (default row limit) sehingga statistik bisa tidak akurat.
+      const reports = await reportService.getAllReports(null, false);
 
       const usedFileNames = new Set<string>();
       let reportsToday = 0;

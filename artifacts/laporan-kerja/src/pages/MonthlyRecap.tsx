@@ -27,6 +27,7 @@ import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { monthlyPdfFileName } from '@/utils/pdf-file-name';
+import { isPimpinanAccess, isAdminHarianAccess } from '@/constants/access-control';
 import {
   Tooltip,
   TooltipContent,
@@ -83,8 +84,8 @@ const MonthlyRecap = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session;
   
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || session?.user?.email === 'sakinah@gmail.com' || session?.user?.email === 'admin.laporan@gmail.com';
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
+  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
 
   // Check permission for printing monthly recap

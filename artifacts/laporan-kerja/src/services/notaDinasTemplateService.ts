@@ -193,10 +193,20 @@ export const notaDinasTemplateService = {
       .insert(insertPayload)
       .select('*')
       .maybeSingle();
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Insert template error:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        payload: { ...insertPayload, created_by: '(redacted)' },
+      });
+      throw new Error(insertError.message || JSON.stringify(insertError));
+    }
     if (inserted) return toTemplate(inserted as TemplateRow);
 
     // INSERT berhasil tapi RLS blokir SELECT — coba fetch manual
+    console.warn('INSERT berhasil tapi tidak return data (kemungkinan RLS blokir SELECT). Mencoba fetch ulang...');
     let fetchAfterInsert = supabase
       .from('nota_dinas_templates')
       .select('*')
@@ -207,10 +217,11 @@ export const notaDinasTemplateService = {
     } else {
       fetchAfterInsert = fetchAfterInsert.is('region_id', null);
     }
-    const { data: afterInsert } = await fetchAfterInsert.maybeSingle();
+    const { data: afterInsert, error: afterInsertError } = await fetchAfterInsert.maybeSingle();
+    if (afterInsertError) console.error('Fetch setelah insert gagal:', afterInsertError);
     if (afterInsert) return toTemplate(afterInsert as TemplateRow);
 
-    throw new Error('Template tidak tersimpan. Coba lagi.');
+    throw new Error('Template tidak tersimpan. Pastikan Anda memiliki akses yang cukup dan coba lagi.');
   },
 
   /**

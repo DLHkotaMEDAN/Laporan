@@ -1,8 +1,26 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Daftar domain yang diizinkan mengakses Edge Function ini.
+// Tambahkan domain produksi Anda di sini jika berbeda.
+const ALLOWED_ORIGINS = [
+  'https://laporanbulanan.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:4173',
+];
+
+const getCorsHeaders = (requestOrigin: string | null) => {
+  // Kalau origin ada di daftar izin, kembalikan origin itu.
+  // Kalau tidak, kembalikan origin pertama (domain produksi) sebagai fallback.
+  const allowedOrigin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0];
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
 };
 
 type CreateUserInput = {
@@ -80,6 +98,7 @@ const regionRequiredRoles = new Set([
 ]);
 
 Deno.serve(async (request) => {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {

@@ -2,19 +2,34 @@ import { supabase } from '@/lib/supabase';
 import { Report } from '@/types/report';
 import { auditLogService } from '@/services/auditLogService';
 
-const fetchAllPages = async <T>(buildQuery: () => any, pageSize = 1000) => {
+/**
+ * Mengambil semua baris dari Supabase dengan paginasi otomatis.
+ * Berhenti ketika halaman terakhir mengembalikan data kurang dari pageSize,
+ * atau ketika batas maksimum halaman tercapai (cegah loop tak henti).
+ *
+ * @param buildQuery  Fungsi yang mengembalikan Supabase query builder
+ * @param pageSize    Jumlah baris per halaman (default 1000)
+ * @param maxPages    Batas maksimum halaman — cegah loop tak henti (default 50 = 50.000 baris)
+ */
+const fetchAllPages = async <T>(
+  buildQuery: () => any,
+  pageSize = 1000,
+  maxPages = 50,
+): Promise<T[]> => {
   const rows: T[] = [];
 
-  for (let from = 0; ; from += pageSize) {
+  for (let page = 0; page < maxPages; page++) {
+    const from = page * pageSize;
     const to = from + pageSize - 1;
     const { data, error } = await buildQuery().range(from, to);
 
     if (error) throw error;
 
-    const page = (data || []) as T[];
-    rows.push(...page);
+    const batch = (data || []) as T[];
+    rows.push(...batch);
 
-    if (page.length < pageSize) break;
+    // Berhenti jika halaman terakhir (data kurang dari pageSize)
+    if (batch.length < pageSize) break;
   }
 
   return rows;

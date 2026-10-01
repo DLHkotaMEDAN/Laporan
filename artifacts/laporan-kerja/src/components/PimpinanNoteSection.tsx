@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ShieldCheck, MessageSquare, Save, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
+import { isPimpinanAccess } from '@/constants/access-control';
 import { cn } from "@/lib/utils";
 
 interface PimpinanNoteSectionProps {
@@ -20,7 +21,7 @@ const PimpinanNoteSection = ({ initialNote = "", onSave }: PimpinanNoteSectionPr
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
 
   const handleSave = async () => {
     setIsSaving(true);

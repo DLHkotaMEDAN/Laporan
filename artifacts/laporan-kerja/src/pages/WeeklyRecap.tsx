@@ -31,6 +31,7 @@ import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { weeklyPdfFileName } from '@/utils/pdf-file-name';
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { isPimpinanAccess, isAdminHarianAccess } from '@/constants/access-control';
 import {
   Tooltip,
   TooltipContent,
@@ -96,8 +97,8 @@ const WeeklyRecap = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session;
   
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
-  const isAdminHarian = profile?.role === 'admin_harian' || (session?.user?.email === 'sakinah@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
+  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
 
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });

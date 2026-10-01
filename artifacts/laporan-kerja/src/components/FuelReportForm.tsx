@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { isGlobalFuelAdmin } from '@/constants/access-control';
+import { isGlobalFuelAdmin, isSuperAdminAccess } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -152,8 +152,8 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     || profile?.role === 'admin_rencana_kerja_bbm'
     || profile?.role === 'admin_wilayah_bbm'
     || profile?.role === 'admin_laporan_bbm'
-    || session?.user?.email === 'admin@gmail.com';
-  const isSuperAdmin = profile?.role === 'admin' || session?.user?.email === 'admin@gmail.com';
+    || isSuperAdminAccess(profile?.role, session?.user?.email);
+  const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
   // Admin BBM is a cross-region role. Only the combined/regional roles are
   // restricted to the region assigned to their profile.
@@ -392,7 +392,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         || profile?.role === 'admin_bbm_pusat'
         || profile?.role === 'admin_rencana_kerja_bbm'
         || profile?.role === 'admin_wilayah_bbm'
-        || session?.user?.email === 'admin@gmail.com';
+        || isSuperAdminAccess(profile?.role, session?.user?.email);
     if (!isAllowed) {
       showError("Anda tidak memiliki izin untuk menyimpan laporan ini");
       return;

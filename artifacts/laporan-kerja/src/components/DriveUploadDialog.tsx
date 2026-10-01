@@ -16,6 +16,7 @@ import { Folder, User, FileText, Loader2, CloudUpload, FolderPlus, Check, X, Sea
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
+import { isPimpinanAccess } from '@/constants/access-control';
 
 const CLIENT_ID = "323264526689-91gea696tm6ftv49jt4lb4tqjo5a1947.apps.googleusercontent.com"; 
 const API_KEY = "AIzaSyDzRtvJVVWSYJ1e9VGKBhA1CxRYtlda1PY";
@@ -45,7 +46,7 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
 
   const [uploadResult, setUploadResult] = useState<{ link: string; folderLink?: string; name: string } | null>(null);
 
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
 
   useEffect(() => {
     if (!isOpen) {

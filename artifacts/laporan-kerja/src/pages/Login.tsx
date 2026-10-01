@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -8,12 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Lock, User, Eye, EyeOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { showError } from '@/utils/toast';
 import { getRoleLandingPath } from '@/constants/access-control';
 
 // Email valid: harus ada karakter sebelum @, domain setelah @, dan TLD minimal 2 karakter
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+// Batas maksimum percobaan sebelum lockout sementara
+const MAX_ATTEMPTS = 5;
+// Durasi lockout dalam detik
+const LOCKOUT_DURATION = 60;
+// Jeda eksponensial per percobaan (detik): percobaan ke-2=2s, ke-3=5s, ke-4=10s, ke-5=20s
+const BACKOFF_SECONDS = [0, 0, 2, 5, 10, 20];
 
 const Login = () => {
   const { session, profile, loading: authLoading } = useAuth();
@@ -23,14 +30,50 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // State rate limiting
+  const [failCount, setFailCount] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     if (session && profile && !authLoading) {
       navigate(getRoleLandingPath(profile.role), { replace: true });
     }
   }, [session, profile, authLoading, navigate]);
 
+  // Countdown timer untuk lockout dan jeda eksponensial
+  useEffect(() => {
+    if (countdown <= 0) {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      return;
+    }
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [countdown]);
+
+  const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
+  const isThrottled = countdown > 0;
+  const isDisabled = loading || isLocked || isThrottled;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Cek lockout
+    if (isLocked) return;
+    // Cek jeda eksponensial
+    if (isThrottled) return;
+
     if (!username.trim() || !password) {
       showError("Username dan Password wajib diisi");
       return;
@@ -38,21 +81,62 @@ const Login = () => {
 
     setLoading(true);
     try {
-      // Menangani input username agar otomatis menjadi email gmail jika tidak ada @
-      const email = EMAIL_REGEX.test(username.trim()) ? username.trim() : `${username.trim()}@gmail.com`;
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Pertahankan fitur @gmail.com otomatis
+      const email = EMAIL_REGEX.test(username.trim())
+        ? username.trim()
+        : `${username.trim()}@gmail.com`;
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) throw error;
+
+      // Login berhasil — reset counter
+      setFailCount(0);
+      setLockedUntil(null);
+      setCountdown(0);
     } catch (error: any) {
-      console.error("Login error:", error);
-      showError(error.message === "Invalid login credentials" 
-        ? "Username atau Password salah" 
-        : "Gagal masuk ke sistem. Pastikan akun sudah terdaftar.");
+      const isInvalidCredential =
+        error.message === 'Invalid login credentials' ||
+        error.message?.toLowerCase().includes('invalid');
+
+      const newFailCount = failCount + 1;
+      setFailCount(newFailCount);
+
+      if (newFailCount >= MAX_ATTEMPTS) {
+        // Lockout sementara
+        const until = Date.now() + LOCKOUT_DURATION * 1000;
+        setLockedUntil(until);
+        setCountdown(LOCKOUT_DURATION);
+        showError(`Terlalu banyak percobaan gagal. Silakan coba lagi dalam ${LOCKOUT_DURATION} detik.`);
+      } else {
+        // Jeda eksponensial
+        const backoff = BACKOFF_SECONDS[newFailCount] ?? 0;
+        if (backoff > 0) {
+          setCountdown(backoff);
+          showError(
+            isInvalidCredential
+              ? `Username atau Password salah. Tunggu ${backoff} detik sebelum mencoba lagi.`
+              : `Gagal masuk. Tunggu ${backoff} detik sebelum mencoba lagi.`
+          );
+        } else {
+          showError(
+            isInvalidCredential
+              ? 'Username atau Password salah'
+              : 'Gagal masuk ke sistem. Pastikan akun sudah terdaftar.'
+          );
+        }
+      }
+
       setLoading(false);
     }
+  };
+
+  // Label tombol sesuai kondisi
+  const getButtonLabel = () => {
+    if (loading) return <><Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" /> Memproses...</>;
+    if (isLocked) return <><ShieldAlert className="mr-2 h-4 w-4 shrink-0" /> Terkunci ({countdown}d)</>;
+    if (isThrottled) return <><Loader2 className="mr-2 h-4 w-4 shrink-0" /> Tunggu {countdown} detik...</>;
+    return 'Masuk';
   };
 
   return (
@@ -71,6 +155,34 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+
+            {/* Peringatan lockout */}
+            {isLocked && (
+              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <ShieldAlert className="h-5 w-5 shrink-0 text-red-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-red-700">Akses Sementara Dikunci</p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    Terlalu banyak percobaan gagal. Coba lagi dalam{' '}
+                    <span className="font-bold">{countdown} detik</span>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Peringatan jeda */}
+            {!isLocked && isThrottled && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-amber-700">Percobaan Gagal ({failCount}/{MAX_ATTEMPTS})</p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    Silakan tunggu <span className="font-bold">{countdown} detik</span> sebelum mencoba lagi.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <div className="relative">
@@ -82,11 +194,12 @@ const Login = () => {
                   className="pl-10"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
+                  disabled={isDisabled}
+                  autoComplete="username"
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Kata Sandi</Label>
               <div className="relative">
@@ -98,7 +211,8 @@ const Login = () => {
                   className="pl-10 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
+                  disabled={isDisabled}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -115,18 +229,15 @@ const Login = () => {
               <Button
                 type="submit"
                 style={{ width: '100%', minWidth: '100%', display: 'inline-flex' }}
-                className="h-11 w-full min-w-full shrink-0 items-center justify-center whitespace-nowrap bg-blue-600 font-bold hover:bg-blue-700"
-                disabled={loading}
+                className="h-11 w-full min-w-full shrink-0 items-center justify-center whitespace-nowrap bg-blue-600 font-bold hover:bg-blue-700 disabled:opacity-60"
+                disabled={isDisabled}
               >
                 <span className="inline-flex w-full items-center justify-center whitespace-nowrap">
-                  {loading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" /> Memproses...</>
-                  ) : (
-                    "Masuk"
-                  )}
+                  {getButtonLabel()}
                 </span>
               </Button>
             </div>
+
           </form>
         </CardContent>
       </Card>

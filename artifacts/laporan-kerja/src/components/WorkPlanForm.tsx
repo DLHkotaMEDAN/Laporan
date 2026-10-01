@@ -25,7 +25,7 @@ import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft, useValueDraft } from '@/hooks/useFormDraft';
-import { isCategoryScopedWorkPlanAdmin, isGlobalWorkPlanAdmin } from '@/constants/access-control';
+import { isCategoryScopedWorkPlanAdmin, isGlobalWorkPlanAdmin, isPimpinanAccess } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -178,7 +178,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     remarks: new Set<string>(),
   });
 
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
   const canManageAllWorkPlanRegions = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
   const allowedWorkPlanCategories = isCategoryScopedWorkPlanAdmin(profile?.role)
     ? profile?.work_plan_categories ?? []

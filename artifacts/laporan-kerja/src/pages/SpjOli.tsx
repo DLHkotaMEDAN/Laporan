@@ -17,12 +17,12 @@ import { WorkPlan } from '@/types/workPlan';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { isSpjOliAdmin } from '@/constants/access-control';
+import { isSpjOliAdmin, isSuperAdminAccess, isPimpinanAccess } from '@/constants/access-control';
 import TotalRecordLabel from '@/components/TotalRecordLabel';
 
 const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: '', team_id: '', spj_number: '', vehicle_name: '', receiver_name: '', operator_name: '', oil_name: '', quantity: 0, unit: 'Liter', location: '', remarks: '' };
 const canAccess = (role?: string, email?: string | null) =>
-  email === 'admin@gmail.com' || ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
+  isSuperAdminAccess(role, email) || ['admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
 const defaultOilOptions = ['Oli Hydraulic', 'Oli Mesin', 'Minyak Rem'];
 
 type SortDirection = 'asc' | 'desc';
@@ -87,7 +87,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   const { profile, session } = useAuth();
   const isRegionalSpjOliAdmin = isSpjOliAdmin(profile?.role) && Boolean(profile?.region_id);
   const lockedRegionId = isRegionalSpjOliAdmin ? profile?.region_id || '' : '';
-  const editable = profile?.is_active !== false && profile?.role !== 'pimpinan' && session?.user?.email !== 'pimpinan@gmail.com';
+  const editable = profile?.is_active !== false && !isPimpinanAccess(profile?.role, session?.user?.email);
   const [records, setRecords] = useState<SpjOliRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

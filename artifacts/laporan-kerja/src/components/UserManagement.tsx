@@ -35,6 +35,7 @@ import {
   isCategoryScopedWorkPlanAdmin,
   isSpjOliAdmin,
   roleCanSelectRegion,
+  isSuperAdminAccess,
 } from '@/constants/access-control';
 
 const toggleWorkPlanCategory = (selected: string[], category: string) => (
@@ -105,7 +106,7 @@ const getEdgeFunctionErrorMessage = async (error: unknown) => {
 
 const UserManagement = () => {
   const { profile: currentProfile, session } = useAuth();
-  const canMutateUsers = currentProfile?.is_active !== false && (currentProfile?.role === 'admin' || session?.user?.email === 'admin@gmail.com');
+  const canMutateUsers = currentProfile?.is_active !== false && isSuperAdminAccess(currentProfile?.role, session?.user?.email);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

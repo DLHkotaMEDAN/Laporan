@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
-import { isGlobalWorkPlanAdmin } from '@/constants/access-control';
+import { isGlobalWorkPlanAdmin, isPimpinanAccess } from '@/constants/access-control';
 import { useRegionName } from '@/hooks/useRegionName';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ const PrintWorkPlan = () => {
   );
 
   const isLoggedIn = !!session;
-  const isPimpinan = profile?.role === 'pimpinan' || (session?.user?.email === 'pimpinan@gmail.com');
+  const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
 
   useEffect(() => {
     if (id) loadPlan(id);
