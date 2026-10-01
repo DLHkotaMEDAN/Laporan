@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import FuelPriceSettings from '@/components/FuelPriceSettings';
 import TrashDialog from '@/components/TrashDialog';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   Select,
   SelectContent,
@@ -122,6 +123,23 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    variant: 'danger' | 'warning' | 'logout';
+    confirmLabel: string;
+    loading: boolean;
+    onConfirm: () => Promise<void>;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    variant: 'danger',
+    confirmLabel: 'Ya, Lanjutkan',
+    loading: false,
+    onConfirm: async () => {},
+  });
   
   const [selectedDate, setSelectedDate] = useState("");
   const [appliedDate, setAppliedDate] = useState("");
@@ -232,8 +250,11 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
 
       // Ambil seluruh data aktif sebagai pembanding sehingga filter tidak
       // membuat salah satu pasangan duplikat hilang dari analisis.
+      // Optimasi: jika tidak ada filter aktif, data sudah berisi semua laporan
+      // sehingga tidak perlu request kedua ke Supabase.
       if (id !== reqIdRef.current) return;
-      const duplicateSource = await getAllReports();
+      const isFiltered = Boolean(date) || month !== "semua" || year !== "semua";
+      const duplicateSource = isFiltered ? await getAllReports() : data;
       if (id !== reqIdRef.current) return;
       setReports(data);
       setAllActiveReports(duplicateSource);
@@ -277,34 +298,52 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
     input.focus();
   };
 
-  const handleLogout = async () => {
-    if (window.confirm("Apakah Anda yakin ingin keluar?")) {
-      try {
-        await signOut();
-        navigate('/login');
-        showSuccess("Berhasil keluar");
-      } catch (error) {
-        showError("Gagal keluar");
-      }
-    }
+  const handleLogout = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Keluar dari Sistem',
+      description: 'Anda akan keluar dari sistem laporan BBM.',
+      variant: 'logout',
+      confirmLabel: 'Ya, Keluar',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await signOut();
+          navigate('/login');
+          showSuccess("Berhasil keluar");
+        } catch (error) {
+          showError("Gagal keluar");
+        }
+      },
+    });
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!isAccountActive || isPimpinan) return;
-    if (!confirm("Hapus laporan ini?")) return;
-    try {
-      if (isLaporanBbm) {
-        await laporanBbmService.deleteReport(id);
-      } else {
-        if (isAdminBbmPusat) await fuelPusatService.deleteReport(id);
-        else await fuelService.deleteReport(id);
-      }
-      setReports(prev => prev.filter(r => r.id !== id));
-      showSuccess("Laporan dihapus");
-    } catch (error) {
-      showError("Gagal menghapus");
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Laporan BBM',
+      description: 'Laporan ini akan dipindahkan ke tempat sampah. Anda dapat memulihkannya nanti.',
+      variant: 'danger',
+      confirmLabel: 'Ya, Hapus',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          if (isLaporanBbm) {
+            await laporanBbmService.deleteReport(id);
+          } else {
+            if (isAdminBbmPusat) await fuelPusatService.deleteReport(id);
+            else await fuelService.deleteReport(id);
+          }
+          setReports(prev => prev.filter(r => r.id !== id));
+          showSuccess("Laporan dihapus");
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          showError("Gagal menghapus");
+        }
+      },
+    });
   };
 
   const resetFilters = () => {
@@ -854,6 +893,16 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
         onClose={() => setIsTrashOpen(false)}
         onRefresh={() => void loadReports(appliedDate, appliedMonth, appliedYear)}
         fuelReportType={reportType}
+      />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        variant={confirmDialog.variant}
+        confirmLabel={confirmDialog.confirmLabel}
+        loading={confirmDialog.loading}
+        onConfirm={confirmDialog.onConfirm}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import { notaDinasTemplateService } from "@/services/notaDinasTemplateService";
 import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
 import KolomPerbaikanEditor from "@/components/KolomPerbaikanEditor";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 const KATEGORI_OPTIONS: { value: NotaDinasCategory; label: string }[] = [
   { value: "permintaan_alat", label: "Permintaan Alat" },
@@ -79,6 +80,7 @@ const NotaDinasTemplateManagement = () => {
   const [kategori, setKategori] = useState<NotaDinasCategory>("permintaan_alat");
   const [templates, setTemplates] = useState<NotaDinasTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<Partial<NotaDinasTemplate> | null>(null);
+  const [deleteTemplateConfirm, setDeleteTemplateConfirm] = useState<{ open: boolean; template: NotaDinasTemplate | null }>({ open: false, template: null });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -121,17 +123,8 @@ const NotaDinasTemplateManagement = () => {
     setEditingTemplate(null);
   };
 
-  const handleDelete = async (tpl: NotaDinasTemplate) => {
-    if (!window.confirm(`Hapus template "${tpl.nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
-    try {
-      await notaDinasTemplateService.deleteTemplate(tpl.id);
-      showSuccess(`Template "${tpl.nama}" dihapus.`);
-      loadTemplates();
-      if (editingTemplate?.id === tpl.id) setEditingTemplate(null);
-    } catch (err) {
-      const msg = (err as any)?.message || JSON.stringify(err);
-      showError(`Gagal menghapus template: ${msg}`);
-    }
+  const handleDelete = (tpl: NotaDinasTemplate) => {
+    setDeleteTemplateConfirm({ open: true, template: tpl });
   };
 
   const handleSetDefault = async (tpl: NotaDinasTemplate) => {
@@ -390,6 +383,28 @@ const NotaDinasTemplateManagement = () => {
         </div>
       )}
     </div>
+    <ConfirmDialog
+      open={deleteTemplateConfirm.open}
+      onOpenChange={(open) => setDeleteTemplateConfirm(prev => ({ ...prev, open }))}
+      title="Hapus Template"
+      description={`Template "${deleteTemplateConfirm.template?.nama || ''}" akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`}
+      variant="danger"
+      confirmLabel="Ya, Hapus"
+      onConfirm={async () => {
+        if (!deleteTemplateConfirm.template) return;
+        const tpl = deleteTemplateConfirm.template;
+        try {
+          await notaDinasTemplateService.deleteTemplate(tpl.id);
+          showSuccess(`Template "${tpl.nama}" dihapus.`);
+          loadTemplates();
+          if (editingTemplate?.id === tpl.id) setEditingTemplate(null);
+          setDeleteTemplateConfirm({ open: false, template: null });
+        } catch (err) {
+          const msg = (err as any)?.message || JSON.stringify(err);
+          showError(`Gagal menghapus template: ${msg}`);
+        }
+      }}
+    />
   );
 };
 

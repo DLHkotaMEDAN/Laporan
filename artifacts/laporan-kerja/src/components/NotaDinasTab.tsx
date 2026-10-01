@@ -13,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { isSuperAdminAccess } from "@/constants/access-control";
 import { useValueDraft } from "@/hooks/useFormDraft";
 import TotalRecordLabel from "@/components/TotalRecordLabel";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import type { NotaDinasCategory, NotaDinasForm, NotaDinasItem, NotaDinasKind, NotaDinasRecord, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
 import { DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 
@@ -607,6 +608,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
   const [form, setForm] = useState<NotaDinasForm>(readDraft);
   const [itemCatalog, setItemCatalog] = useState<string[]>(readItemCatalog);
   const [records, setRecords] = useState<NotaDinasRecord[]>([]);
+  const [deleteNotaConfirm, setDeleteNotaConfirm] = useState<{ open: boolean; record: NotaDinasRecord | null }>({ open: false, record: null });
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1041,27 +1043,8 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
     showSuccess("Form diduplikat sebagai Nota Dinas baru. Data asli tidak berubah.");
   };
 
-  const deleteRecord = async (record: NotaDinasRecord) => {
-    const label = getNumberLabel(record) || record.form.hal || "Nota Dinas ini";
-    if (!window.confirm(`Hapus ${label}? Data yang dihapus tidak dapat dikembalikan.`)) return;
-
-    try {
-      await notaDinasService.delete(record.id);
-      setRecords((currentRecords) => currentRecords.filter((item) => item.id !== record.id));
-      if (typeof window !== "undefined") {
-        const localRecords = readRecords().filter((item) => item.id !== record.id);
-        if (localRecords.length > 0) window.localStorage.setItem(RECORDS_KEY, JSON.stringify(localRecords));
-        else window.localStorage.removeItem(RECORDS_KEY);
-      }
-      if (activeRecordId === record.id) {
-        setActiveRecordId(null);
-        setView("list");
-      }
-      showSuccess("Nota Dinas berhasil dihapus.");
-    } catch (error) {
-      console.error("Gagal menghapus Nota Dinas:", error);
-      showError("Nota Dinas gagal dihapus. Periksa koneksi dan hak akses akun.");
-    }
+  const deleteRecord = (record: NotaDinasRecord) => {
+    setDeleteNotaConfirm({ open: true, record });
   };
 
   const getNumberLabel = (record: NotaDinasRecord, continuation = false) => {
@@ -1637,6 +1620,36 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
           .nota-dinas-sheet + .nota-dinas-sheet { break-before: page !important; page-break-before: always !important; }
         }
       `}</style>
+      <ConfirmDialog
+        open={deleteNotaConfirm.open}
+        onOpenChange={(open) => setDeleteNotaConfirm(prev => ({ ...prev, open }))}
+        title="Hapus Nota Dinas"
+        description={`${deleteNotaConfirm.record ? (getNumberLabel(deleteNotaConfirm.record) || deleteNotaConfirm.record.form.hal || 'Nota Dinas ini') : 'Nota Dinas ini'} akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`}
+        variant="danger"
+        confirmLabel="Ya, Hapus"
+        onConfirm={async () => {
+          if (!deleteNotaConfirm.record) return;
+          const record = deleteNotaConfirm.record;
+          try {
+            await notaDinasService.delete(record.id);
+            setRecords((currentRecords) => currentRecords.filter((item) => item.id !== record.id));
+            if (typeof window !== "undefined") {
+              const localRecords = readRecords().filter((item) => item.id !== record.id);
+              if (localRecords.length > 0) window.localStorage.setItem(RECORDS_KEY, JSON.stringify(localRecords));
+              else window.localStorage.removeItem(RECORDS_KEY);
+            }
+            if (activeRecordId === record.id) {
+              setActiveRecordId(null);
+              setView("list");
+            }
+            showSuccess("Nota Dinas berhasil dihapus.");
+            setDeleteNotaConfirm({ open: false, record: null });
+          } catch (error) {
+            console.error("Gagal menghapus Nota Dinas:", error);
+            showError("Nota Dinas gagal dihapus. Periksa koneksi dan hak akses akun.");
+          }
+        }}
+      />
     </section>
   );
 };

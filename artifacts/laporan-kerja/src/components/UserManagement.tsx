@@ -37,6 +37,7 @@ import {
   roleCanSelectRegion,
   isSuperAdminAccess,
 } from '@/constants/access-control';
+import ResetPasswordDialog from '@/components/ResetPasswordDialog';
 
 const toggleWorkPlanCategory = (selected: string[], category: string) => (
   selected.includes(category)
@@ -109,6 +110,11 @@ const UserManagement = () => {
   const canMutateUsers = currentProfile?.is_active !== false && isSuperAdminAccess(currentProfile?.role, session?.user?.email);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<{ open: boolean; userId: string; username: string }>({
+    open: false,
+    userId: '',
+    username: '',
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -321,30 +327,13 @@ const UserManagement = () => {
     }
   };
 
-  const handleResetPassword = async (profile: Profile) => {
+  const handleResetPassword = (profile: Profile) => {
     if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah password.'); return; }
-    const password = window.prompt(`Masukkan password baru untuk ${profile.username || 'pengguna'} (minimal 8 karakter):`);
-    if (password === null) return;
-    if (password.length < 8) {
-      showError('Password minimal 8 karakter.');
-      return;
-    }
-
-    setUpdatingId(profile.id);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: { action: 'reset-password', userId: profile.id, password },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: profile.id, details: { username: profile.username, field: 'password' } });
-      showSuccess(`Password ${profile.username || 'pengguna'} berhasil diubah.`);
-      await fetchProfiles();
-    } catch (error: any) {
-      showError('Gagal mengubah password: ' + error.message);
-    } finally {
-      setUpdatingId(null);
-    }
+    setResetPasswordTarget({
+      open: true,
+      userId: profile.id,
+      username: profile.username || 'Pengguna',
+    });
   };
 
   const openEditProfile = (profile: Profile) => {
@@ -811,6 +800,12 @@ const UserManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+      <ResetPasswordDialog
+        open={resetPasswordTarget.open}
+        onOpenChange={(open) => setResetPasswordTarget(prev => ({ ...prev, open }))}
+        userId={resetPasswordTarget.userId}
+        username={resetPasswordTarget.username}
+      />
     </div>
   );
 };

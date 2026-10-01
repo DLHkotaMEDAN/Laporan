@@ -2,13 +2,45 @@ import { supabase } from '@/lib/supabase';
 import { OvertimeRecord } from '@/types/overtime';
 import { auditLogService } from '@/services/auditLogService';
 
+/**
+ * Mengambil semua baris dengan paginasi otomatis.
+ * Berhenti ketika halaman terakhir mengembalikan data kurang dari pageSize,
+ * atau ketika batas maksimum halaman tercapai (cegah loop tak henti).
+ */
+const fetchAllPages = async <T>(
+  buildQuery: () => any,
+  pageSize = 1000,
+  maxPages = 50,
+): Promise<T[]> => {
+  const rows: T[] = [];
+
+  for (let page = 0; page < maxPages; page++) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error } = await buildQuery().range(from, to);
+
+    if (error) throw error;
+
+    const batch = (data || []) as T[];
+    rows.push(...batch);
+
+    if (batch.length < pageSize) break;
+  }
+
+  return rows;
+};
+
 export const overtimeService = {
   async getAll(regionId?: string | null) {
-    let query = supabase.from('overtime_records').select('*, team:teams(name), region:regions(name)').order('date', { ascending: false }).order('name');
-    if (regionId) query = query.eq('region_id', regionId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as OvertimeRecord[];
+    return fetchAllPages<OvertimeRecord>(() => {
+      let query = supabase
+        .from('overtime_records')
+        .select('*, team:teams(name), region:regions(name)')
+        .order('date', { ascending: false })
+        .order('name');
+      if (regionId) query = query.eq('region_id', regionId);
+      return query;
+    });
   },
   async getById(id: string) {
     const { data, error } = await supabase.from('overtime_records').select('*, team:teams(name), region:regions(name)').eq('id', id).single();

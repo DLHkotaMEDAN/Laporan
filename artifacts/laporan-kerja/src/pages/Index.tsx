@@ -21,6 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import TrashDialog from '@/components/TrashDialog';
 import ChangePasswordDialog from '@/components/ChangePasswordDialog';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import FuelReportTab from '@/components/FuelReportTab';
 import SpjOli from '@/pages/SpjOli';
 import OvertimeRecap from '@/pages/OvertimeRecap';
@@ -246,6 +247,23 @@ const Index = () => {
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
   const [recordCounts, setRecordCounts] = useState<RecordCounts>(emptyRecordCounts);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    variant: 'danger' | 'warning' | 'logout';
+    confirmLabel: string;
+    loading: boolean;
+    onConfirm: () => Promise<void>;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    variant: 'danger',
+    confirmLabel: 'Ya, Lanjutkan',
+    loading: false,
+    onConfirm: async () => {},
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(savedViewStateRef.current.searchQuery || "");
   const [activeTab, setActiveTab] = useState<MainTab>(savedViewStateRef.current.activeTab || "reports");
@@ -480,29 +498,46 @@ const Index = () => {
     }
   };
 
-  const handleLogout = async () => {
-    if (window.confirm("Apakah Anda yakin ingin keluar?")) {
-      try {
-        await signOut();
-        showSuccess("Berhasil keluar");
-      } catch (error) {
-        showError("Gagal keluar");
-      }
-    }
+  const handleLogout = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Keluar dari Sistem',
+      description: 'Anda akan keluar dari sistem. Pastikan semua data sudah tersimpan sebelum keluar.',
+      variant: 'logout',
+      confirmLabel: 'Ya, Keluar',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await signOut();
+          showSuccess("Berhasil keluar");
+        } catch (error) {
+          showError("Gagal keluar");
+        }
+      },
+    });
   };
 
-  const handleDeleteReport = async (e: React.MouseEvent, report: Report) => {
+  const handleDeleteReport = (e: React.MouseEvent, report: Report) => {
     e.stopPropagation();
     if (!canManageReports) return;
-    if (window.confirm(`Pindahkan laporan "${report.description}" ke tempat sampah?`)) {
-      try {
-        await reportService.deleteReport(report.id);
-        setReports(reports.filter(r => r.id !== report.id));
-        showSuccess("Laporan dipindahkan ke tempat sampah");
-      } catch (error) {
-        showError("Gagal menghapus");
-      }
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Pindahkan ke Tempat Sampah',
+      description: `Laporan "${report.description}" akan dipindahkan ke tempat sampah. Anda dapat memulihkannya nanti.`,
+      variant: 'warning',
+      confirmLabel: 'Pindahkan',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await reportService.deleteReport(report.id);
+          setReports(reports.filter(r => r.id !== report.id));
+          showSuccess("Laporan dipindahkan ke tempat sampah");
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          showError("Gagal menghapus");
+        }
+      },
+    });
   };
 
   const handleToggleWorkPlanVisibility = async (e: React.MouseEvent, plan: WorkPlan) => {
@@ -519,18 +554,27 @@ const Index = () => {
     }
   };
 
-  const handleDeleteWorkPlan = async (e: React.MouseEvent, plan: WorkPlan) => {
+  const handleDeleteWorkPlan = (e: React.MouseEvent, plan: WorkPlan) => {
     e.stopPropagation();
     if (!canManageWorkPlans) return;
-    if (window.confirm(`Pindahkan rencana kerja "${plan.items[0]?.description}" ke tempat sampah?`)) {
-      try {
-        await workPlanService.deleteWorkPlan(plan.id);
-        setWorkPlans(workPlans.filter(p => p.id !== plan.id));
-        showSuccess("Rencana kerja dipindahkan ke tempat sampah");
-      } catch (error) {
-        showError("Gagal menghapus data");
-      }
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Pindahkan ke Tempat Sampah',
+      description: `Rencana kerja "${plan.items[0]?.description}" akan dipindahkan ke tempat sampah. Anda dapat memulihkannya nanti.`,
+      variant: 'warning',
+      confirmLabel: 'Pindahkan',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await workPlanService.deleteWorkPlan(plan.id);
+          setWorkPlans(workPlans.filter(p => p.id !== plan.id));
+          showSuccess("Rencana kerja dipindahkan ke tempat sampah");
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          showError("Gagal menghapus data");
+        }
+      },
+    });
   };
 
   const resetFilters = () => {
@@ -1511,6 +1555,16 @@ const Index = () => {
         fuelReportType={activeTab === 'fuel_reports_pusat' ? 'admin_bbm_pusat' : activeTab === 'laporan_bbm' ? 'laporan_bbm' : 'admin_bbm'}
       />
       <ChangePasswordDialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        variant={confirmDialog.variant}
+        confirmLabel={confirmDialog.confirmLabel}
+        loading={confirmDialog.loading}
+        onConfirm={confirmDialog.onConfirm}
+      />
 
       <Dialog open={isDailyRecapDateOpen} onOpenChange={setIsDailyRecapDateOpen}>
         <DialogContent className="rounded-2xl p-5 sm:max-w-[460px] sm:p-6">

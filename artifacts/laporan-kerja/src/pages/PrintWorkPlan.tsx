@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Edit, Trash2, Image } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
 import { isGlobalWorkPlanAdmin, isPimpinanAccess } from '@/constants/access-control';
@@ -38,6 +39,7 @@ const PrintWorkPlan = () => {
   const [plan, setPlan] = useState<WorkPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const regionName = useRegionName(
     plan?.region_id ?? profile?.region_id,
     isGlobalWorkPlanAdmin(profile?.role, session?.user?.email) ? 'SEMUA WILAYAH' : undefined,
@@ -68,17 +70,9 @@ const PrintWorkPlan = () => {
     setPlan({ ...plan, pimpinan_note: note });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!id || isPimpinan) return;
-    if (window.confirm("Apakah Anda yakin ingin menghapus rencana kerja ini?")) {
-      try {
-        await workPlanService.deleteWorkPlan(id);
-        showSuccess("Rencana kerja berhasil dihapus");
-        navigate('/work-plans');
-      } catch (error) {
-        showError("Gagal menghapus data");
-      }
-    }
+    setDeleteConfirmOpen(true);
   };
 
   if (loading) return <div className="p-20 text-center">Menyiapkan dokumen...</div>;
@@ -101,6 +95,7 @@ const PrintWorkPlan = () => {
   const getSpanRows = (itemIndex: number, span: number) => isTreeLayout ? span : getItemSpanRows(displayItems, itemIndex, span);
 
   return (
+    <>
     <div className="min-h-screen bg-slate-50 p-0 md:p-8">
       <div className="recap-sticky-toolbar max-w-[1200px] mx-auto space-y-6 no-print mb-8 p-4 bg-white rounded-lg shadow-sm border">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -420,6 +415,25 @@ const PrintWorkPlan = () => {
         }
       `}} />
     </div>
+    <ConfirmDialog
+      open={deleteConfirmOpen}
+      onOpenChange={setDeleteConfirmOpen}
+      title="Hapus Rencana Kerja"
+      description="Rencana kerja ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+      variant="danger"
+      confirmLabel="Ya, Hapus"
+      onConfirm={async () => {
+        try {
+          await workPlanService.deleteWorkPlan(id!);
+          showSuccess("Rencana kerja dihapus");
+          setDeleteConfirmOpen(false);
+          navigate('/work-plans');
+        } catch (error) {
+          showError("Gagal menghapus rencana kerja");
+        }
+      }}
+    />
+    </>
   );
 };
 

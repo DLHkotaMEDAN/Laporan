@@ -24,6 +24,7 @@ import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import DriveUploadDialog from '@/components/DriveUploadDialog';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import SignatoryText from '@/components/SignatoryText';
 import { generateRecapDrivePdfBase64, getRegionalCoordinatorSignature } from '@/utils/recap-drive-pdf';
 import { getReportRecapTitle } from '@/utils/report-recap-title';
@@ -68,6 +69,7 @@ const DailyRecap = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDriveDialogOpen, setIsDriveDialogOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
@@ -174,16 +176,7 @@ const DailyRecap = () => {
     }
   };
 
-  const handleLogout = async () => {
-    if (window.confirm("Apakah Anda yakin ingin keluar?")) {
-      try {
-        await signOut();
-        navigate('/login');
-      } catch (error) {
-        showError("Gagal keluar");
-      }
-    }
-  };
+  const handleLogout = () => setLogoutConfirmOpen(true);
 
   const toggleColumn = (column: keyof typeof visibleColumns) => {
     setVisibleColumns(prev => ({ ...prev, [column]: !prev[column] }));
@@ -696,6 +689,23 @@ const DailyRecap = () => {
         onClose={() => setIsDriveDialogOpen(false)}
         onUpload={handleDriveUpload}
         defaultFileName={`Rekap_Harian_DLH_${selectedDate}`}
+      />
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Keluar dari Sistem"
+        description="Anda akan keluar dari sistem. Pastikan semua data sudah tersimpan."
+        variant="logout"
+        confirmLabel="Ya, Keluar"
+        onConfirm={async () => {
+          try {
+            await signOut();
+            navigate('/login');
+            showSuccess("Berhasil keluar");
+          } catch (error) {
+            showError("Gagal keluar");
+          }
+        }}
       />
 
       <div ref={printRef} className="print-area recap-print-area bg-white p-4 md:p-10 mx-auto shadow-lg border min-h-[297mm] w-full max-w-[420mm]">
