@@ -153,13 +153,12 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     || isSuperAdminAccess(profile?.role, session?.user?.email);
   const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
   const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
-  // Admin BBM is a cross-region role. Only the combined/regional roles are
-  // restricted to the region assigned to their profile.
-  const isRegionalFuelAdmin = !isGlobalFuelAdmin(profile?.role) && (
-    profile?.role === 'admin_rencana_kerja_bbm'
-    || profile?.role === 'admin_wilayah_bbm'
-    || profile?.role === 'admin_laporan_bbm'
-  ) && !isSuperAdmin;
+  // User yang wilayahnya di-lock = user yang PUNYA region_id di profil,
+  // kecuali super admin dan admin_bbm_pusat.
+  // admin_bbm tanpa region_id tetap bebas memilih wilayah.
+  const isRegionalFuelAdmin = !isSuperAdmin
+    && reportType !== 'admin_bbm_pusat'
+    && Boolean(profile?.region_id);
   const isLaporanBbm = reportType === 'laporan_bbm';
   const isAdminBbmPusat = reportType === 'admin_bbm_pusat';
   const routeBase = reportType === 'admin_bbm_pusat' ? '/fuel-reports-pusat' : isLaporanBbm ? '/laporan-bbm' : '/fuel-reports';
@@ -565,7 +564,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
               <FormField control={form.control} name="team" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tim / Operator</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isRegionalFuelAdmin ? availableTeamNames.length === 0 : !selectedRegion}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Tim" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {availableTeamNames.map(teamName => <SelectItem key={teamName} value={teamName}>{teamName}</SelectItem>)}
