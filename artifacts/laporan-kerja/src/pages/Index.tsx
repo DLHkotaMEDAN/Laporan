@@ -230,7 +230,9 @@ const getDatabaseRecordCount = async (
   let query = supabase.from(table).select('id', { count: 'exact', head: true });
   if (options.regionId) query = query.eq('region_id', options.regionId);
   if (options.reportType) query = query.eq('report_type', options.reportType);
-  if (options.softDeleted !== false) query = query.is('deleted_at', null);
+  // Default: filter hanya data aktif (non-deleted).
+  // Hanya tampilkan data terhapus jika softDeleted === true secara eksplisit.
+  if (options.softDeleted !== true) query = query.is('deleted_at', null);
 
   const { count, error } = await query;
   if (error) throw error;
@@ -666,13 +668,13 @@ const Index = () => {
       jobs.overtime = getDatabaseRecordCount('overtime_records', { regionId: accountRegionId, softDeleted: false });
     }
     if (isAdmin || isAdminBbm) {
-      jobs.fuel_reports = getDatabaseRecordCount('fuel_reports', { regionId: accountRegionId, reportType: 'admin_bbm' });
+      jobs.fuel_reports = getDatabaseRecordCount('fuel_reports', { regionId: accountRegionId, reportType: 'admin_bbm', softDeleted: false });
     }
     if (isAdmin || isAdminBbmPusat) {
-      jobs.fuel_reports_pusat = getDatabaseRecordCount('fuel_reports_pusat', { regionId: accountRegionId });
+      jobs.fuel_reports_pusat = getDatabaseRecordCount('fuel_reports_pusat', { regionId: accountRegionId, softDeleted: false });
     }
     if (isAdmin || isAdminLaporanBbm) {
-      jobs.laporan_bbm = getDatabaseRecordCount('laporan_bbm_reports', { regionId: accountRegionId });
+      jobs.laporan_bbm = getDatabaseRecordCount('laporan_bbm_reports', { regionId: accountRegionId, softDeleted: false });
     }
     if (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) {
       jobs.spj_oli = getDatabaseRecordCount('spj_oli_records', { regionId: accountRegionId, softDeleted: false });

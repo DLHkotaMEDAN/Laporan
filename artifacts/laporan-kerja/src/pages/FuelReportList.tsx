@@ -250,13 +250,19 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
         data = await getAllReports();
       }
 
+      // Guard setelah fetch pertama: jika request ini sudah tidak relevan
+      // (user mengganti filter lagi), hentikan sebelum melakukan fetch kedua.
+      if (id !== reqIdRef.current) return;
+
       // Ambil seluruh data aktif sebagai pembanding sehingga filter tidak
       // membuat salah satu pasangan duplikat hilang dari analisis.
       // Optimasi: jika tidak ada filter aktif, data sudah berisi semua laporan
       // sehingga tidak perlu request kedua ke Supabase.
-      if (id !== reqIdRef.current) return;
       const isFiltered = Boolean(date) || month !== "semua" || year !== "semua";
       const duplicateSource = isFiltered ? await getAllReports() : data;
+
+      // Guard setelah fetch kedua: pastikan request ini masih relevan
+      // sebelum menulis ke state.
       if (id !== reqIdRef.current) return;
       setReports(data);
       setAllActiveReports(duplicateSource);

@@ -225,7 +225,12 @@ const FuelReportRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
 
-  if (!canAccessFuelArea(profile?.role, session.user.email) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || isLaporanBbmAdmin(profile?.role)) {
+  if (
+    !canAccessFuelArea(profile?.role, session.user.email)
+    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
+    || profile?.role === USER_ROLES.ADMIN_SPJ_OLI
+    || isLaporanBbmAdmin(profile?.role)
+  ) {
     return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
   }
 

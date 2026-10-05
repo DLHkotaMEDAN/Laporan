@@ -38,11 +38,6 @@ export const ACCESS_OPTIONS: readonly { value: UserRole; label: string }[] = [
   { value: USER_ROLES.USER,                label: 'Pengguna Tim' },
 ];
 
-export const SYSTEM_EMAILS = {
-  superAdmin: (import.meta.env.VITE_SUPER_ADMIN_EMAILS ?? '').split(',').map((e: string) => e.trim()).filter(Boolean),
-  pimpinan:   (import.meta.env.VITE_PIMPINAN_EMAILS   ?? '').split(',').map((e: string) => e.trim()).filter(Boolean),
-};
-
 export type RecapPeriod = 'daily' | 'weekly' | 'monthly';
 
 // Role-role yang wajib punya region_id yang terikat di profil.
@@ -92,12 +87,10 @@ export const roleRequiresRegion = (role: string | null | undefined) =>
 export const roleRequiresTeam = (role: string | null | undefined) => role === USER_ROLES.USER;
 
 export const isSuperAdminAccess = (role: string | null | undefined, email?: string | null) =>
-  role === USER_ROLES.ADMIN ||
-  Boolean(email && (SYSTEM_EMAILS.superAdmin as readonly string[]).includes(email));
+  role === USER_ROLES.ADMIN;
 
 export const isPimpinanAccess = (role: string | null | undefined, email?: string | null) =>
-  role === USER_ROLES.PIMPINAN ||
-  Boolean(email && (SYSTEM_EMAILS.pimpinan as readonly string[]).includes(email));
+  role === USER_ROLES.PIMPINAN;
 
 export const isGlobalWorkPlanAdmin = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email) || role === USER_ROLES.ADMIN_RENCANA_KERJA;
@@ -161,8 +154,7 @@ export const canAccessFuelArea = (role: string | null | undefined, email?: strin
   || isPimpinanAccess(role, email)
   || isAdminBbmAccess(role)
   || isLaporanBbmAdmin(role)
-  || role === USER_ROLES.ADMIN_SPJ_BBM
-  || isSpjOliAdmin(role);
+  || role === USER_ROLES.ADMIN_SPJ_BBM;
 
 export const canPrintAdminRecap = (role: string | null | undefined, email?: string | null) =>
   isSuperAdminAccess(role, email);
