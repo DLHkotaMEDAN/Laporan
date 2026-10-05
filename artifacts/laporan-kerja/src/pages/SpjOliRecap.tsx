@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarDays, ChevronDown, Edit, FileText, FilterX, Image, Loader2, PenTool, Plus, Printer, Share2, Table } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

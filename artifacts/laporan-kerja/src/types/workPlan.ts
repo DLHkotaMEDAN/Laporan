@@ -1,5 +1,3 @@
-"use client";
-
 import { Location } from "./report";
 
 export interface WorkPlanTool {

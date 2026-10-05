@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { auditLogService } from '@/services/auditLogService';
@@ -104,6 +102,28 @@ const getEdgeFunctionErrorMessage = async (error: unknown) => {
   }
 
   return error instanceof Error ? error.message : 'Terjadi kesalahan saat menghubungi layanan akun.';
+};
+
+/**
+ * Jalankan tasks secara paralel dengan batas concurrency.
+ * Mencegah rate limiting saat fallback path memanggil Edge Function per-user.
+ */
+const runWithConcurrencyLimit = async <T,>(
+  tasks: (() => Promise<T>)[],
+  limit: number,
+): Promise<T[]> => {
+  const results: T[] = [];
+  let index = 0;
+
+  const worker = async () => {
+    while (index < tasks.length) {
+      const current = index++;
+      results[current] = await tasks[current]();
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
 };
 
 const UserManagement = () => {
@@ -236,15 +256,21 @@ const UserManagement = () => {
       let accounts: { id: string; email?: string }[] = accountData?.users || [];
 
       // Fallback for an already-deployed function that predates list-user-emails.
-      // It keeps the table usable and still obtains the email through the existing
-      // per-account admin endpoint until the function is redeployed.
+      // Gunakan concurrency limit (5) agar tidak memicu rate limiting Supabase
+      // saat ada banyak pengguna terdaftar.
       if (accountError || accountData?.error) {
-        const accountDetails = await Promise.all((data || []).map(async profile => {
-          const { data: detail } = await supabase.functions.invoke('create-user', {
-            body: { action: 'get-user-details', userId: profile.id },
-          });
-          return detail?.id && detail?.email ? { id: detail.id, email: detail.email } : null;
-        }));
+        const profiles_data = data || [];
+        const tasks = profiles_data.map(profile => async () => {
+          try {
+            const { data: detail } = await supabase.functions.invoke('create-user', {
+              body: { action: 'get-user-details', userId: profile.id },
+            });
+            return detail?.id && detail?.email ? { id: detail.id, email: detail.email } : null;
+          } catch {
+            return null;
+          }
+        });
+        const accountDetails = await runWithConcurrencyLimit(tasks, 5);
         accounts = accountDetails.filter((account): account is { id: string; email: string } => account !== null);
       }
 

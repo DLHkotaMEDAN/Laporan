@@ -158,6 +158,7 @@ export const reportService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'REPORT', entityId: data.id, details: { date: report.date, category: report.category } });
     return data;
   },
 
@@ -170,6 +171,7 @@ export const reportService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'REPORT', entityId: id, details: { fields: Object.keys(report) } });
     return data;
   },
 

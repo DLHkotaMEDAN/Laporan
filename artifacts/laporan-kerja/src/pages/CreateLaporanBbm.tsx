@@ -1,5 +1,3 @@
-"use client";
-
 import FuelReportForm from '@/components/FuelReportForm';
 
 const CreateLaporanBbm = () => (

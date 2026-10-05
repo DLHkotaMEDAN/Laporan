@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Pencil, Plus, RotateCcw, Save, Settings2, Star, Trash2 } from "lucide-react";

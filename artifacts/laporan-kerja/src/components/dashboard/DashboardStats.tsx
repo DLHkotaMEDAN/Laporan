@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, ClipboardList, CheckCircle2, Calendar, TrendingUp } from 'lucide-react';

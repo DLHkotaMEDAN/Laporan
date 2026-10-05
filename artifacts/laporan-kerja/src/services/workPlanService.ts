@@ -139,6 +139,7 @@ export const workPlanService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'WORK_PLAN', entityId: data.id, details: { date: plan.date, category: plan.category } });
     return data;
   },
 
@@ -151,6 +152,7 @@ export const workPlanService = {
       .single();
     
     if (error) throw error;
+    void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'WORK_PLAN', entityId: id, details: { fields: Object.keys(plan) } });
     return data;
   },
 

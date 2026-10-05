@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -240,12 +238,14 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
         const endDate = `${year}-12-31`;
         data = await getReportsByDateRange(startDate, endDate);
       } else if (month !== "semua") {
-        const y = new Date().getFullYear();
-        const m = parseInt(month);
-        const startDate = `${y}-${m.toString().padStart(2, '0')}-01`;
-        const lastDay = new Date(y, m, 0).getDate();
-        const endDate = `${y}-${m.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
-        data = await getReportsByDateRange(startDate, endDate);
+        // Tahun "Semua" + bulan tertentu: ambil semua data lalu filter client-side
+        // berdasarkan bulan agar data dari semua tahun ikut tampil.
+        const m = parseInt(month).toString().padStart(2, '0');
+        const allData = await getAllReports();
+        data = allData.filter(report => {
+          const reportMonth = report.date?.slice(5, 7); // "YYYY-MM-DD" → "MM"
+          return reportMonth === m;
+        });
       } else {
         data = await getAllReports();
       }

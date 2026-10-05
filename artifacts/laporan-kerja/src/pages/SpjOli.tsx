@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowUpDown, ChevronDown, ChevronUp, Edit, FilterX, Loader2, Plus, Search, Trash2 } from 'lucide-react';

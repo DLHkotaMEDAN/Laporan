@@ -22,30 +22,81 @@ export type Signatory = {
 };
 
 const CACHE_KEY = 'dlh-signatories';
+// Cache berlaku selama 5 menit — cukup untuk mencegah redundant fetch
+// dalam satu sesi, tapi tidak bocor data lama ke sesi berikutnya.
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const readCache = (): Signatory[] => {
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); }
-  catch { return []; }
+type CacheEntry = {
+  data: Signatory[];
+  expiresAt: number;
 };
 
-const writeCache = (signatories: Signatory[]) => localStorage.setItem(CACHE_KEY, JSON.stringify(signatories));
+const readCache = (): Signatory[] | null => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const entry: CacheEntry = JSON.parse(raw);
+    // Tolak cache yang sudah kadaluarsa
+    if (Date.now() > entry.expiresAt) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return entry.data;
+  } catch {
+    localStorage.removeItem(CACHE_KEY);
+    return null;
+  }
+};
+
+const writeCache = (signatories: Signatory[]) => {
+  try {
+    const entry: CacheEntry = {
+      data: signatories,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // localStorage penuh atau tidak tersedia — abaikan, tidak kritis
+  }
+};
+
+const clearCache = () => localStorage.removeItem(CACHE_KEY);
 
 export const signatoryService = {
   async getAll(): Promise<Signatory[]> {
+    // Coba dari cache yang masih valid dulu untuk mengurangi request ke DB.
+    const cached = readCache();
+    if (cached !== null) return cached;
+
     const { data, error } = await supabase
       .from('signatory_settings')
       .select('id, position, name, nip, all_regions, region_ids, categories, is_active')
       .order('position')
       .order('name');
-    if (!error && data) {
-      writeCache(data as Signatory[]);
-      return data as Signatory[];
+
+    if (error || !data) {
+      // Gagal ambil dari DB: kembalikan array kosong.
+      // Lebih aman daripada mengembalikan data lama yang mungkin stale atau
+      // sudah dimanipulasi. Komponen pemanggil bertanggung jawab menampilkan
+      // pesan error kepada user.
+      console.error('Gagal memuat data penandatangan:', error?.message);
+      return [];
     }
-    return readCache();
+
+    writeCache(data as Signatory[]);
+    return data as Signatory[];
   },
 
   async save(signatory: Omit<Signatory, 'id'> & { id?: string }): Promise<Signatory> {
-    const payload = { position: signatory.position, name: signatory.name.trim(), nip: signatory.nip.trim(), all_regions: signatory.all_regions, region_ids: signatory.all_regions ? [] : signatory.region_ids, categories: signatory.categories, is_active: signatory.is_active };
+    const payload = {
+      position: signatory.position,
+      name: signatory.name.trim(),
+      nip: signatory.nip.trim(),
+      all_regions: signatory.all_regions,
+      region_ids: signatory.all_regions ? [] : signatory.region_ids,
+      categories: signatory.categories,
+      is_active: signatory.is_active,
+    };
     const query = signatory.id
       ? supabase.from('signatory_settings').update(payload).eq('id', signatory.id).select('id, position, name, nip, all_regions, region_ids, categories, is_active').single()
       : supabase.from('signatory_settings').insert(payload).select('id, position, name, nip, all_regions, region_ids, categories, is_active').single();
@@ -54,8 +105,8 @@ export const signatoryService = {
       throw new Error(error?.message || 'Data penandatangan gagal disimpan.');
     }
     const saved = data as Signatory;
-    const cached = readCache().filter((item) => item.id !== saved.id);
-    writeCache([...cached, saved]);
+    // Invalidasi cache setelah mutasi agar getAll() berikutnya ambil data segar dari DB.
+    clearCache();
     window.dispatchEvent(new Event('signatories-updated'));
     void auditLogService.logCurrentUser({
       action: signatory.id ? 'UPDATE' : 'CREATE',
@@ -69,7 +120,8 @@ export const signatoryService = {
   async remove(id: string): Promise<void> {
     const { error } = await supabase.from('signatory_settings').delete().eq('id', id);
     if (error) throw new Error(error.message);
-    writeCache(readCache().filter((item) => item.id !== id));
+    // Invalidasi cache setelah mutasi.
+    clearCache();
     window.dispatchEvent(new Event('signatories-updated'));
     void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'SIGNATORY_SETTINGS', entityId: id, details: { mode: 'hard_delete' } });
   },

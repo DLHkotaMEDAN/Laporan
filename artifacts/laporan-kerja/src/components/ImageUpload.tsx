@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useCallback, useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';

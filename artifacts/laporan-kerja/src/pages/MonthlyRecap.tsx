@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Report, Task, Equipment, HeavyEquipment } from '@/types/report';

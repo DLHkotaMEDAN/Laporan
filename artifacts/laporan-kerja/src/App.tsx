@@ -210,6 +210,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   
   const isAllowed = canAccessFuelArea(profile?.role, session.user.email)
     && !isLaporanBbmAdmin(profile?.role);
@@ -242,6 +243,7 @@ const LaporanBbmRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
   const isAllowed = isSuperAdminAccess(profile?.role, session.user.email)
     || isLaporanBbmAdmin(profile?.role);
@@ -255,6 +257,7 @@ const SpjOliRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
   const isAllowed = profile?.role === USER_ROLES.ADMIN
     || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
@@ -270,6 +273,7 @@ const NotaDinasRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
   const isAllowed = isSuperAdminAccess(profile?.role, session.user.email) || isNotaDinasAdmin(profile?.role);
   return isAllowed ? <>{children}</> : <Navigate to={getRoleLandingPath(profile?.role)} replace />;
@@ -306,6 +310,7 @@ const OvertimeAccessRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
   const isAllowed = isSuperAdminAccess(profile?.role, session?.user?.email)
     || profile?.role === USER_ROLES.ADMIN_REKAP_LEMBUR;
@@ -317,6 +322,7 @@ const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
   const isAllowed = canPrintAdminRecap(profile?.role, session.user.email);
   if (!isAllowed) return <Navigate to="/" replace />;

@@ -1,5 +1,3 @@
-"use client";
-
 export type FuelType = "Pertamax" | "Dexlite" | "Oli";
 export type FuelReportType = "admin_bbm" | "admin_bbm_pusat" | "laporan_bbm";
 

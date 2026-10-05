@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -247,6 +245,9 @@ const Index = () => {
   const hasRestoredScrollRef = useRef(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
+  // Ref untuk membaca nilai terbaru di dalam async functions tanpa stale closure.
+  const reportsRef = useRef<Report[]>([]);
+  const workPlansRef = useRef<WorkPlan[]>([]);
   const [recordCounts, setRecordCounts] = useState<RecordCounts>(emptyRecordCounts);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -333,6 +334,10 @@ const Index = () => {
       : isUserRestricted
         ? (profile?.category || "Petugas Lapangan")
         : "Sistem Laporan";
+
+  // Sync ref agar loadRecordCounts selalu membaca nilai terbaru.
+  useEffect(() => { reportsRef.current = reports; }, [reports]);
+  useEffect(() => { workPlansRef.current = workPlans; }, [workPlans]);
 
   useEffect(() => {
     if (authLoading || !isLoggedIn) return;
@@ -654,14 +659,14 @@ const Index = () => {
     const canShowWorkPlans = !isNotaDinasOnly && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly;
 
     if (canShowReports) {
-      // Gunakan length dari state jika sudah ada, fallback ke count DB
-      jobs.reports = reports.length > 0
-        ? Promise.resolve(reports.length)
+      // Gunakan ref (bukan closure) agar selalu membaca nilai terbaru dari state.
+      jobs.reports = reportsRef.current.length > 0
+        ? Promise.resolve(reportsRef.current.length)
         : getDatabaseRecordCount('reports', { regionId: accountRegionId ?? undefined, softDeleted: false });
     }
     if (canShowWorkPlans) {
-      jobs.workplans = workPlans.length > 0
-        ? Promise.resolve(workPlans.length)
+      jobs.workplans = workPlansRef.current.length > 0
+        ? Promise.resolve(workPlansRef.current.length)
         : getDatabaseRecordCount('work_plans', { regionId: accountRegionId ?? undefined, softDeleted: false });
     }
     if (canViewOvertime) {
