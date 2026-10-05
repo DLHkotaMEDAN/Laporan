@@ -38,6 +38,7 @@ import {
   isSuperAdminAccess,
 } from '@/constants/access-control';
 import ResetPasswordDialog from '@/components/ResetPasswordDialog';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const toggleWorkPlanCategory = (selected: string[], category: string) => (
   selected.includes(category)
@@ -115,6 +116,13 @@ const UserManagement = () => {
     userId: '',
     username: '',
   });
+  const [userActionConfirm, setUserActionConfirm] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    variant: 'danger' | 'warning';
+    onConfirm: () => Promise<void>;
+  }>({ open: false, title: '', description: '', variant: 'warning', onConfirm: async () => {} });
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -274,57 +282,64 @@ const UserManagement = () => {
     }
   };
 
-  const handleDeleteProfile = async (id: string, username: string) => {
+  const handleDeleteProfile = (id: string, username: string) => {
     if (!canMutateUsers) { showError('Akun nonaktif tidak dapat menghapus pengguna.'); return; }
-    if (!confirm(`Hapus profil "${username}"? Pengguna ini tidak akan bisa mengakses fitur khusus role lagi.`)) return;
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'PROFILE', entityId: id, details: { username } });
-      
-      setProfiles(profiles.filter(p => p.id !== id));
-      showSuccess("Profil dihapus");
-    } catch (error: any) {
-      showError("Gagal menghapus profil: " + error.message);
-    }
+    setUserActionConfirm({
+      open: true,
+      title: 'Hapus Pengguna',
+      description: `Profil "${username}" akan dihapus. Pengguna ini tidak akan bisa mengakses fitur khusus role lagi.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.from('profiles').delete().eq('id', id);
+          if (error) throw error;
+          void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'PROFILE', entityId: id, details: { username } });
+          setProfiles(profiles.filter(p => p.id !== id));
+          showSuccess("Profil dihapus");
+          setUserActionConfirm(prev => ({ ...prev, open: false }));
+        } catch (error: any) {
+          showError("Gagal menghapus profil: " + error.message);
+        }
+      },
+    });
   };
 
-  const handleToggleActive = async (profile: Profile) => {
+  const handleToggleActive = (profile: Profile) => {
     if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah status pengguna.'); return; }
     const nextIsActive = profile.is_active === false;
     const actionLabel = nextIsActive ? 'mengaktifkan' : 'menonaktifkan';
-    if (!confirm(`Yakin ingin ${actionLabel} akun "${profile.username || 'Pengguna'}"?`)) return;
-
-    setUpdatingId(profile.id);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: { action: 'set-user-active', userId: profile.id, isActive: nextIsActive },
-      });
-      if (error || data?.error) {
-        // Fallback untuk Edge Function yang belum dideploy ulang.
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ is_active: nextIsActive, updated_at: new Date().toISOString() })
-          .eq('id', profile.id);
-        if (profileError) throw new Error(profileError.message || data?.error || error?.message);
-      }
-
-      setProfiles(currentProfiles => currentProfiles.map(item => item.id === profile.id
-        ? { ...item, is_active: nextIsActive, updated_at: new Date().toISOString() }
-        : item));
-      showSuccess(nextIsActive ? 'Akun berhasil diaktifkan.' : 'Akun berhasil dinonaktifkan.');
-      void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: profile.id, details: { username: profile.username, field: 'is_active', value: nextIsActive } });
-    } catch (error: any) {
-      const message = error?.message || 'Kolom status akun belum tersedia di database.';
-      showError('Gagal mengubah status akun: ' + message);
-    } finally {
-      setUpdatingId(null);
-    }
+    setUserActionConfirm({
+      open: true,
+      title: nextIsActive ? 'Aktifkan Akun' : 'Nonaktifkan Akun',
+      description: `Yakin ingin ${actionLabel} akun "${profile.username || 'Pengguna'}"?`,
+      variant: 'warning',
+      onConfirm: async () => {
+        setUpdatingId(profile.id);
+        try {
+          const { data, error } = await supabase.functions.invoke('create-user', {
+            body: { action: 'set-user-active', userId: profile.id, isActive: nextIsActive },
+          });
+          if (error || data?.error) {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ is_active: nextIsActive, updated_at: new Date().toISOString() })
+              .eq('id', profile.id);
+            if (profileError) throw new Error(profileError.message || data?.error || error?.message);
+          }
+          setProfiles(currentProfiles => currentProfiles.map(item => item.id === profile.id
+            ? { ...item, is_active: nextIsActive, updated_at: new Date().toISOString() }
+            : item));
+          showSuccess(nextIsActive ? 'Akun berhasil diaktifkan.' : 'Akun berhasil dinonaktifkan.');
+          void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: profile.id, details: { username: profile.username, field: 'is_active', value: nextIsActive } });
+          setUserActionConfirm(prev => ({ ...prev, open: false }));
+        } catch (error: any) {
+          const message = error?.message || 'Kolom status akun belum tersedia di database.';
+          showError('Gagal mengubah status akun: ' + message);
+        } finally {
+          setUpdatingId(null);
+        }
+      },
+    });
   };
 
   const handleResetPassword = (profile: Profile) => {
@@ -805,6 +820,15 @@ const UserManagement = () => {
         onOpenChange={(open) => setResetPasswordTarget(prev => ({ ...prev, open }))}
         userId={resetPasswordTarget.userId}
         username={resetPasswordTarget.username}
+      />
+      <ConfirmDialog
+        open={userActionConfirm.open}
+        onOpenChange={(open) => setUserActionConfirm(prev => ({ ...prev, open }))}
+        title={userActionConfirm.title}
+        description={userActionConfirm.description}
+        variant={userActionConfirm.variant}
+        confirmLabel="Ya, Lanjutkan"
+        onConfirm={userActionConfirm.onConfirm}
       />
     </div>
   );

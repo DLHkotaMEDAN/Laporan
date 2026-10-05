@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { isSpjOliAdmin, isSuperAdminAccess, isPimpinanAccess } from '@/constants/access-control';
 import TotalRecordLabel from '@/components/TotalRecordLabel';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: '', team_id: '', spj_number: '', vehicle_name: '', receiver_name: '', operator_name: '', oil_name: '', quantity: 0, unit: 'Liter', location: '', remarks: '' };
 const canAccess = (role?: string, email?: string | null) =>
@@ -95,6 +96,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   const [teamId, setTeamId] = useState('semua');
   const [date, setDate] = useState('');
   const [sort, setSort] = useState<{ key: SpjOliSortKey; direction: SortDirection } | null>(null);
+  const [deleteSpjConfirm, setDeleteSpjConfirm] = useState<{ open: boolean; id: string }>({ open: false, id: '' });
   const [form, setForm] = useState(emptyRecord);
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; region_id: string; name: string }>();
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
@@ -254,12 +256,13 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
     if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
     try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); await clearDraft(); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
   };
-  const remove = async (recordId: string) => { if (!confirm('Hapus data SPJ Oli ini?')) return; try { await spjOliService.remove(recordId); setRecords(current => current.filter(record => record.id !== recordId)); showSuccess('SPJ Oli dihapus'); } catch { showError('Gagal menghapus SPJ Oli'); } };
+  const remove = (recordId: string) => setDeleteSpjConfirm({ open: true, id: recordId });
 
   if (!canAccess(profile?.role, session?.user?.email)) return null;
   if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} spjNumberRecords={records} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} lastSavedAt={lastSavedAt} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
 
   return (
+    <>
     <div className="space-y-5">
       <div className="flex flex-col gap-3">
         <div>
@@ -345,6 +348,25 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
         <div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500"><b>{sortedRecords.length}</b> data SPJ Oli ditampilkan.</div>
       </section>
     </div>
+      <ConfirmDialog
+        open={deleteSpjConfirm.open}
+        onOpenChange={(open) => setDeleteSpjConfirm(prev => ({ ...prev, open }))}
+        title="Hapus SPJ Oli"
+        description="Data SPJ Oli ini akan dihapus permanen. Tindakan ini tidak dapat dibatalkan."
+        variant="danger"
+        confirmLabel="Ya, Hapus"
+        onConfirm={async () => {
+          try {
+            await spjOliService.remove(deleteSpjConfirm.id);
+            setRecords(current => current.filter(record => record.id !== deleteSpjConfirm.id));
+            showSuccess('SPJ Oli dihapus');
+            setDeleteSpjConfirm({ open: false, id: '' });
+          } catch {
+            showError('Gagal menghapus SPJ Oli');
+          }
+        }}
+      />
+    </>
   );
 
 }

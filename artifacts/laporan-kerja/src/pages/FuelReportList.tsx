@@ -15,7 +15,7 @@ import { fuelService } from '@/services/fuelService';
 import { fuelPusatService } from '@/services/fuelPusatService';
 import { laporanBbmService } from '@/services/laporanBbmService';
 import { useAuth } from '@/context/AuthContext';
-import { isGlobalFuelAdmin, isLaporanBbmAdmin, isSuperAdminAccess, isPimpinanAccess, isAdminBbmAccess, isAdminBbmPusatAccess } from '@/constants/access-control';
+import { isGlobalFuelAdmin, isLaporanBbmAdmin, isSuperAdminAccess, isPimpinanAccess, isAdminBbmAccess, isAdminBbmPusatAccess, isAdminRencanaKerjaAccess } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { showSuccess, showError } from '@/utils/toast';
 import { Input } from "@/components/ui/input";
@@ -165,6 +165,8 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
   const isAccountActive = profile?.is_active !== false;
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
+  // Role combined yang punya akses Rencana Kerja + BBM — perlu tombol kembali ke dashboard
+  const isCombinedRkBbm = !isSuperAdmin && isAdminBbm && isAdminRencanaKerjaAccess(profile?.role);
   const canInputFuelReport = isAccountActive && (isLaporanBbm
     ? isSuperAdmin || isAdminLaporanBbm
     : isAdminBbmPusat
@@ -524,9 +526,22 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
                   <p className="text-xs font-semibold text-slate-500 md:text-sm">Dinas Lingkungan Hidup Kota Medan</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 self-end rounded-full text-red-500 hover:bg-red-50 md:self-auto">
-                <LogOut size={20} />
-              </Button>
+              <div className="flex items-center gap-2 self-end md:self-auto">
+                {isCombinedRkBbm && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => navigate('/?tab=workplans')}
+                    className="h-9 w-9 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    aria-label="Kembali ke Dashboard"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50">
+                  <LogOut size={20} />
+                </Button>
+              </div>
             </div>
           </div>
 

@@ -14,7 +14,7 @@ import { laporanBbmService } from '@/services/laporanBbmService';
 import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
-import { isPimpinanAccess, isAdminHarianAccess, isSuperAdminAccess } from '@/constants/access-control';
+import { isPimpinanAccess, isSuperAdminAccess } from '@/constants/access-control';
 import { Report } from '@/types/report';
 import { WorkPlan } from '@/types/workPlan';
 import { FuelReport, FuelReportType } from '@/types/fuelReport';
@@ -37,13 +37,12 @@ const TrashDialog = ({ isOpen, onClose, onRefresh, fuelReportType = 'admin_bbm' 
 
   const role = profile?.role;
   const isPimpinan = isPimpinanAccess(role, session?.user?.email);
-  const isAdminHarian = isAdminHarianAccess(role, session?.user?.email);
   const isAdmin = isSuperAdminAccess(role, session?.user?.email);
   const isFuelAdmin = role === 'admin_bbm' || role === 'admin_rencana_kerja_bbm' || role === 'admin_wilayah_bbm';
   const isPusatFuelAdmin = role === 'admin_bbm_pusat';
   const isLaporanFuelAdmin = role === 'admin_laporan_bbm';
   const canViewFuelTrash = isAdmin || isFuelAdmin || isPusatFuelAdmin || isLaporanFuelAdmin || isPimpinan;
-  const isUserRestricted = role === 'user' && !isPimpinan && !isAdminHarian && !isAdmin;
+  const isUserRestricted = role === 'user' && !isPimpinan && !isAdmin;
   // Admin BBM adalah administrator global; hanya role gabungan yang dibatasi
   // oleh wilayah akun saat membaca tempat sampah BBM.
   const fuelRegionId = (isFuelAdmin || isPusatFuelAdmin || isLaporanFuelAdmin) && !isAdmin && role !== 'admin_bbm' && role !== 'admin_bbm_pusat' ? profile?.region_id || '__unassigned__' : null;

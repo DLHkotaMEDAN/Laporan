@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, Lock, User, Eye, EyeOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { showError } from '@/utils/toast';
-import { getRoleLandingPath } from '@/constants/access-control';
+import { getRoleLandingPath, getLoginDestination } from '@/constants/access-control';
 
 // Email valid: harus ada karakter sebelum @, domain setelah @, dan TLD minimal 2 karakter
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -38,7 +38,7 @@ const Login = () => {
 
   useEffect(() => {
     if (session && profile && !authLoading) {
-      navigate(getRoleLandingPath(profile.role), { replace: true });
+      navigate(getLoginDestination(profile.role), { replace: true });
     }
   }, [session, profile, authLoading, navigate]);
 

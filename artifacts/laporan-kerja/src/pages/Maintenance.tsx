@@ -36,6 +36,7 @@ import { id as localeId } from 'date-fns/locale';
 import ImageUpload from '@/components/ImageUpload';
 import SignatoryManagement from '@/components/SignatoryManagement';
 import NotaDinasTemplateManagement from '@/components/NotaDinasTemplateManagement';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   getStoredLandingPhotoUrl,
   removeLandingPhoto,
@@ -77,6 +78,12 @@ const Maintenance = () => {
   const [logUntil, setLogUntil] = useState('');
   const [deletedReports, setDeletedReports] = useState<any[]>([]);
   const [deletedWorkPlans, setDeletedWorkPlans] = useState<any[]>([]);
+  const [maintenanceConfirm, setMaintenanceConfirm] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => Promise<void>;
+  }>({ open: false, title: '', description: '', onConfirm: async () => {} });
   
   const [stats, setStats] = useState({ 
     totalStorageCount: 0, 
@@ -254,20 +261,27 @@ const Maintenance = () => {
     }
   };
 
-  const handleClearAllLogs = async () => {
-    if (!confirm("Hapus seluruh riwayat aktivitas? Tindakan ini tidak dapat dibatalkan.")) return;
-    setLoading(true);
-    try {
-      await auditLogService.deleteAllLogs();
-      showSuccess("Seluruh riwayat aktivitas telah dibersihkan");
-      setLogs([]);
-    } catch (e: any) {
-      showError("Gagal membersihkan database: " + (e.message || "Izin ditolak"));
-      const logsData = await auditLogService.getLogs();
-      setLogs(logsData);
-    } finally {
-      setLoading(false);
-    }
+  const handleClearAllLogs = () => {
+    setMaintenanceConfirm({
+      open: true,
+      title: 'Hapus Seluruh Riwayat Aktivitas',
+      description: 'Seluruh riwayat aktivitas akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await auditLogService.deleteAllLogs();
+          showSuccess("Seluruh riwayat aktivitas telah dibersihkan");
+          setLogs([]);
+          setMaintenanceConfirm(prev => ({ ...prev, open: false }));
+        } catch (e: any) {
+          showError("Gagal membersihkan database: " + (e.message || "Izin ditolak"));
+          const logsData = await auditLogService.getLogs();
+          setLogs(logsData);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const fetchData = useCallback(async () => {
@@ -310,16 +324,23 @@ const Maintenance = () => {
     }
   };
 
-  const handlePermanentDelete = async (type: 'REPORT' | 'WORK_PLAN', id: string) => {
-    if (!confirm("Hapus permanen? Data tidak bisa dikembalikan lagi.")) return;
-    try {
-      if (type === 'REPORT') await reportService.hardDeleteReport(id);
-      else await workPlanService.hardDeleteWorkPlan(id);
-      showSuccess("Data dihapus permanen");
-      fetchData();
-    } catch (e) {
-      showError("Gagal menghapus permanen");
-    }
+  const handlePermanentDelete = (type: 'REPORT' | 'WORK_PLAN', id: string) => {
+    setMaintenanceConfirm({
+      open: true,
+      title: 'Hapus Permanen',
+      description: 'Data akan dihapus secara permanen dan tidak bisa dikembalikan lagi.',
+      onConfirm: async () => {
+        try {
+          if (type === 'REPORT') await reportService.hardDeleteReport(id);
+          else await workPlanService.hardDeleteWorkPlan(id);
+          showSuccess("Data dihapus permanen");
+          setMaintenanceConfirm(prev => ({ ...prev, open: false }));
+          fetchData();
+        } catch (e) {
+          showError("Gagal menghapus permanen");
+        }
+      },
+    });
   };
 
   const handlePreview = (fileName: string) => {
@@ -328,22 +349,29 @@ const Maintenance = () => {
     setPreviewName(fileName);
   };
 
-  const cleanStorage = async () => {
+  const cleanStorage = () => {
     if (orphanedFiles.length === 0) return;
-    if (!confirm(`Hapus ${orphanedFiles.length} file sampah? Tindakan ini tidak dapat dibatalkan.`)) return;
-    setLoading(true);
-    try {
-      const fileNamesToDelete = orphanedFiles.map(f => f.name);
-      const { error } = await supabase.storage.from('report-photos').remove(fileNamesToDelete);
-      if (error) throw error;
-      void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'STORAGE', details: { bucket: 'report-photos', file_count: fileNamesToDelete.length, files: fileNamesToDelete.slice(0, 20) } });
-      showSuccess(`${fileNamesToDelete.length} file berhasil dibersihkan.`);
-      await analyzeSystem();
-    } catch (error: any) {
-      showError("Gagal membersihkan: " + error.message);
-    } finally {
-      setLoading(false);
-    }
+    setMaintenanceConfirm({
+      open: true,
+      title: 'Bersihkan File Sampah',
+      description: `Sebanyak ${orphanedFiles.length} file sampah akan dihapus permanen dari storage. Tindakan ini tidak dapat dibatalkan.`,
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const fileNamesToDelete = orphanedFiles.map(f => f.name);
+          const { error } = await supabase.storage.from('report-photos').remove(fileNamesToDelete);
+          if (error) throw error;
+          void auditLogService.logCurrentUser({ action: 'DELETE', entityType: 'STORAGE', details: { bucket: 'report-photos', file_count: fileNamesToDelete.length, files: fileNamesToDelete.slice(0, 20) } });
+          showSuccess(`${fileNamesToDelete.length} file berhasil dibersihkan.`);
+          setMaintenanceConfirm(prev => ({ ...prev, open: false }));
+          await analyzeSystem();
+        } catch (error: any) {
+          showError("Gagal membersihkan: " + error.message);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   if (!isAdmin) return null;
@@ -744,6 +772,15 @@ const Maintenance = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={maintenanceConfirm.open}
+        onOpenChange={(open) => setMaintenanceConfirm(prev => ({ ...prev, open }))}
+        title={maintenanceConfirm.title}
+        description={maintenanceConfirm.description}
+        variant="danger"
+        confirmLabel="Ya, Hapus Permanen"
+        onConfirm={maintenanceConfirm.onConfirm}
+      />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { signatoryService, type Signatory, type SignatoryPosition } from '@/services/signatoryService';
 import { supabase } from '@/lib/supabase';
 import { showError, showSuccess } from '@/utils/toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const labels: Record<SignatoryPosition, string> = {
   kabid_tata_lingkungan: 'Kabid Tata Lingkungan',
@@ -27,6 +28,7 @@ export default function SignatoryManagement() {
   const [draft, setDraft] = useState<Draft>(emptyDraft());
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteSignatoryConfirm, setDeleteSignatoryConfirm] = useState<{ open: boolean; id: string }>({ open: false, id: '' });
 
   const isCoordinator = coordinatorPositions.includes(draft.position);
   const isEditing = Boolean(draft.id);
@@ -67,11 +69,7 @@ export default function SignatoryManagement() {
       showError(error instanceof Error ? error.message : 'Gagal menyimpan penandatangan.');
     } finally { setSaving(false); }
   };
-  const remove = async (id: string) => {
-    if (!confirm('Hapus data penandatangan ini?')) return;
-    try { await signatoryService.remove(id); setDraft(emptyDraft()); await load(); showSuccess('Penandatangan dihapus.'); }
-    catch (error) { showError(error instanceof Error ? error.message : 'Gagal menghapus data.'); }
-  };
+  const remove = (id: string) => setDeleteSignatoryConfirm({ open: true, id });
   const regionLabel = (item: Signatory) => item.all_regions || !coordinatorPositions.includes(item.position)
     ? 'Semua wilayah'
     : regions.filter((region) => item.region_ids.includes(region.id)).map((region) => region.name).join(', ');
@@ -79,7 +77,7 @@ export default function SignatoryManagement() {
     ? 'Pilih cakupan wilayah dan kategori. Data khusus wilayah akan diprioritaskan pada cetakan.'
     : 'Jabatan ini berlaku untuk seluruh wilayah dan hanya dapat memiliki satu penandatangan aktif.', [isCoordinator]);
 
-  return <div className="space-y-5">
+  return <><div className="space-y-5">
     <div className="rounded-lg border border-violet-100 bg-violet-50 p-4 text-sm text-violet-950"><p className="font-semibold">Input Penandatangan Cetakan</p><p className="mt-1 text-violet-800">{helper}</p></div>
     <div className="rounded-lg border bg-slate-50 p-4">
       <div className="grid gap-4 md:grid-cols-3">
@@ -94,5 +92,25 @@ export default function SignatoryManagement() {
       <div className="mt-5 flex justify-end gap-2">{isEditing && <Button variant="outline" onClick={() => setDraft(emptyDraft)}><X className="mr-2 h-4 w-4" />Batal</Button>}<Button onClick={() => void save()} disabled={saving}>{isEditing ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}{isEditing ? 'Simpan Perubahan' : 'Tambah Penandatangan'}</Button></div>
     </div>
     <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-slate-100 text-left text-xs uppercase text-slate-500"><tr><th className="p-3">Jabatan</th><th className="p-3">Nama / NIP</th><th className="p-3">Cakupan</th><th className="p-3 text-right">Aksi</th></tr></thead><tbody>{items.map((item) => <tr key={item.id} className="border-t"><td className="p-3 font-medium">{labels[item.position]}</td><td className="p-3"><p>{item.name}</p><p className="text-xs text-slate-500">{item.nip || 'NIP belum diisi'}</p></td><td className="p-3 text-xs">{regionLabel(item)}{coordinatorPositions.includes(item.position) && <p className="mt-1 text-slate-500">{item.categories.length ? item.categories.join(', ') : 'Semua kategori'}</p>}</td><td className="p-3 text-right"><Button variant="ghost" size="sm" onClick={() => setDraft({ ...item, region_ids: item.region_ids || [], categories: item.categories || [] })}><Pencil className="mr-1 h-4 w-4" />Ubah</Button><Button variant="ghost" size="icon" aria-label="Hapus penandatangan" className="text-red-600" onClick={() => void remove(item.id)}><Trash2 className="h-4 w-4" /></Button></td></tr>)}</tbody></table>{!loading && items.length === 0 && <p className="p-6 text-center text-sm text-slate-500">Belum ada data penandatangan.</p>}{loading && <p className="p-6 text-center text-sm text-slate-500">Memuat data penandatangan…</p>}</div>
-  </div>;
+  </div>
+  <ConfirmDialog
+    open={deleteSignatoryConfirm.open}
+    onOpenChange={(open) => setDeleteSignatoryConfirm(prev => ({ ...prev, open }))}
+    title="Hapus Penandatangan"
+    description="Data penandatangan ini akan dihapus permanen. Tindakan ini tidak dapat dibatalkan."
+    variant="danger"
+    confirmLabel="Ya, Hapus"
+    onConfirm={async () => {
+      try {
+        await signatoryService.remove(deleteSignatoryConfirm.id);
+        setDraft(emptyDraft());
+        await load();
+        showSuccess('Penandatangan dihapus.');
+        setDeleteSignatoryConfirm({ open: false, id: '' });
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Gagal menghapus data.');
+      }
+    }}
+  />
+  </>;
 }

@@ -37,7 +37,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchingProfileRef = useRef<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
+    // Jika invokasi lain untuk userId yang sama sudah berjalan, abaikan.
+    // Invokasi yang sedang berjalan bertanggung jawab me-reset loading.
     if (fetchingProfileRef.current === userId) return;
+
+    // Invokasi ini mengambil alih kepemilikan. Tandai dengan ref sebelum
+    // async pertama agar tidak ada invokasi lain yang memulai dengan userId ini.
     fetchingProfileRef.current = userId;
     setLoading(true);
 
@@ -51,6 +56,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .eq('id', userId)
           .single();
 
+        // Setelah setiap await: periksa apakah invokasi ini masih relevan.
+        // Bisa tidak relevan jika signOut meng-clear ref sementara fetch berjalan.
+        if (fetchingProfileRef.current !== userId) return;
+
         if (error?.code === 'PGRST116') {
           const { data: newData, error: createError } = await supabase
             .from('profiles')
@@ -58,31 +67,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .select()
             .single();
 
+          if (fetchingProfileRef.current !== userId) return;
           if (createError) throw createError;
           setProfile(newData);
-          fetchingProfileRef.current = null;
-          setLoading(false);
-          return;
+          break; // keluar loop, lanjut ke cleanup di bawah
         }
 
         if (error) throw error;
 
         setProfile(data);
-        fetchingProfileRef.current = null;
-        setLoading(false);
-        return;
+        break; // keluar loop, lanjut ke cleanup di bawah
       } catch (error) {
         if (attempt === 1) {
           console.error("Error fetching profile:", error);
-          break;
+          if (fetchingProfileRef.current === userId) {
+            setProfile(null);
+          }
+        } else {
+          // Tunggu sebentar sebelum retry — hanya jika masih relevan
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
+          if (fetchingProfileRef.current !== userId) return;
         }
-        await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
       }
     }
 
-    setProfile(null);
-    fetchingProfileRef.current = null;
-    setLoading(false);
+    // Cleanup: hanya reset jika invokasi ini masih yang aktif.
+    // Jika tidak (misal signOut sudah clear ref lebih dulu), biarkan saja.
+    if (fetchingProfileRef.current === userId) {
+      fetchingProfileRef.current = null;
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

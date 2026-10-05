@@ -32,7 +32,7 @@ import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { weeklyPdfFileName } from '@/utils/pdf-file-name';
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { isPimpinanAccess, isAdminHarianAccess } from '@/constants/access-control';
+import { isPimpinanAccess } from '@/constants/access-control';
 import {
   Tooltip,
   TooltipContent,
@@ -100,8 +100,7 @@ const WeeklyRecap = () => {
   const isLoggedIn = !!session;
   
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
-  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
-  const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan;
 
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
@@ -115,13 +114,11 @@ const WeeklyRecap = () => {
 
   useEffect(() => {
     if (profile && !hasSetDefaults) {
-      if (isAdminHarian) {
-        setVisibleColumns(prev => ({ ...prev, photos: false }));
-        setSignatureMode("without-signature");
-      }
+      setVisibleColumns(prev => ({ ...prev, photos: false }));
+      setSignatureMode("without-signature");
       setHasSetDefaults(true);
     }
-  }, [profile, isAdminHarian, hasSetDefaults]);
+  }, [profile, hasSetDefaults]);
 
   useEffect(() => {
     const dateParam = searchParams.get('date');
@@ -145,7 +142,7 @@ const WeeklyRecap = () => {
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [authLoading, selectedDate, selectedCategories, isLoggedIn, profile?.role, profile?.category, isPimpinan, isAdminHarian, isUserRestricted]);
+  }, [authLoading, selectedDate, selectedCategories, isLoggedIn, profile?.role, profile?.category, isPimpinan, isUserRestricted]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;

@@ -52,7 +52,6 @@ import {
   canPrintAdminRecap,
   getRoleLandingPath,
   isSuperAdminAccess,
-  isAdminHarianAccess,
   isAdminBbmAccess,
   isLaporanBbmAdmin,
   isAdminRencanaKerjaAccess,
@@ -160,16 +159,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
 
-  // admin_wilayah_bbm boleh membuat/edit laporan harian (combined workspace),
-  // sehingga dikecualikan dari redirect meski masuk isAdminBbmAccess &
-  // isAdminRencanaKerjaAccess.
-  const isWilayahBbm = profile?.role === USER_ROLES.ADMIN_WILAYAH_BBM;
+  // Jika session sudah ada tapi profile belum selesai dimuat dari DB,
+  // tampilkan spinner daripada memproses redirect dengan profile = null.
+  // Kondisi ini terjadi pada jendela waktu singkat antara setSession dan setProfile.
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+
+  // admin_wilayah_bbm dan admin_rencana_kerja_bbm boleh membuat/edit laporan
+  // harian (combined workspace), dikecualikan dari redirect meski masuk
+  // isAdminBbmAccess & isAdminRencanaKerjaAccess.
+  const isCombinedRkBbm = profile.role === USER_ROLES.ADMIN_WILAYAH_BBM
+    || profile.role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM;
 
   if (
-    (!isWilayahBbm && isAdminBbmAccess(profile?.role))
-    || isLaporanBbmAdmin(profile?.role)
-    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
-    || (!isWilayahBbm && isAdminRencanaKerjaAccess(profile?.role))
+    (!isCombinedRkBbm && isAdminBbmAccess(profile.role))
+    || isLaporanBbmAdmin(profile.role)
+    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
+    || (!isCombinedRkBbm && isAdminRencanaKerjaAccess(profile.role))
   ) {
     return <Navigate to={getRoleLandingPath(profile.role)} />;
   }
@@ -182,18 +187,17 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  if (isAdminHarianAccess(profile?.role, session.user.email)) return <Navigate to="/" replace />;
-
-  // admin_wilayah_bbm boleh membuat/edit rencana kerja (combined workspace).
-  // isAdminBbmAccess mencakup admin_wilayah_bbm, jadi perlu dikecualikan agar tidak
-  // ter-redirect ke landing BBM.
-  const isWilayahBbm = profile?.role === USER_ROLES.ADMIN_WILAYAH_BBM;
+  // admin_wilayah_bbm dan admin_rencana_kerja_bbm boleh membuat/edit rencana
+  // kerja (combined workspace), dikecualikan dari redirect meski masuk isAdminBbmAccess.
+  const isCombinedRkBbm = profile.role === USER_ROLES.ADMIN_WILAYAH_BBM
+    || profile.role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM;
 
   if (
-    (!isWilayahBbm && isAdminBbmAccess(profile?.role))
-    || isLaporanBbmAdmin(profile?.role)
-    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
+    (!isCombinedRkBbm && isAdminBbmAccess(profile.role))
+    || isLaporanBbmAdmin(profile.role)
+    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
   ) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
@@ -270,9 +274,10 @@ const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => 
   const { session, profile, loading } = useAuth();
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
-  // BUG FIX: cek sesi login agar halaman rekap & detail tidak bisa diakses tanpa login
   if (!session) return <Navigate to="/login" replace />;
-  if (isAdminBbmAccess(profile?.role) || isLaporanBbmAdmin(profile?.role) || profile?.role === USER_ROLES.ADMIN_SPJ_BBM || profile?.role === USER_ROLES.ADMIN_SPJ_OLI) {
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+
+  if (isAdminBbmAccess(profile.role) || isLaporanBbmAdmin(profile.role) || profile.role === USER_ROLES.ADMIN_SPJ_BBM || profile.role === USER_ROLES.ADMIN_SPJ_OLI) {
     return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
 

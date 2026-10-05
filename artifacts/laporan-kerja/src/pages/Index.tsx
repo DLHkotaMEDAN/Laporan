@@ -29,7 +29,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import { cn } from "@/lib/utils";
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { canPrintReportRecap } from '@/utils/recap-print-permissions';
-import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isAdminBbmPusatAccess, isGlobalWorkPlanAdmin, isLaporanBbmAdmin, isNotaDinasAdmin, roleRequiresRegion, isSuperAdminAccess, isPimpinanAccess, isAdminHarianAccess } from '@/constants/access-control';
+import { canManageReportEntries, canManageWorkPlans as hasWorkPlanManagement, getRoleLabel, isAdminBbmPusatAccess, isGlobalWorkPlanAdmin, isLaporanBbmAdmin, isNotaDinasAdmin, roleRequiresRegion, isSuperAdminAccess, isPimpinanAccess } from '@/constants/access-control';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { Input } from "@/components/ui/input";
 import {
@@ -291,17 +291,26 @@ const Index = () => {
   const isAdminSpjOli = profile?.role === 'admin_spj_oli';
   const isNotaDinasOnly = isNotaDinasAdmin(profile?.role);
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
-  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
-  const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
+  // Admin Rencana Kerja: admin_rencana_kerja (semua wilayah), admin_rencana_kerja_bbm,
+  // dan admin_wilayah_bbm (combined workspace dengan BBM).
+  const isAdminRencanaKerja = profile?.role === 'admin_rencana_kerja'
+    || profile?.role === 'admin_rencana_kerja_bbm'
+    || profile?.role === 'admin_wilayah_bbm';
+  // Admin Wilayah: punya akses laporan harian + rencana kerja dalam wilayah sendiri.
   const isAdminWilayah = profile?.role === 'admin_wilayah' || profile?.role === 'admin_wilayah_bbm';
   const accountRegionId = !isAdmin && (roleRequiresRegion(profile?.role) || isAdminSpjOli) ? profile?.region_id || "__unassigned__" : null;
+  // isCombinedWorkspace: role yang punya akses BBM sekaligus laporan/rencana kerja.
   const isCombinedWorkspace = isAdminBbm && (isAdminRencanaKerja || isAdminWilayah);
   const isFuelSpecialist = (isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli) && !isCombinedWorkspace;
-  const canViewReportsTab = !isNotaDinasOnly && !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah || isCombinedWorkspace);
+  // Tab Laporan Kerja hanya tampil untuk role yang memang punya akses laporan harian:
+  // - Admin Wilayah (admin_wilayah, admin_wilayah_bbm)
+  // - Laporan, User, Super Admin, Pimpinan
+  // - admin_rencana_kerja_bbm TIDAK tampil tab ini (hanya RK + BBM, bukan laporan harian)
+  const canViewReportsTab = !isNotaDinasOnly && !isFuelSpecialist && (!isAdminRencanaKerja || isAdminWilayah);
   const isOvertimeOnly = profile?.role === 'admin_rekap_lembur';
   const canViewOvertime = isAdmin || isOvertimeOnly;
   const isLaporanOnly = profile?.role === 'laporan';
-  const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan;
   const isAccountActive = profile?.is_active !== false;
   const canManageReports = isLoggedIn && isAccountActive && !isPimpinan && canManageReportEntries(profile?.role, session?.user?.email);
   const canManageWorkPlans = isLoggedIn && isAccountActive && !isPimpinan && hasWorkPlanManagement(profile?.role, session?.user?.email);
@@ -319,8 +328,6 @@ const Index = () => {
     ? "Pimpinan"
     : isLaporanOnly
       ? "Petugas Laporan"
-    : isAdminHarian
-      ? "Admin Harian"
       : isUserRestricted
         ? (profile?.category || "Petugas Lapangan")
         : "Sistem Laporan";
@@ -380,9 +387,23 @@ const Index = () => {
         || (savedTab === "fuel_reports_pusat" && !isAdmin && !isAdminBbmPusat)
         ? isAdminBbm ? "fuel_reports" : "reports"
         : savedTab;
-      setActiveTab(isAdminRencanaKerja && !isCombinedWorkspace && safeSavedTab === "reports" ? "workplans" : safeSavedTab);
+
+      // Untuk admin_rencana_kerja_bbm: tab "reports" tidak tersedia,
+      // koreksi ke "workplans" sebagai tab utama.
+      const correctedTab = (safeSavedTab === "reports" && isCombinedWorkspace && !isAdminWilayah)
+        ? "workplans"
+        : (isAdminRencanaKerja && !isCombinedWorkspace && safeSavedTab === "reports")
+          ? "workplans"
+          : safeSavedTab;
+
+      setActiveTab(correctedTab);
     } else {
-      setActiveTab(isCombinedWorkspace ? "reports" : isAdminRencanaKerja ? "workplans" : "reports");
+      // Pertama kali login (tidak ada savedTab):
+      // - admin_rencana_kerja_bbm → workplans (tab utamanya)
+      // - admin_wilayah_bbm → reports (punya akses laporan harian)
+      // - admin_rencana_kerja murni → workplans
+      // - semua lainnya → reports
+      setActiveTab(isCombinedWorkspace ? (isAdminWilayah ? "reports" : "workplans") : isAdminRencanaKerja ? "workplans" : "reports");
     }
   }, [isAdmin, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, isNotaDinasOnly, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
@@ -628,7 +649,7 @@ const Index = () => {
 
     const jobs: Partial<Record<MainTab, Promise<number>>> = {};
     const canShowReports = canViewReportsTab && !isOvertimeOnly;
-    const canShowWorkPlans = !isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly;
+    const canShowWorkPlans = !isNotaDinasOnly && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly;
 
     if (canShowReports) {
       // Gunakan length dari state jika sudah ada, fallback ke count DB
@@ -641,22 +662,22 @@ const Index = () => {
         ? Promise.resolve(workPlans.length)
         : getDatabaseRecordCount('work_plans', { regionId: accountRegionId ?? undefined, softDeleted: false });
     }
-    if (canViewOvertime && !isAdminHarian) {
+    if (canViewOvertime) {
       jobs.overtime = getDatabaseRecordCount('overtime_records', { regionId: accountRegionId, softDeleted: false });
     }
-    if ((isAdmin || isAdminBbm) && !isAdminHarian) {
+    if (isAdmin || isAdminBbm) {
       jobs.fuel_reports = getDatabaseRecordCount('fuel_reports', { regionId: accountRegionId, reportType: 'admin_bbm' });
     }
-    if ((isAdmin || isAdminBbmPusat) && !isAdminHarian) {
+    if (isAdmin || isAdminBbmPusat) {
       jobs.fuel_reports_pusat = getDatabaseRecordCount('fuel_reports_pusat', { regionId: accountRegionId });
     }
-    if ((isAdmin || isAdminLaporanBbm) && !isAdminHarian) {
+    if (isAdmin || isAdminLaporanBbm) {
       jobs.laporan_bbm = getDatabaseRecordCount('laporan_bbm_reports', { regionId: accountRegionId });
     }
-    if ((isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) && !isAdminHarian) {
+    if (isAdmin || isPimpinan || isAdminSpj || isAdminSpjOli) {
       jobs.spj_oli = getDatabaseRecordCount('spj_oli_records', { regionId: accountRegionId, softDeleted: false });
     }
-    if ((isAdmin || isNotaDinasOnly) && !isAdminHarian) {
+    if (isAdmin || isNotaDinasOnly) {
       jobs.nota_dinas = getDatabaseRecordCount('nota_dinas_records', { regionId: accountRegionId, softDeleted: false });
     }
 
@@ -979,19 +1000,19 @@ const Index = () => {
               >
                 <FileText size={16} /> Laporan Kerja
               </TabsTrigger>}
-              {!isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
+              {!isNotaDinasOnly && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsTrigger
                 value="workplans"
                 className={cn(systemTabBaseClass, systemTabToneClass.workplans)}
               >
                 <ClipboardList size={16} /> Rencana Kerja
               </TabsTrigger>}
-              {canViewOvertime && !isAdminHarian && <TabsTrigger
+              {canViewOvertime && <TabsTrigger
                 value="overtime"
                 className={cn(systemTabBaseClass, systemTabToneClass.overtime)}
               >
                 <FileText size={16} /> Rekap Lembur
               </TabsTrigger>}
-              {(isAdmin || isPimpinan || isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli || isNotaDinasOnly) && !isAdminHarian && (
+              {(isAdmin || isPimpinan || isAdminBbm || isAdminBbmPusat || isAdminLaporanBbm || isAdminSpj || isAdminSpjOli || isNotaDinasOnly) && (
                 <>
                   {(isAdmin || isAdminBbm) && (
                     <TabsTrigger value="fuel_reports" className={cn(systemTabBaseClass, systemTabToneClass.fuel_reports)}>
@@ -1412,7 +1433,7 @@ const Index = () => {
             )}
           </TabsContent>}
 
-          {!isNotaDinasOnly && !isAdminHarian && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsContent value="workplans" className="mt-0">
+          {!isNotaDinasOnly && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly && <TabsContent value="workplans" className="mt-0">
             <TotalRecordLabel count={recordCounts.workplans} />
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">

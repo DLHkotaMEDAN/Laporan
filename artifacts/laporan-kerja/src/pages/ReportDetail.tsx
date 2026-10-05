@@ -13,6 +13,7 @@ import { isPimpinanAccess } from '@/constants/access-control';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const ReportDetail = () => {
   const { id } = useParams();
@@ -20,6 +21,7 @@ const ReportDetail = () => {
   const { session, profile } = useAuth();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteReportConfirm, setDeleteReportConfirm] = useState(false);
 
   const isLoggedIn = !!session;
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
@@ -78,12 +80,9 @@ const ReportDetail = () => {
                 variant="destructive" 
                 className={cn("px-2 md:px-4 h-9", isPimpinan && "opacity-50 cursor-not-allowed")}
                 disabled={isPimpinan}
-                onClick={async () => { 
+                onClick={() => { 
                   if (isPimpinan) return;
-                  if(confirm("Hapus?")) { 
-                    await reportService.deleteReport(report.id); 
-                    navigate('/'); 
-                  } 
+                  setDeleteReportConfirm(true);
                 }}
               >
                 <Trash2 className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Hapus</span>
@@ -233,6 +232,23 @@ const ReportDetail = () => {
           ::-webkit-scrollbar { display: none; }
         }
       `}</style>
+      <ConfirmDialog
+        open={deleteReportConfirm}
+        onOpenChange={setDeleteReportConfirm}
+        title="Hapus Laporan"
+        description="Laporan ini akan dipindahkan ke tempat sampah. Anda dapat memulihkannya nanti."
+        variant="warning"
+        confirmLabel="Ya, Hapus"
+        onConfirm={async () => {
+          try {
+            await reportService.deleteReport(report.id);
+            setDeleteReportConfirm(false);
+            navigate('/');
+          } catch {
+            showError("Gagal menghapus laporan");
+          }
+        }}
+      />
     </div>
   );
 };

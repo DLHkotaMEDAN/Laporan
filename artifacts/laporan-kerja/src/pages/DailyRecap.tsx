@@ -31,7 +31,7 @@ import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { dailyPdfFileName } from '@/utils/pdf-file-name';
-import { isPimpinanAccess, isAdminHarianAccess } from '@/constants/access-control';
+import { isPimpinanAccess } from '@/constants/access-control';
 import {
   Tooltip,
   TooltipContent,
@@ -96,8 +96,7 @@ const DailyRecap = () => {
   const isLoggedIn = !!session;
   
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
-  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
-  const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan;
   const regionId = !isPimpinan && profile?.role !== 'admin' ? profile?.region_id : null;
   const availableCategories = Array.from(new Set(reports.map((report) => report.category))).sort((first, second) => first.localeCompare(second));
 
@@ -110,13 +109,11 @@ const DailyRecap = () => {
 
   useEffect(() => {
     if (profile && !hasSetDefaults) {
-      if (isAdminHarian) {
-        setVisibleColumns(prev => ({ ...prev, photos: false }));
-        setSignatureMode("without-signature");
-      }
+      setVisibleColumns(prev => ({ ...prev, photos: false }));
+      setSignatureMode("without-signature");
       setHasSetDefaults(true);
     }
-  }, [profile, isAdminHarian, hasSetDefaults]);
+  }, [profile, hasSetDefaults]);
 
   useEffect(() => {
     const dateParam = searchParams.get('date');
@@ -139,7 +136,7 @@ const DailyRecap = () => {
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [selectedDate, selectedCategories, regionId, isLoggedIn, profile?.role, profile?.category, isPimpinan, isAdminHarian, isUserRestricted]);
+  }, [selectedDate, selectedCategories, regionId, isLoggedIn, profile?.role, profile?.category, isPimpinan, isUserRestricted]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;

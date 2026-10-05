@@ -30,6 +30,7 @@ import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useValueDraft } from '@/hooks/useFormDraft';
 import { isGlobalFuelAdmin, isSuperAdminAccess } from '@/constants/access-control';
 import TotalRecordLabel from '@/components/TotalRecordLabel';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -195,6 +196,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
   const [selectedRegion, setSelectedRegion] = useState("semua");
   const [selectedTeam, setSelectedTeam] = useState("semua");
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [deleteFuelConfirm, setDeleteFuelConfirm] = useState<{ open: boolean; id: string }>({ open: false, id: '' });
 
   const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
   const canFilterByRegionTeam = isSuperAdmin || isGlobalFuelAdmin(profile?.role);
@@ -351,24 +353,10 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
     setCurrentPage(1);
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!isAccountActive) return;
-    if (!confirm("Hapus laporan ini?")) return;
-    try {
-      if (isLaporanBbm) {
-        await laporanBbmService.deleteReport(id);
-      } else if (isAdminBbmPusat) {
-        await fuelPusatService.deleteReport(id);
-      } else {
-        await fuelService.deleteReport(id);
-      }
-      setReports(prev => prev.filter(r => r.id !== id));
-      setAllActiveReports(prev => prev.filter(r => r.id !== id));
-      showSuccess("Laporan dihapus");
-    } catch (error) {
-      showError("Gagal menghapus");
-    }
+    setDeleteFuelConfirm({ open: true, id });
   };
 
   const duplicateReportKeys = useMemo(() => {
@@ -539,6 +527,7 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
   };
 
   return (
+    <>
     <div className="space-y-4">
       {/* Filter */}
       <div className="bg-white p-4 rounded-xl border shadow-sm space-y-3">
@@ -864,6 +853,32 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
         </div>
       )}
     </div>
+      <ConfirmDialog
+        open={deleteFuelConfirm.open}
+        onOpenChange={(open) => setDeleteFuelConfirm(prev => ({ ...prev, open }))}
+        title="Hapus Laporan BBM"
+        description="Laporan BBM ini akan dipindahkan ke tempat sampah."
+        variant="danger"
+        confirmLabel="Ya, Hapus"
+        onConfirm={async () => {
+          try {
+            if (isLaporanBbm) {
+              await laporanBbmService.deleteReport(deleteFuelConfirm.id);
+            } else if (isAdminBbmPusat) {
+              await fuelPusatService.deleteReport(deleteFuelConfirm.id);
+            } else {
+              await fuelService.deleteReport(deleteFuelConfirm.id);
+            }
+            setReports(prev => prev.filter(r => r.id !== deleteFuelConfirm.id));
+            setAllActiveReports(prev => prev.filter(r => r.id !== deleteFuelConfirm.id));
+            showSuccess("Laporan dihapus");
+            setDeleteFuelConfirm({ open: false, id: '' });
+          } catch (error) {
+            showError("Gagal menghapus");
+          }
+        }}
+      />
+    </>
   );
 };
 

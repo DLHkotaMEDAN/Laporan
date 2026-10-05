@@ -28,7 +28,7 @@ import { useAuth } from '@/context/AuthContext';
 import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { isPimpinanAccess, isAdminHarianAccess, isSuperAdminAccess } from '@/constants/access-control';
+import { isPimpinanAccess, isSuperAdminAccess } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -140,8 +140,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   const [isDuplicateMode, setIsDuplicateMode] = useState(false);
 
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
-  const isAdminHarian = isAdminHarianAccess(profile?.role, session?.user?.email);
-  const isUserRestricted = profile?.role === 'user' && !isPimpinan && !isAdminHarian;
+  const isUserRestricted = profile?.role === 'user' && !isPimpinan;
   const activeRegionId = profile?.region_id ?? initialData?.region_id ?? null;
   const { teams } = useAvailableTeams(activeRegionId);
   
