@@ -140,7 +140,7 @@ const readIndexViewState = (): IndexViewState => {
   if (typeof window === "undefined") return {};
 
   try {
-    return JSON.parse(window.sessionStorage.getItem(INDEX_VIEW_STATE_KEY) || "{}");
+    return JSON.parse(window.localStorage.getItem(INDEX_VIEW_STATE_KEY) || "{}");
   } catch {
     return {};
   }
@@ -149,7 +149,7 @@ const readIndexViewState = (): IndexViewState => {
 const writeIndexViewState = (state: IndexViewState) => {
   if (typeof window === "undefined") return;
 
-  window.sessionStorage.setItem(INDEX_VIEW_STATE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(INDEX_VIEW_STATE_KEY, JSON.stringify(state));
 };
 
 const getWorkPlanDescriptions = (plan: WorkPlan): string[] => {
@@ -243,6 +243,8 @@ const Index = () => {
   const { session, profile, signOut, loading: authLoading } = useAuth();
   const savedViewStateRef = useRef<IndexViewState>(readIndexViewState());
   const hasRestoredScrollRef = useRef(false);
+  // Flag agar tab initialization effect hanya berjalan sekali setelah auth selesai.
+  const hasInitializedTabRef = useRef(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [workPlans, setWorkPlans] = useState<WorkPlan[]>([]);
   // Ref untuk membaca nilai terbaru di dalam async functions tanpa stale closure.
@@ -368,7 +370,19 @@ const Index = () => {
   }, [selectedDate, selectedMonth, selectedYear, selectedCategory]);
 
   useEffect(() => {
+    // Tunggu sampai auth selesai load agar role-based tab initialization
+    // hanya berjalan sekali dengan data yang sudah benar.
+    // Tanpa ini, effect berjalan dua kali: sekali saat profile masih null
+    // (semua role boolean false → savedTab terpilih), lalu sekali lagi
+    // setelah profile load (role boolean berubah → tab tertimpa ke default role).
+    if (authLoading) return;
+
+    // Jika sudah pernah diinisialisasi sebelumnya, jangan override tab aktif
+    // kecuali ada ?tab= di URL yang eksplisit diminta.
     const requestedTab = searchParams.get('tab');
+    if (hasInitializedTabRef.current && !requestedTab) return;
+    hasInitializedTabRef.current = true;
+
     const savedTab = savedViewStateRef.current.activeTab;
     const canViewLaporanBbm = isAdmin || isAdminLaporanBbm;
 
@@ -413,7 +427,7 @@ const Index = () => {
       // - semua lainnya → reports
       setActiveTab(isCombinedWorkspace ? (isAdminWilayah ? "reports" : "workplans") : isAdminRencanaKerja ? "workplans" : "reports");
     }
-  }, [isAdmin, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, isNotaDinasOnly, isAdminRencanaKerja, isCombinedWorkspace, isOvertimeOnly, searchParams]);
+  }, [authLoading, isAdmin, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, isNotaDinasOnly, isAdminRencanaKerja, isAdminWilayah, isCombinedWorkspace, isOvertimeOnly, searchParams]);
 
   useEffect(() => {
     const state: IndexViewState = {
