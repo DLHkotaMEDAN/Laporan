@@ -181,7 +181,9 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
 
   // ── Admin Laporan BBM — per wilayah ──────────────────────────────────────
   [USER_ROLES.ADMIN_LAPORAN_BBM]: [
-    { resource: 'fuel_reports', action: 'create', condition: ctx => ctx.regionId === ctx.resourceRegionId },
+    // create tidak perlu condition — resourceRegionId selalu null saat record belum ada.
+    // Scoping ke wilayah dilakukan di form melalui profile.region_id.
+    { resource: 'fuel_reports', action: 'create' },
     { resource: 'fuel_reports', action: 'read',   condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'fuel_reports', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
     { resource: 'fuel_reports', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Report, Task, Equipment, HeavyEquipment } from '@/types/report';
-import { reportService } from '@/services/reportService';
+import { reportService, ReportFilters } from '@/services/reportService';
 import { getReportTasks, getUnitByCategory, sortByCategory } from '@/utils/report-helpers';
 import { 
   ArrowLeft, Printer, Fuel, FileText, ChevronsUpDown, 
@@ -87,6 +87,11 @@ const MonthlyRecap = () => {
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan;
 
+  // regionId untuk user yang terikat wilayah — dikirim ke server agar tidak menarik data lintas wilayah
+  const regionId = profile?.role !== 'admin' && profile?.role !== 'pimpinan'
+    ? (profile?.region_id ?? null)
+    : null;
+
   // Check permission for printing monthly recap
   const canPrintMonthlyRecap = () => {
     return canPrintReportRecap(profile?.role, 'monthly', session?.user?.email);
@@ -111,33 +116,47 @@ const MonthlyRecap = () => {
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [authLoading, selectedMonth, selectedYear, selectedCategories, isLoggedIn, profile?.role, profile?.category, isPimpinan, isUserRestricted]);
+  }, [authLoading, selectedMonth, selectedYear, selectedCategories, regionId, isLoggedIn, profile?.role, profile?.category, isPimpinan, isUserRestricted]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
-      let data = await reportService.getAllReports();
-      data = data.filter(r => {
-        const reportDate = new Date(r.date);
-        const m = (reportDate.getMonth() + 1).toString();
-        const y = reportDate.getFullYear().toString();
-        const matchMonth = selectedMonth === "semua" || m === selectedMonth;
-        const matchYear = selectedYear === "semua" || y === selectedYear;
-        // Admin Wilayah dapat melihat seluruh kategori di wilayahnya. Hanya
-        // pengguna tim yang dibatasi pada satu kategori dari profilnya.
-        const matchCategory = isUserRestricted
-          ? r.category === profile?.category
-          : selectedCategories.includes('semua') || selectedCategories.includes(r.category);
-        return matchMonth && matchYear && matchCategory;
-      });
-      
+
+      // Tentukan filter kategori
+      const effectiveCategory = isUserRestricted
+        ? (profile?.category ?? null)
+        : selectedCategories.includes('semua') ? null : selectedCategories[0] ?? null;
+
+      // Bangun dateFilter untuk dikirim ke server.
+      // Gunakan type 'month' agar server membuat range tanggal yang tepat
+      // (menghindari timezone bug pada new Date("YYYY-MM-DD")).
+      const dateFilter: ReportFilters['dateFilter'] =
+        selectedMonth !== 'semua' && selectedYear !== 'semua'
+          ? { type: 'month', month: selectedMonth, year: selectedYear }
+          : selectedYear !== 'semua'
+            ? { type: 'year', year: selectedYear }
+            : null;
+
+      const filters: ReportFilters = {
+        dateFilter,
+        category: effectiveCategory,
+        regionId: regionId ?? null,
+      };
+
+      let data = await reportService.getFilteredReports(filters);
+
+      // Filter kategori multi-select di client (server hanya mendukung satu nilai)
+      if (!isUserRestricted && !selectedCategories.includes('semua') && selectedCategories.length > 1) {
+        data = data.filter(r => selectedCategories.includes(r.category));
+      }
+
       data.sort((a, b) => {
         const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (dateDiff !== 0) return dateDiff;
         return sortByCategory(a.category, b.category);
       });
-      
+
       if (requestId === dataRequestId.current) {
         setReports(data);
       }

@@ -47,12 +47,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               <p className="text-sm text-slate-500">
                 Halaman ini mengalami masalah dan tidak dapat ditampilkan.
               </p>
-            </div>
-            {this.state.error && (
-              <p className="text-xs text-red-400 bg-red-50 rounded-lg px-3 py-2 text-left font-mono break-all">
-                {this.state.error.message}
+              <p className="text-sm text-slate-400">
+                Silakan coba lagi atau hubungi administrator jika masalah berlanjut.
               </p>
-            )}
+            </div>
             <div className="flex gap-3 justify-center">
               <Button
                 variant="outline"

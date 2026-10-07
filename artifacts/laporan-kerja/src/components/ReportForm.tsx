@@ -308,9 +308,10 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
     fileName: string,
     maxRetry = 2,
   ): Promise<string> => {
+    const userId = session?.user?.id ?? 'anonymous';
     for (let attempt = 1; attempt <= maxRetry; attempt++) {
       try {
-        return await storageService.uploadPhoto(base64, fileName);
+        return await storageService.uploadPhoto(base64, fileName, userId);
       } catch (err) {
         if (attempt === maxRetry) throw err;
         // Tunggu sebelum retry: 500ms, 1000ms, dst

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
+import { supabase } from '@/lib/supabase';
 
 interface FuelReportDetailProps {
   reportType?: FuelReportType;
@@ -53,13 +54,19 @@ const FuelReportDetail = ({ reportType = 'admin_bbm' }: FuelReportDetailProps) =
 
   const handleSaveNote = async (note: string) => {
     if (!report) return;
-    if (isLaporanBbm) {
-      await laporanBbmService.updateReport(report.id, { pimpinan_note: note });
-    } else if (isAdminBbmPusat) {
-      await fuelPusatService.updateReport(report.id, { pimpinan_note: note });
-    } else {
-      await fuelService.updateReport(report.id, { pimpinan_note: note });
-    }
+    // Gunakan RPC khusus agar pimpinan hanya bisa update kolom pimpinan_note.
+    // Tentukan nama tabel berdasarkan jenis laporan BBM.
+    const tableName = isLaporanBbm
+      ? 'laporan_bbm_reports'
+      : isAdminBbmPusat
+        ? 'fuel_reports_pusat'
+        : 'fuel_reports';
+    const { error } = await supabase.rpc('update_pimpinan_note', {
+      p_record_id: report.id,
+      p_note: note,
+      p_table: tableName,
+    });
+    if (error) throw error;
     setReport({ ...report, pimpinan_note: note });
   };
 

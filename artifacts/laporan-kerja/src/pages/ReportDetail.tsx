@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { supabase } from '@/lib/supabase';
 
 const ReportDetail = () => {
   const { id } = useParams();
@@ -41,7 +42,14 @@ const ReportDetail = () => {
 
   const handleSaveNote = async (note: string) => {
     if (!report) return;
-    await reportService.updateReport(report.id, { pimpinan_note: note });
+    // Gunakan RPC khusus agar pimpinan hanya bisa update kolom pimpinan_note,
+    // bukan membuka akses UPDATE penuh ke seluruh tabel.
+    const { error } = await supabase.rpc('update_pimpinan_note', {
+      p_record_id: report.id,
+      p_note: note,
+      p_table: 'reports',
+    });
+    if (error) throw error;
     setReport({ ...report, pimpinan_note: note });
   };
 

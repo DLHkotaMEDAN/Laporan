@@ -125,11 +125,16 @@ const ActivityTracker = () => {
       lastInteraction.current = { key, time: now };
 
       const normalized = label.toLowerCase();
+      // Hanya catat aksi yang bernilai forensik: cetak dan export.
+      // Klik biasa (INTERACT) tidak dicatat — volume tinggi tanpa nilai investigasi.
       const action = /cetak|print/.test(normalized)
         ? 'PRINT'
         : /export|excel|pdf|download|unduh/.test(normalized)
           ? 'EXPORT'
-          : 'INTERACT';
+          : null;
+
+      if (!action) return;
+
       void auditLogService.logAction({
         action,
         entityType: 'UI',
@@ -225,14 +230,15 @@ const FuelReportRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
   if (
-    !canAccessFuelArea(profile?.role, session.user.email)
-    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
-    || profile?.role === USER_ROLES.ADMIN_SPJ_OLI
-    || isLaporanBbmAdmin(profile?.role)
+    !canAccessFuelArea(profile.role, session.user.email)
+    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
+    || profile.role === USER_ROLES.ADMIN_SPJ_OLI
+    || isLaporanBbmAdmin(profile.role)
   ) {
-    return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
   }
 
   return <>{children}</>;
@@ -298,11 +304,27 @@ const WorkPlanAccessRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   if (!session) return <Navigate to="/login" replace />;
-  if (profile?.role === USER_ROLES.LAPORAN) return <Navigate to="/" replace />;
+  if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  if (isAdminRencanaKerjaAccess(profile?.role)) return <>{children}</>;
+  // Role laporan tidak punya akses rencana kerja
+  if (profile.role === USER_ROLES.LAPORAN) return <Navigate to="/" replace />;
 
-  return <NonFuelSpecialistRoute>{children}</NonFuelSpecialistRoute>;
+  // Admin rencana kerja (semua varian) boleh akses langsung
+  if (isAdminRencanaKerjaAccess(profile.role)) return <>{children}</>;
+
+  // Fuel specialists tidak punya akses rencana kerja — redirect ke landing mereka.
+  // Logika ini sebelumnya didelegasikan ke NonFuelSpecialistRoute, sekarang
+  // diinline agar tidak ada double auth check (loading/session/profile dua kali).
+  if (
+    isAdminBbmAccess(profile.role)
+    || isLaporanBbmAdmin(profile.role)
+    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
+    || profile.role === USER_ROLES.ADMIN_SPJ_OLI
+  ) {
+    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const OvertimeAccessRoute = ({ children }: { children: React.ReactNode }) => {
@@ -331,16 +353,17 @@ const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <RouteScrollReset />
-          <ActivityTracker />
-          <ErrorBoundary>
-            <Routes>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <RouteScrollReset />
+            <ActivityTracker />
+            <ErrorBoundary>
+              <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Index />} />
             <Route path="/pdf-preview" element={<PdfPreview />} />
@@ -398,12 +421,13 @@ const App = () => (
             <Route path="/maintenance" element={<AdminRoute><Maintenance /></AdminRoute>} />
             
             <Route path="*" element={<NotFound />} />
-          </Routes>
-          </ErrorBoundary>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+              </Routes>
+            </ErrorBoundary>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

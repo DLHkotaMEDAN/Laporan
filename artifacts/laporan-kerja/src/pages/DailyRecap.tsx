@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Report, Task, Equipment, HeavyEquipment } from '@/types/report';
-import { reportService } from '@/services/reportService';
+import { reportService, ReportFilters } from '@/services/reportService';
 import { getUnitByCategory, sortByCategory } from '@/utils/report-helpers';
 import {
   ArrowLeft, Printer, FileText, ChevronsUpDown,
@@ -140,25 +140,36 @@ const DailyRecap = () => {
     const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
-      let data = await reportService.getAllReports(undefined, false, regionId);
-      data = data.filter(r => {
-        const matchDate = selectedDate === "semua" || r.date === selectedDate;
-        const matchRegion = !regionId || r.region_id === regionId;
-        let matchCategory = false;
-        if (!isUserRestricted) {
-          matchCategory = selectedCategories.includes('semua') || selectedCategories.includes(r.category);
-        } else {
-          matchCategory = r.category === profile?.category;
-        }
-        return matchDate && matchCategory && matchRegion;
-      });
-      
+
+      // Tentukan filter kategori — user terbatas hanya boleh lihat kategori profilnya
+      const effectiveCategory = isUserRestricted
+        ? (profile?.category ?? null)
+        : selectedCategories.includes('semua') ? null : selectedCategories[0] ?? null;
+
+      const filters: ReportFilters = {
+        // Filter tanggal dikirim ke server agar tidak menarik semua data
+        dateFilter: selectedDate && selectedDate !== 'semua'
+          ? { type: 'date', value: selectedDate }
+          : null,
+        category: effectiveCategory,
+        // regionId sudah ditentukan di luar berdasarkan role user
+        regionId: regionId ?? null,
+      };
+
+      let data = await reportService.getFilteredReports(filters);
+
+      // Filter kategori multi-select tetap di client karena server hanya
+      // mendukung satu nilai kategori per query. Untuk 'semua', tidak perlu filter.
+      if (!isUserRestricted && !selectedCategories.includes('semua') && selectedCategories.length > 1) {
+        data = data.filter(r => selectedCategories.includes(r.category));
+      }
+
       data.sort((a, b) => {
         const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (dateDiff !== 0) return dateDiff;
         return sortByCategory(a.category, b.category);
       });
-      
+
       if (requestId === dataRequestId.current) {
         setReports(data);
       }

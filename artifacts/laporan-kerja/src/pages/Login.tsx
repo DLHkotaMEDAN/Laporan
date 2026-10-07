@@ -13,6 +13,47 @@ import { getRoleLandingPath, getLoginDestination } from '@/constants/access-cont
 // Email valid: harus ada karakter sebelum @, domain setelah @, dan TLD minimal 2 karakter
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// Key untuk sessionStorage — berlaku selama tab browser aktif
+const STORAGE_KEY_FAIL_COUNT = 'dlh:login:failCount';
+const STORAGE_KEY_LOCKED_UNTIL = 'dlh:login:lockedUntil';
+
+const readFailCount = (): number => {
+  try { return parseInt(sessionStorage.getItem(STORAGE_KEY_FAIL_COUNT) ?? '0', 10) || 0; }
+  catch { return 0; }
+};
+
+const readLockedUntil = (): number | null => {
+  try {
+    const v = sessionStorage.getItem(STORAGE_KEY_LOCKED_UNTIL);
+    if (!v) return null;
+    const n = parseInt(v, 10);
+    // Buang nilai yang sudah kadaluarsa
+    if (n <= Date.now()) {
+      sessionStorage.removeItem(STORAGE_KEY_LOCKED_UNTIL);
+      return null;
+    }
+    return n;
+  } catch { return null; }
+};
+
+const writeRateLimit = (failCount: number, lockedUntil: number | null) => {
+  try {
+    sessionStorage.setItem(STORAGE_KEY_FAIL_COUNT, String(failCount));
+    if (lockedUntil !== null) {
+      sessionStorage.setItem(STORAGE_KEY_LOCKED_UNTIL, String(lockedUntil));
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY_LOCKED_UNTIL);
+    }
+  } catch { /* sessionStorage tidak tersedia — fallback ke in-memory */ }
+};
+
+const clearRateLimit = () => {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY_FAIL_COUNT);
+    sessionStorage.removeItem(STORAGE_KEY_LOCKED_UNTIL);
+  } catch { /* abaikan */ }
+};
+
 // Batas maksimum percobaan sebelum lockout sementara
 const MAX_ATTEMPTS = 5;
 // Durasi lockout dalam detik
@@ -28,10 +69,17 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // State rate limiting
-  const [failCount, setFailCount] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState(0);
+  // State rate limiting — diinisialisasi dari sessionStorage agar tetap berlaku saat refresh
+  const [failCount, setFailCount] = useState<number>(() => readFailCount());
+  const [lockedUntil, setLockedUntil] = useState<number | null>(() => readLockedUntil());
+  const [countdown, setCountdown] = useState<number>(() => {
+    const until = readLockedUntil();
+    if (until !== null) {
+      const remaining = Math.ceil((until - Date.now()) / 1000);
+      return remaining > 0 ? remaining : 0;
+    }
+    return 0;
+  });
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -88,10 +136,11 @@ const Login = () => {
 
       if (error) throw error;
 
-      // Login berhasil — reset counter
+      // Login berhasil — reset counter dan hapus dari sessionStorage
       setFailCount(0);
       setLockedUntil(null);
       setCountdown(0);
+      clearRateLimit();
     } catch (error: any) {
       const isInvalidCredential =
         error.message === 'Invalid login credentials' ||
@@ -105,10 +154,12 @@ const Login = () => {
         const until = Date.now() + LOCKOUT_DURATION * 1000;
         setLockedUntil(until);
         setCountdown(LOCKOUT_DURATION);
+        writeRateLimit(newFailCount, until);
         showError(`Terlalu banyak percobaan gagal. Silakan coba lagi dalam ${LOCKOUT_DURATION} detik.`);
       } else {
         // Jeda eksponensial
         const backoff = BACKOFF_SECONDS[newFailCount] ?? 0;
+        writeRateLimit(newFailCount, null);
         if (backoff > 0) {
           setCountdown(backoff);
           showError(

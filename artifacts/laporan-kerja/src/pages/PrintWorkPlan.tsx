@@ -64,7 +64,13 @@ const PrintWorkPlan = () => {
 
   const handleSaveNote = async (note: string) => {
     if (!plan) return;
-    await workPlanService.updateWorkPlan(plan.id, { pimpinan_note: note });
+    // Gunakan RPC khusus agar pimpinan hanya bisa update kolom pimpinan_note.
+    const { error } = await supabase.rpc('update_pimpinan_note', {
+      p_record_id: plan.id,
+      p_note: note,
+      p_table: 'work_plans',
+    });
+    if (error) throw error;
     setPlan({ ...plan, pimpinan_note: note });
   };
 

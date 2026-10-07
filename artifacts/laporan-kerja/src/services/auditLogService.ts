@@ -119,12 +119,26 @@ export const auditLogService = {
     });
   },
 
-  async getLogs(filters?: { action?: string; entityType?: string; userId?: string; search?: string }) {
+  async getLogs(
+    filters?: {
+      action?: string;
+      entityType?: string;
+      userId?: string;
+      search?: string;
+      /** Jumlah maksimum baris yang dikembalikan. Default 500. */
+      limit?: number;
+      /** Offset baris untuk paginasi. Default 0. */
+      offset?: number;
+    }
+  ) {
+    const limit = filters?.limit ?? 500;
+    const offset = filters?.offset ?? 0;
+
     let query = supabase
       .from('audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(500);
+      .range(offset, offset + limit - 1);
 
     if (filters?.action && filters.action !== 'ALL') query = query.eq('action', filters.action);
     if (filters?.entityType && filters.entityType !== 'ALL') query = query.eq('entity_type', filters.entityType);

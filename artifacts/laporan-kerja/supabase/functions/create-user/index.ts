@@ -1,7 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Daftar domain yang diizinkan mengakses Edge Function ini.
-// Tambahkan domain produksi Anda di sini jika berbeda.
 const ALLOWED_ORIGINS = [
   'https://laporanbulanan.vercel.app',
   'http://localhost:5173',
@@ -9,8 +7,6 @@ const ALLOWED_ORIGINS = [
 ];
 
 const getCorsHeaders = (requestOrigin: string | null) => {
-  // Kalau origin ada di daftar izin, kembalikan origin itu.
-  // Kalau tidak, kembalikan origin pertama (domain produksi) sebagai fallback.
   const allowedOrigin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
     ? requestOrigin
     : ALLOWED_ORIGINS[0];
@@ -54,20 +50,14 @@ type SetUserActiveInput = {
   isActive: boolean;
 };
 
+// Harus identik dengan USER_ROLES di src/constants/access-control.ts.
+// Setiap kali role ditambah atau dihapus di access-control.ts,
+// update file ini juga agar validasi Edge Function tetap sinkron.
 const USER_ROLES = {
   ADMIN: 'admin',
   ADMIN_WILAYAH: 'admin_wilayah',
   ADMIN_WILAYAH_BBM: 'admin_wilayah_bbm',
   LAPORAN: 'laporan',
-  ADMIN_HARIAN: 'admin_harian',
-  ADMIN_LAPORAN_MINGGUAN: 'admin_laporan_mingguan',
-  ADMIN_LAPORAN_BULANAN: 'admin_laporan_bulanan',
-  ADMIN_LAPORAN_MINGGUAN_BULANAN: 'admin_laporan_mingguan_bulanan',
-  ADMIN_LAPORAN_HARIAN_MINGGUAN: 'admin_laporan_harian_mingguan',
-  ADMIN_LAPORAN_HARIAN_BULANAN: 'admin_laporan_harian_bulanan',
-  ADMIN_LAPORAN_HARIAN_RENCANA_KERJA: 'admin_laporan_harian_rencana_kerja',
-  ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA: 'admin_laporan_mingguan_rencana_kerja',
-  ADMIN_LAPORAN_BULANAN_RENCANA_KERJA: 'admin_laporan_bulanan_rencana_kerja',
   ADMIN_RENCANA_KERJA: 'admin_rencana_kerja',
   ADMIN_RENCANA_KERJA_BBM: 'admin_rencana_kerja_bbm',
   ADMIN_REKAP_LEMBUR: 'admin_rekap_lembur',
@@ -82,14 +72,12 @@ const USER_ROLES = {
 } as const;
 
 const validRoles = new Set(Object.values(USER_ROLES));
+
+// Harus identik dengan REGION_REQUIRED_ROLES di src/constants/access-control.ts.
 const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_WILAYAH,
   USER_ROLES.ADMIN_WILAYAH_BBM,
   USER_ROLES.LAPORAN,
-  USER_ROLES.ADMIN_HARIAN,
-  USER_ROLES.ADMIN_LAPORAN_HARIAN_RENCANA_KERJA,
-  USER_ROLES.ADMIN_LAPORAN_MINGGUAN_RENCANA_KERJA,
-  USER_ROLES.ADMIN_LAPORAN_BULANAN_RENCANA_KERJA,
   USER_ROLES.ADMIN_RENCANA_KERJA_BBM,
   USER_ROLES.ADMIN_LAPORAN_BBM,
   USER_ROLES.ADMIN_REKAP_LEMBUR,

@@ -358,11 +358,12 @@ const Index = () => {
   }, [profile, isLoggedIn, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId]);
 
   // Re-fetch saat filter utama (tanggal/bulan/tahun/kategori) berubah.
-  // selectedRegion dan searchQuery tidak memicu fetch — dihandle client-side.
+  // Nilai filter di-pass eksplisit ke loadData agar tidak terjadi stale closure
+  // saat React 18 memproses state update secara bersamaan.
   useEffect(() => {
     if (authLoading || !isLoggedIn) return;
     if (isAdminSpj || isAdminSpjOli || isAdminLaporanBbm || isNotaDinasOnly) return;
-    loadData();
+    loadData(selectedDate, selectedMonth, selectedYear, selectedCategory);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedMonth, selectedYear, selectedCategory]);
 
@@ -466,28 +467,37 @@ const Index = () => {
     }
   }, [categories, isUserRestricted, profile?.category, selectedCategory]);
 
-  const buildDateFilter = (): ReportFilters['dateFilter'] => {
-    if (selectedDate) return { type: 'date', value: selectedDate };
-    if (selectedMonth !== 'semua' && selectedYear !== 'semua') return { type: 'month', month: selectedMonth, year: selectedYear };
-    if (selectedYear !== 'semua') return { type: 'year', year: selectedYear };
+  const buildDateFilter = (
+    date: string,
+    month: string,
+    year: string,
+  ): ReportFilters['dateFilter'] => {
+    if (date) return { type: 'date', value: date };
+    if (month !== 'semua' && year !== 'semua') return { type: 'month', month, year };
+    if (year !== 'semua') return { type: 'year', year };
     return null;
   };
 
-  const loadData = async () => {
+  const loadData = async (
+    date = selectedDate,
+    month = selectedMonth,
+    year = selectedYear,
+    category = selectedCategory,
+  ) => {
     try {
       setLoading(true);
 
       // Kategori untuk user yang dibatasi selalu dari profile, bukan dari filter UI
       const effectiveCategory = isUserRestricted
         ? (profile?.category ?? null)
-        : (selectedCategory !== 'semua' ? selectedCategory : null);
+        : (category !== 'semua' ? category : null);
 
       // Region: user dengan region_id tetap di-scope ke region mereka,
       // admin bisa memilih region via selectedRegion (filter UI)
       const effectiveRegionId = accountRegionId
         ?? (isAdmin && selectedRegion !== 'semua' ? selectedRegion : null);
 
-      const dateFilter = buildDateFilter();
+      const dateFilter = buildDateFilter(date, month, year);
 
       const reportFilters: ReportFilters = {
         dateFilter,

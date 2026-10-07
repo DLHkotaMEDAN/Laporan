@@ -135,6 +135,27 @@ const deleteDraft = async (key: string) => {
   }).finally(() => database.close());
 };
 
+/** Menghapus semua draft saat user sign out — dipanggil via event 'dlh:signout'. */
+const clearAllDrafts = async () => {
+  try {
+    const database = await openDatabase();
+    await new Promise<void>((resolve, reject) => {
+      const request = database.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    }).finally(() => database.close());
+  } catch {
+    // Abaikan — draft adalah pelindung tambahan, bukan data kritis.
+  }
+};
+
+// Daftarkan listener global sekali saat modul pertama kali dimuat.
+// Ketika AuthContext mendispatch 'dlh:signout', semua draft dihapus
+// sehingga user berikutnya tidak melihat draft user sebelumnya.
+if (typeof window !== 'undefined') {
+  window.addEventListener('dlh:signout', () => { void clearAllDrafts(); });
+}
+
 /** Menyimpan isian form hanya di perangkat, termasuk saat browser menjadi tidak aktif. */
 // RHF's resolver output can be narrower than its FieldValues constraint for
 // deeply nested Zod schemas. The hook only reads/resets values, so accepting

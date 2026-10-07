@@ -1,8 +1,21 @@
 import { supabase } from '@/lib/supabase';
 import { auditLogService } from '@/services/auditLogService';
 
+/**
+ * Sanitasi nama file sebelum digunakan sebagai bagian dari path storage.
+ * Menghapus path traversal (../, ./) dan karakter yang tidak aman,
+ * menyisakan hanya alfanumerik, underscore, dan tanda hubung.
+ */
+const sanitizeFileName = (name: string): string => {
+  // Ambil basename saja (hapus path separator apapun)
+  const basename = name.replace(/[/\\]/g, '_');
+  // Hapus karakter selain alfanumerik, underscore, tanda hubung, dan titik
+  // Batasi panjang agar tidak menyebabkan path terlalu panjang
+  return basename.replace(/[^a-zA-Z0-9_\-\.]/g, '_').slice(0, 100);
+};
+
 export const storageService = {
-  async uploadPhoto(base64: string, fileName: string): Promise<string> {
+  async uploadPhoto(base64: string, fileName: string, userId: string): Promise<string> {
     // Deteksi MIME type dari prefix Base64 (format: data:image/xxx;base64,...)
     const mimeMatch = base64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
     const mimeType = mimeMatch?.[1] ?? 'image/jpeg';
@@ -16,16 +29,17 @@ export const storageService = {
     const ext = extMap[mimeType] ?? 'jpg';
 
     // Konversi Base64 ke Blob
+    // Uint8Array.from langsung mengalokasikan buffer sekali — lebih efisien
+    // daripada membuat intermediate Array lalu mengkonversinya ke TypedArray.
     const base64Data = base64.split(',')[1];
     const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
+    const byteArray = Uint8Array.from(byteCharacters, (c) => c.charCodeAt(0));
     const blob = new Blob([byteArray], { type: mimeType });
 
-    const filePath = `${Date.now()}_${fileName}.${ext}`;
+    // Path menyertakan userId agar RLS Storage bisa validasi kepemilikan.
+    // Format: {userId}/{timestamp}_{fileName}.{ext}
+    const safeFileName = sanitizeFileName(fileName);
+    const filePath = `${userId}/${Date.now()}_${safeFileName}.${ext}`;
 
     const { data, error } = await supabase.storage
       .from('report-photos')
@@ -48,7 +62,7 @@ export const storageService = {
       action: 'CREATE',
       entityType: 'REPORT_PHOTO',
       entityId: filePath,
-      details: { bucket: 'report-photos', file_name: filePath, source_name: fileName, mime_type: mimeType },
+      details: { bucket: 'report-photos', file_name: filePath, source_name: fileName, mime_type: mimeType, owner_id: userId },
     });
     return publicUrl;
   },

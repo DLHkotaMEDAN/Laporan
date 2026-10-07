@@ -28,7 +28,7 @@ import { getReportRecapTitle } from '@/utils/report-recap-title';
 import { canPrintReportRecap, getRecapPrintDeniedMessage } from '@/utils/recap-print-permissions';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { weeklyPdfFileName } from '@/utils/pdf-file-name';
-import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { isPimpinanAccess } from '@/constants/access-control';
 import {
@@ -100,6 +100,11 @@ const WeeklyRecap = () => {
   const isPimpinan = isPimpinanAccess(profile?.role, session?.user?.email);
   const isUserRestricted = isLoggedIn && profile?.role === 'user' && !isPimpinan;
 
+  // regionId untuk user yang terikat wilayah — dikirim ke server agar RLS tidak bocor
+  const regionId = profile?.role !== 'admin' && profile?.role !== 'pimpinan'
+    ? (profile?.region_id ?? null)
+    : null;
+
   const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
 
@@ -140,31 +145,42 @@ const WeeklyRecap = () => {
     if (selectedCategories.length > 0) {
       loadData();
     }
-  }, [authLoading, selectedDate, selectedCategories, isLoggedIn, profile?.role, profile?.category, isPimpinan, isUserRestricted]);
+  }, [authLoading, selectedDate, selectedCategories, regionId, isLoggedIn, profile?.role, profile?.category, isPimpinan, isUserRestricted]);
 
   const loadData = async () => {
     const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
-      let data = await reportService.getAllReports();
-      data = data.filter(r => {
-        const reportDate = parseISO(r.date);
-        const matchDate = isWithinInterval(reportDate, { start: weekStart, end: weekEnd });
-        
-        // Admin Wilayah dapat melihat seluruh kategori di wilayahnya. Hanya
-        // pengguna tim yang dibatasi pada satu kategori dari profilnya.
-        const matchCategory = isUserRestricted
-          ? r.category === profile?.category
-          : selectedCategories.includes('semua') || selectedCategories.includes(r.category);
-        return matchDate && matchCategory;
-      });
-      
+
+      // Format tanggal untuk range filter server-side (ISO date string "YYYY-MM-DD")
+      const startStr = format(weekStart, 'yyyy-MM-dd');
+      const endStr = format(weekEnd, 'yyyy-MM-dd');
+
+      // Tentukan filter kategori
+      const effectiveCategory = isUserRestricted
+        ? (profile?.category ?? null)
+        : selectedCategories.includes('semua') ? null : selectedCategories[0] ?? null;
+
+      // Gunakan getReportsByDateRange untuk range minggu — lebih tepat dari
+      // getFilteredReports yang hanya mendukung satu tanggal per query.
+      let data = await reportService.getReportsByDateRange(startStr, endStr, effectiveCategory);
+
+      // Filter wilayah client-side sebagai pengaman tambahan
+      if (regionId) {
+        data = data.filter(r => r.region_id === regionId);
+      }
+
+      // Filter kategori multi-select (jika user memilih lebih dari satu kategori)
+      if (!isUserRestricted && !selectedCategories.includes('semua') && selectedCategories.length > 1) {
+        data = data.filter(r => selectedCategories.includes(r.category));
+      }
+
       data.sort((a, b) => {
         const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (dateDiff !== 0) return dateDiff;
         return sortByCategory(a.category, b.category);
       });
-      
+
       if (requestId === dataRequestId.current) {
         setReports(data);
       }

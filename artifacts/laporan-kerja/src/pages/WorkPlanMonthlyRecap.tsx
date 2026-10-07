@@ -137,10 +137,14 @@ const WorkPlanMonthlyRecap = () => {
       const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
       if (requestId !== dataRequestId.current) return;
       setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
+      // Gunakan perbandingan string pada p.date ("YYYY-MM-DD") untuk menghindari
+      // timezone shift yang bisa membuat tanggal 1 bulan muncul di bulan sebelumnya.
+      const monthStr = String(selectedMonth).padStart(2, '0');
       const filtered = data.filter(p => {
-        const pDate = parseISO(p.date);
-        return (pDate.getMonth() + 1).toString() === selectedMonth &&
-               pDate.getFullYear().toString() === selectedYear &&
+        // p.date format: "YYYY-MM-DD" — ekstrak bulan dan tahun langsung dari string
+        const [yearPart, monthPart] = p.date.split('-');
+        const matchMonth = yearPart === selectedYear && monthPart === monthStr;
+        return matchMonth &&
                (selectedCategories.includes('semua') || selectedCategories.includes(p.category)) &&
                p.is_visible !== false;
       });

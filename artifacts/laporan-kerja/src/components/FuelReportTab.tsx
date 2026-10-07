@@ -284,10 +284,21 @@ const FuelReportTab = ({ regionId = null, reportType = 'admin_bbm', recordCount 
         data = await getAllReports();
       }
 
+      // Guard setelah fetch pertama — hentikan jika request sudah tidak relevan
       if (id !== reqIdRef.current) return;
-      // Ambil semua data aktif untuk deteksi duplikat lintas filter
-      const allActive = await getAllReports();
-      if (id !== reqIdRef.current) return;
+
+      // Optimasi: jika tidak ada filter aktif, data sudah berisi semua laporan.
+      // Skip fetch kedua — gunakan data yang sama sebagai sumber deteksi duplikat.
+      const isFiltered = Boolean(date) || month !== "semua" || year !== "semua";
+      let allActive: FuelReport[];
+      if (isFiltered) {
+        allActive = await getAllReports();
+        // Guard setelah fetch kedua
+        if (id !== reqIdRef.current) return;
+      } else {
+        allActive = data;
+      }
+
       setReports(data);
       setAllActiveReports(allActive);
       setCurrentPage(1);

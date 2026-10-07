@@ -59,19 +59,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (fetchingProfileRef.current !== userId) return;
 
         if (error?.code === 'PGRST116') {
-          const { data: newData, error: createError } = await supabase
-            .from('profiles')
-            .insert([{ id: userId, role: 'user', updated_at: new Date().toISOString() }])
-            .select()
-            .single();
-
-          if (fetchingProfileRef.current !== userId) return;
-          if (createError) throw createError;
-          setProfile(newData);
-          break; // keluar loop, lanjut ke cleanup di bawah
+          // Profil tidak ditemukan — akun ini belum didaftarkan oleh admin.
+          // Tolak sesi agar user tanpa profil tidak bisa masuk.
+          // Admin harus membuat profil terlebih dahulu via tab Pengguna.
+          console.warn('Login ditolak: profil tidak ditemukan untuk user', userId);
+          fetchingProfileRef.current = null;
+          await supabase.auth.signOut();
+          return;
         }
 
         if (error) throw error;
+
+        // Tolak sesi jika akun dinonaktifkan oleh admin.
+        // Force sign out agar token tidak bisa dipakai lagi.
+        if (data?.is_active === false) {
+          fetchingProfileRef.current = null;
+          await supabase.auth.signOut();
+          return;
+        }
 
         setProfile(data);
         break; // keluar loop, lanjut ke cleanup di bawah
@@ -145,6 +150,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    // Reset ref agar fetchProfile yang sedang berjalan tahu untuk berhenti,
+    // dan login ulang dengan userId yang sama tidak terganjal guard awal.
+    fetchingProfileRef.current = null;
     if (user) {
       await auditLogService.logAction({
         action: 'LOGOUT',
@@ -157,6 +165,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       loginAuditUsers.current.delete(user.id);
     }
+    // Beritahu useFormDraft untuk menghapus semua draft sebelum sesi berakhir.
+    // Menggunakan custom event agar AuthContext tidak perlu import useFormDraft.
+    window.dispatchEvent(new Event('dlh:signout'));
     await supabase.auth.signOut();
   };
 

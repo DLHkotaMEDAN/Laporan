@@ -68,8 +68,9 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
       let photoBeforeUrl = form.photo_before_url;
       let photoAfterUrl = form.photo_after_url;
       const photoName = form.name.trim().replace(/\s+/g, '_') || 'tanpa_nama';
-      if (photoBeforeUrl.startsWith('data:image')) photoBeforeUrl = await storageService.uploadPhoto(photoBeforeUrl, `lembur_${photoName}_sebelum`);
-      if (photoAfterUrl.startsWith('data:image')) photoAfterUrl = await storageService.uploadPhoto(photoAfterUrl, `lembur_${photoName}_sesudah`);
+      const userId = session?.user?.id ?? 'anonymous';
+      if (photoBeforeUrl.startsWith('data:image')) photoBeforeUrl = await storageService.uploadPhoto(photoBeforeUrl, `lembur_${photoName}_sebelum`, userId);
+      if (photoAfterUrl.startsWith('data:image')) photoAfterUrl = await storageService.uploadPhoto(photoAfterUrl, `lembur_${photoName}_sesudah`, userId);
       const payload = {
         ...form,
         photo_url: photoBeforeUrl,

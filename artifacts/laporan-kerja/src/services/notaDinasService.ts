@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { auditLogService } from '@/services/auditLogService';
 import type { NotaDinasForm, NotaDinasRecord } from '@/types/notaDinas';
 
 type NotaDinasRow = {
@@ -66,7 +67,7 @@ export const notaDinasService = {
       form,
       ...(createdAt ? { created_at: createdAt } : {}),
       ...(updatedAt ? { updated_at: updatedAt } : {}),
-      ...(resolvedRegionId ? { region_id: resolvedRegionId } : {}),
+      region_id: resolvedRegionId,
       created_by: userData.user.id,
     };
 
@@ -77,7 +78,14 @@ export const notaDinasService = {
       .single();
 
     if (error) throw error;
-    return toRecord(data as NotaDinasRow);
+    const created = toRecord(data as NotaDinasRow);
+    void auditLogService.logCurrentUser({
+      action: 'CREATE',
+      entityType: 'NOTA_DINAS',
+      entityId: created.id,
+      details: { jenisNotaDinas: form.jenisNotaDinas, tanggal: form.tanggal, wilayah: form.wilayah },
+    });
+    return created;
   },
 
   async update(id: string, form: NotaDinasForm, updatedAt?: string, regionId?: string | null) {
@@ -89,13 +97,19 @@ export const notaDinasService = {
       .update({
         form,
         updated_at: updatedAt || new Date().toISOString(),
-        ...(resolvedRegionId ? { region_id: resolvedRegionId } : {}),
+        region_id: resolvedRegionId,
       })
       .eq('id', id)
       .select('id, form, region_id, created_at, updated_at')
       .single();
 
     if (error) throw error;
+    void auditLogService.logCurrentUser({
+      action: 'UPDATE',
+      entityType: 'NOTA_DINAS',
+      entityId: id,
+      details: { jenisNotaDinas: form.jenisNotaDinas, tanggal: form.tanggal, wilayah: form.wilayah },
+    });
     return toRecord(data as NotaDinasRow);
   },
 
@@ -106,6 +120,12 @@ export const notaDinasService = {
       .eq('id', id);
 
     if (error) throw error;
+    void auditLogService.logCurrentUser({
+      action: 'DELETE',
+      entityType: 'NOTA_DINAS',
+      entityId: id,
+      details: { mode: 'hard_delete' },
+    });
   },
 
   async save(form: NotaDinasForm, id?: string, createdAt?: string, regionId?: string | null) {
