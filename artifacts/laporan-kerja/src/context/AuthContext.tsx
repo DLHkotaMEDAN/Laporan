@@ -7,6 +7,7 @@ import { auditLogService } from '@/services/auditLogService';
 interface Profile {
   id: string;
   role: UserRole;
+  roles: string[];
   category: string | null;
   work_plan_categories?: string[] | null;
   username: string | null;
@@ -161,7 +162,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         userId: user.id,
         username: profile?.username || user.email,
         userEmail: user.email,
-        role: profile?.role,
+        role: (profile?.roles ?? []).join(',') || profile?.role || undefined,
       });
       loginAuditUsers.current.delete(user.id);
     }

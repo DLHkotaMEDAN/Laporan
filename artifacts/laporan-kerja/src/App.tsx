@@ -56,6 +56,12 @@ import {
   isLaporanBbmAdmin,
   isAdminRencanaKerjaAccess,
   isNotaDinasAdmin,
+  isSuperAdminRoles,
+  isAdminBbmRoles,
+  isLaporanBbmRoles,
+  isNotaDinasRoles,
+  canAccessFuelAreaRoles,
+  getRoleLandingPathRoles,
 } from "@/constants/access-control";
 import { AuthorizeRoute } from "@/components/AuthorizeRoute";
 import { auditLogService } from "@/services/auditLogService";
@@ -101,7 +107,7 @@ const ActivityTracker = () => {
       userId: session.user.id,
       username: profile.username || session.user.email,
       userEmail: session.user.email,
-      role: profile.role,
+      role: (profile.roles ?? []).join(',') || profile.role,
     });
   }, [location.pathname, location.search, profile, session]);
 
@@ -147,7 +153,7 @@ const ActivityTracker = () => {
         userId: session.user.id,
         username: profile.username || session.user.email,
         userEmail: session.user.email,
-        role: profile.role,
+        role: (profile.roles ?? []).join(',') || profile.role,
       });
     };
 
@@ -169,19 +175,30 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Kondisi ini terjadi pada jendela waktu singkat antara setSession dan setProfile.
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  // admin_wilayah_bbm dan admin_rencana_kerja_bbm boleh membuat/edit laporan
-  // harian (combined workspace), dikecualikan dari redirect meski masuk
-  // isAdminBbmAccess & isAdminRencanaKerjaAccess.
-  const isCombinedRkBbm = profile.role === USER_ROLES.ADMIN_WILAYAH_BBM
+  const profileRoles = profile.roles ?? [];
+
+  // admin_wilayah_bbm dan admin_rencana_kerja_bbm (dimigrasi ke array multi-role)
+  // boleh membuat/edit laporan harian (combined workspace).
+  // User yang punya bbm + (laporan_kerja atau rencana_kerja) TIDAK di-redirect.
+  const hasLaporanOrRencana = profileRoles.includes('laporan_kerja') || profileRoles.includes('rencana_kerja');
+  const isCombinedRkBbm = isAdminBbmRoles(profileRoles) && hasLaporanOrRencana;
+
+  // Backward compat: also check legacy combined role strings
+  const isCombinedRkBbmLegacy = profile.role === USER_ROLES.ADMIN_WILAYAH_BBM
     || profile.role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM;
 
+  const combinedExempt = isCombinedRkBbm || isCombinedRkBbmLegacy;
+
   if (
-    (!isCombinedRkBbm && isAdminBbmAccess(profile.role))
-    || isLaporanBbmAdmin(profile.role)
-    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
-    || (!isCombinedRkBbm && isAdminRencanaKerjaAccess(profile.role))
+    (!combinedExempt && (isAdminBbmRoles(profileRoles) || isAdminBbmAccess(profile.role)))
+    || isLaporanBbmRoles(profileRoles) || isLaporanBbmAdmin(profile.role)
+    || profileRoles.includes('spj_oli') || profile.role === USER_ROLES.ADMIN_SPJ_BBM
+    || (!combinedExempt && (profileRoles.includes('rencana_kerja') || isAdminRencanaKerjaAccess(profile.role)))
   ) {
-    return <Navigate to={getRoleLandingPath(profile.role)} />;
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile.role);
+    return <Navigate to={landingPath} />;
   }
   
   return <>{children}</>;
@@ -194,17 +211,25 @@ const WorkPlanWriteRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  // admin_wilayah_bbm dan admin_rencana_kerja_bbm boleh membuat/edit rencana
-  // kerja (combined workspace), dikecualikan dari redirect meski masuk isAdminBbmAccess.
-  const isCombinedRkBbm = profile.role === USER_ROLES.ADMIN_WILAYAH_BBM
+  const profileRoles = profile.roles ?? [];
+
+  // admin_wilayah_bbm dan admin_rencana_kerja_bbm (atau multi-role equivalent)
+  // boleh membuat/edit rencana kerja (combined workspace), dikecualikan dari redirect.
+  const hasRencanaKerja = profileRoles.includes('rencana_kerja');
+  const isCombinedRkBbm = isAdminBbmRoles(profileRoles) && hasRencanaKerja;
+  const isCombinedRkBbmLegacy = profile.role === USER_ROLES.ADMIN_WILAYAH_BBM
     || profile.role === USER_ROLES.ADMIN_RENCANA_KERJA_BBM;
+  const combinedExempt = isCombinedRkBbm || isCombinedRkBbmLegacy;
 
   if (
-    (!isCombinedRkBbm && isAdminBbmAccess(profile.role))
-    || isLaporanBbmAdmin(profile.role)
-    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
+    (!combinedExempt && (isAdminBbmRoles(profileRoles) || isAdminBbmAccess(profile.role)))
+    || isLaporanBbmRoles(profileRoles) || isLaporanBbmAdmin(profile.role)
+    || profileRoles.includes('spj_oli') || profile.role === USER_ROLES.ADMIN_SPJ_BBM
   ) {
-    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile.role);
+    return <Navigate to={landingPath} replace />;
   }
 
   return <>{children}</>;
@@ -217,8 +242,10 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
   
-  const isAllowed = canAccessFuelArea(profile?.role, session.user.email)
-    && !isLaporanBbmAdmin(profile?.role);
+  const profileRoles = profile.roles ?? [];
+  const isAllowed = (profileRoles.length > 0
+    ? canAccessFuelAreaRoles(profileRoles) && !isLaporanBbmRoles(profileRoles)
+    : canAccessFuelArea(profile?.role, session.user.email) && !isLaporanBbmAdmin(profile?.role));
                     
   if (!isAllowed) return <Navigate to="/" />;
   
@@ -232,13 +259,18 @@ const FuelReportRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  if (
-    !canAccessFuelArea(profile.role, session.user.email)
-    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
-    || profile.role === USER_ROLES.ADMIN_SPJ_OLI
-    || isLaporanBbmAdmin(profile.role)
-  ) {
-    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+  const profileRoles = profile.roles ?? [];
+  const hasSpjOli = profileRoles.includes('spj_oli');
+  const hasLaporanBbm = isLaporanBbmRoles(profileRoles) || isLaporanBbmAdmin(profile.role);
+  const canFuel = profileRoles.length > 0
+    ? canAccessFuelAreaRoles(profileRoles)
+    : canAccessFuelArea(profile.role, session.user.email);
+
+  if (!canFuel || hasSpjOli || profile.role === USER_ROLES.ADMIN_SPJ_OLI || hasLaporanBbm) {
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile.role);
+    return <Navigate to={landingPath} replace />;
   }
 
   return <>{children}</>;
@@ -251,9 +283,16 @@ const LaporanBbmRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  const isAllowed = isSuperAdminAccess(profile?.role, session.user.email)
-    || isLaporanBbmAdmin(profile?.role);
-  if (!isAllowed) return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+  const profileRoles = profile.roles ?? [];
+  const isAllowed = profileRoles.length > 0
+    ? (isSuperAdminRoles(profileRoles) || isLaporanBbmRoles(profileRoles))
+    : (isSuperAdminAccess(profile?.role, session.user.email) || isLaporanBbmAdmin(profile?.role));
+  if (!isAllowed) {
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile?.role);
+    return <Navigate to={landingPath} replace />;
+  }
 
   return <>{children}</>;
 };
@@ -265,11 +304,19 @@ const SpjOliRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  const isAllowed = profile?.role === USER_ROLES.ADMIN
-    || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
-    || profile?.role === USER_ROLES.ADMIN_SPJ_OLI
-    || profile?.role === USER_ROLES.PIMPINAN;
-  if (!isAllowed) return <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+  const profileRoles = profile.roles ?? [];
+  const isAllowed = profileRoles.length > 0
+    ? (profileRoles.includes('administrator') || profileRoles.includes('spj_oli') || profileRoles.includes('pimpinan'))
+    : (profile?.role === USER_ROLES.ADMIN
+      || profile?.role === USER_ROLES.ADMIN_SPJ_BBM
+      || profile?.role === USER_ROLES.ADMIN_SPJ_OLI
+      || profile?.role === USER_ROLES.PIMPINAN);
+  if (!isAllowed) {
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile?.role);
+    return <Navigate to={landingPath} replace />;
+  }
 
   return <>{children}</>;
 };
@@ -281,8 +328,14 @@ const NotaDinasRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  const isAllowed = isSuperAdminAccess(profile?.role, session.user.email) || isNotaDinasAdmin(profile?.role);
-  return isAllowed ? <>{children}</> : <Navigate to={getRoleLandingPath(profile?.role)} replace />;
+  const profileRoles = profile.roles ?? [];
+  const isAllowed = profileRoles.length > 0
+    ? (isSuperAdminRoles(profileRoles) || isNotaDinasRoles(profileRoles))
+    : (isSuperAdminAccess(profile?.role, session.user.email) || isNotaDinasAdmin(profile?.role));
+  const landingPath = profileRoles.length > 0
+    ? getRoleLandingPathRoles(profileRoles)
+    : getRoleLandingPath(profile?.role);
+  return isAllowed ? <>{children}</> : <Navigate to={landingPath} replace />;
 };
 
 const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => {
@@ -292,8 +345,17 @@ const NonFuelSpecialistRoute = ({ children }: { children: React.ReactNode }) => 
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  if (isAdminBbmAccess(profile.role) || isLaporanBbmAdmin(profile.role) || profile.role === USER_ROLES.ADMIN_SPJ_BBM || profile.role === USER_ROLES.ADMIN_SPJ_OLI) {
-    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+  const profileRoles = profile.roles ?? [];
+  const isFuelOnly = profileRoles.length > 0
+    ? (isAdminBbmRoles(profileRoles) || isLaporanBbmRoles(profileRoles) || profileRoles.includes('spj_oli'))
+    : (isAdminBbmAccess(profile.role) || isLaporanBbmAdmin(profile.role)
+       || profile.role === USER_ROLES.ADMIN_SPJ_BBM || profile.role === USER_ROLES.ADMIN_SPJ_OLI);
+
+  if (isFuelOnly) {
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile.role);
+    return <Navigate to={landingPath} replace />;
   }
 
   return <>{children}</>;
@@ -306,22 +368,33 @@ const WorkPlanAccessRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  // Role laporan tidak punya akses rencana kerja
-  if (profile.role === USER_ROLES.LAPORAN) return <Navigate to="/" replace />;
+  const profileRoles = profile.roles ?? [];
+
+  // laporan_kerja (lama: LAPORAN) tidak punya akses rencana kerja
+  if (profileRoles.includes('laporan_kerja') && !profileRoles.includes('rencana_kerja')) {
+    return <Navigate to="/" replace />;
+  }
+  // Backward compat: legacy LAPORAN role
+  if (profileRoles.length === 0 && profile.role === USER_ROLES.LAPORAN) {
+    return <Navigate to="/" replace />;
+  }
 
   // Admin rencana kerja (semua varian) boleh akses langsung
-  if (isAdminRencanaKerjaAccess(profile.role)) return <>{children}</>;
+  if (profileRoles.includes('rencana_kerja') || isAdminRencanaKerjaAccess(profile.role)) {
+    return <>{children}</>;
+  }
 
   // Fuel specialists tidak punya akses rencana kerja — redirect ke landing mereka.
-  // Logika ini sebelumnya didelegasikan ke NonFuelSpecialistRoute, sekarang
-  // diinline agar tidak ada double auth check (loading/session/profile dua kali).
-  if (
-    isAdminBbmAccess(profile.role)
-    || isLaporanBbmAdmin(profile.role)
-    || profile.role === USER_ROLES.ADMIN_SPJ_BBM
-    || profile.role === USER_ROLES.ADMIN_SPJ_OLI
-  ) {
-    return <Navigate to={getRoleLandingPath(profile.role)} replace />;
+  const isFuelOnly = profileRoles.length > 0
+    ? (isAdminBbmRoles(profileRoles) || isLaporanBbmRoles(profileRoles) || profileRoles.includes('spj_oli'))
+    : (isAdminBbmAccess(profile.role) || isLaporanBbmAdmin(profile.role)
+       || profile.role === USER_ROLES.ADMIN_SPJ_BBM || profile.role === USER_ROLES.ADMIN_SPJ_OLI);
+
+  if (isFuelOnly) {
+    const landingPath = profileRoles.length > 0
+      ? getRoleLandingPathRoles(profileRoles)
+      : getRoleLandingPath(profile.role);
+    return <Navigate to={landingPath} replace />;
   }
 
   return <>{children}</>;
@@ -334,8 +407,10 @@ const OvertimeAccessRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  const isAllowed = isSuperAdminAccess(profile?.role, session?.user?.email)
-    || profile?.role === USER_ROLES.ADMIN_REKAP_LEMBUR;
+  const profileRoles = profile.roles ?? [];
+  const isAllowed = profileRoles.length > 0
+    ? (isSuperAdminRoles(profileRoles) || profileRoles.includes('rekap_lembur'))
+    : (isSuperAdminAccess(profile?.role, session?.user?.email) || profile?.role === USER_ROLES.ADMIN_REKAP_LEMBUR);
   return isAllowed ? <>{children}</> : <Navigate to="/" replace />;
 };
 
@@ -346,7 +421,10 @@ const PrintRekapAdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
 
-  const isAllowed = canPrintAdminRecap(profile?.role, session.user.email);
+  const profileRoles = profile.roles ?? [];
+  const isAllowed = profileRoles.length > 0
+    ? isSuperAdminRoles(profileRoles)
+    : canPrintAdminRecap(profile?.role, session.user.email);
   if (!isAllowed) return <Navigate to="/" replace />;
 
   return <>{children}</>;

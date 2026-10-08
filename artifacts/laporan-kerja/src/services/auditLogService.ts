@@ -16,6 +16,10 @@ export type AuditLog = {
   created_at: string;
 };
 
+/** Serialize roles array to comma-separated string for audit_logs.role column. */
+const serializeRoles = (roles: string[] | null | undefined): string | null =>
+  roles && roles.length > 0 ? roles.join(',') : null;
+
 export const auditLogService = {
   async logAction(params: {
     action: AuditAction;
@@ -36,10 +40,10 @@ export const auditLogService = {
         if (!role && user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, roles')
             .eq('id', user.id)
             .maybeSingle();
-          role = profile?.role || null;
+          role = serializeRoles(profile?.roles) || profile?.role || null;
         }
       }
       const payload = {
@@ -105,7 +109,7 @@ export const auditLogService = {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, role')
+      .select('username, role, roles')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -115,7 +119,7 @@ export const auditLogService = {
       userId: user.id,
       username: profile?.username || user.email || 'User',
       userEmail: user.email,
-      role: profile?.role,
+      role: serializeRoles(profile?.roles) || profile?.role || null,
     });
   },
 

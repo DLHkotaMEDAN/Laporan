@@ -34,6 +34,14 @@ import {
   isSpjOliAdmin,
   roleCanSelectRegion,
   isSuperAdminAccess,
+  PermissionKey,
+  PERMISSION_LABELS,
+  PERMISSION_REQUIRES_REGION,
+  ADMINISTRATOR_KEY,
+  isSuperAdminRoles,
+  getRoleLabelRoles,
+  rolesRequireRegion,
+  roleRequiresTeamRoles,
 } from '@/constants/access-control';
 import ResetPasswordDialog from '@/components/ResetPasswordDialog';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -49,6 +57,7 @@ interface Profile {
   username: string | null;
   email?: string | null;
   role: UserRole;
+  roles: string[];
   category: string | null;
   work_plan_categories: string[] | null;
   region_id: string | null;
@@ -73,6 +82,7 @@ interface UserFormState {
   email: string;
   password: string;
   role: UserRole;
+  roles: string[];
   regionId: string;
   teamId: string;
   workPlanCategories: string[];
@@ -81,6 +91,7 @@ interface UserFormState {
 interface EditUserFormState {
   username: string;
   role: UserRole;
+  roles: string[];
   regionId: string;
   teamId: string;
   workPlanCategories: string[];
@@ -128,7 +139,8 @@ const runWithConcurrencyLimit = async <T,>(
 
 const UserManagement = () => {
   const { profile: currentProfile, session } = useAuth();
-  const canMutateUsers = currentProfile?.is_active !== false && isSuperAdminAccess(currentProfile?.role, session?.user?.email);
+  const canMutateUsers = currentProfile?.is_active !== false
+    && (isSuperAdminRoles(currentProfile?.roles ?? []) || isSuperAdminAccess(currentProfile?.role, session?.user?.email));
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetPasswordTarget, setResetPasswordTarget] = useState<{ open: boolean; userId: string; username: string }>({
@@ -148,9 +160,9 @@ const UserManagement = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState<UserFormState>({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, regionId: '', teamId: '', workPlanCategories: [] });
+  const [newUser, setNewUser] = useState<UserFormState>({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, roles: [], regionId: '', teamId: '', workPlanCategories: [] });
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
-  const [editUser, setEditUser] = useState<EditUserFormState>({ username: '', role: USER_ROLES.USER, regionId: '', teamId: '', workPlanCategories: [] });
+  const [editUser, setEditUser] = useState<EditUserFormState>({ username: '', role: USER_ROLES.USER, roles: [], regionId: '', teamId: '', workPlanCategories: [] });
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   const [accountDetails, setAccountDetails] = useState<{ email?: string; createdAt?: string; lastSignInAt?: string | null; emailConfirmedAt?: string | null } | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -196,6 +208,23 @@ const UserManagement = () => {
     setTeams(data || []);
   };
 
+  /** Toggle role in multi-role system.
+   * Administrator: exclusive — selecting it clears all other roles (and vice versa).
+   * Other roles: can be combined freely, but not while administrator is selected.
+   */
+  const handleRoleToggle = (key: string, currentRoles: string[], setRoles: (r: string[]) => void) => {
+    if (key === ADMINISTRATOR_KEY) {
+      setRoles(currentRoles.includes(ADMINISTRATOR_KEY) ? [] : [ADMINISTRATOR_KEY]);
+    } else {
+      if (currentRoles.includes(ADMINISTRATOR_KEY)) return;
+      setRoles(
+        currentRoles.includes(key)
+          ? currentRoles.filter(r => r !== key)
+          : [...currentRoles, key],
+      );
+    }
+  };
+
   const handleCreateUser = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canMutateUsers) { showError('Akun nonaktif hanya dapat melihat data.'); return; }
@@ -207,6 +236,7 @@ const UserManagement = () => {
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
+          roles: newUser.roles.length > 0 ? newUser.roles : [newUser.role],
           regionId: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
           teamId: roleRequiresTeam(newUser.role) ? newUser.teamId : null,
           workPlanCategories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUserWorkPlanCategories : [],
@@ -223,6 +253,7 @@ const UserManagement = () => {
           username: newUser.username.trim(),
           email: data.email || newUser.email.trim().toLowerCase(),
           role: newUser.role,
+          roles: newUser.roles.length > 0 ? newUser.roles : [newUser.role],
           category: null,
           work_plan_categories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUserWorkPlanCategories : [],
           region_id: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
@@ -232,7 +263,7 @@ const UserManagement = () => {
         },
         ...currentProfiles.filter(profile => profile.id !== data.id),
       ]);
-      setNewUser({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, regionId: '', teamId: '', workPlanCategories: [] });
+      setNewUser({ username: '', email: '', password: '', role: USER_ROLES.ADMIN_WILAYAH, roles: [], regionId: '', teamId: '', workPlanCategories: [] });
       await fetchProfiles();
     } catch (error: unknown) {
       showError('Gagal membuat akun: ' + await getEdgeFunctionErrorMessage(error));
@@ -279,7 +310,7 @@ const UserManagement = () => {
           .filter((account): account is { id: string; email: string } => Boolean(account.id && account.email))
           .map(account => [account.id, account.email]),
       );
-      setProfiles((data || []).map(profile => ({ ...profile, email: emailsByUserId.get(profile.id) || null })));
+      setProfiles((data || []).map(profile => ({ ...profile, roles: profile.roles ?? [], email: emailsByUserId.get(profile.id) || null })));
     } catch (error: any) {
       showError("Gagal memuat daftar pengguna: " + error.message);
     } finally {
@@ -382,6 +413,7 @@ const UserManagement = () => {
     setEditUser({
       username: profile.username || '',
       role: profile.role,
+      roles: profile.roles ?? [],
       regionId: profile.region_id || '',
       teamId: profile.team_id || '',
       workPlanCategories: profile.work_plan_categories || [],
@@ -410,9 +442,12 @@ const UserManagement = () => {
       return;
     }
 
+    const effectiveRoles = editUser.roles.length > 0 ? editUser.roles : [editUser.role];
+
     const updates = {
       username: editUser.username.trim(),
       role: editUser.role,
+      roles: effectiveRoles,
       region_id: canSelectRegion ? editUser.regionId || null : null,
       team_id: roleRequiresTeam(editUser.role) ? editUser.teamId : null,
       work_plan_categories: isCategoryScopedWorkPlanAdmin(editUser.role) ? editUserWorkPlanCategories : [],

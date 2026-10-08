@@ -245,3 +245,116 @@ export const getRoleBadgeClass = (role: string | null | undefined) => {
       return 'text-blue-600 border-blue-200 bg-blue-50';
   }
 };
+
+// ============================================================
+// MULTI-ROLE SYSTEM — 11 permission keys
+// ============================================================
+
+export type PermissionKey =
+  | 'administrator'
+  | 'pimpinan'
+  | 'laporan_kerja'
+  | 'rencana_kerja'
+  | 'rekap_lembur'
+  | 'bbm'
+  | 'bbm_pusat'
+  | 'laporan_bbm'
+  | 'spj_oli'
+  | 'nota_dinas'
+  | 'pengguna_tim';
+
+export const PERMISSION_LABELS: Record<PermissionKey, string> = {
+  administrator: 'Administrator',
+  pimpinan: 'Pimpinan',
+  laporan_kerja: 'Admin Wilayah (Laporan Kerja)',
+  rencana_kerja: 'Admin Rencana Kerja',
+  rekap_lembur: 'Admin Rekap Lembur',
+  bbm: 'Admin BBM',
+  bbm_pusat: 'Admin BBM Pusat',
+  laporan_bbm: 'Admin Laporan BBM',
+  spj_oli: 'Admin SPJ Oli',
+  nota_dinas: 'Admin Nota Dinas',
+  pengguna_tim: 'Pengguna Tim',
+};
+
+// Permission keys yang memerlukan pengisian wilayah/region
+export const PERMISSION_REQUIRES_REGION: PermissionKey[] = [
+  'laporan_kerja',
+  'rencana_kerja',
+  'rekap_lembur',
+  'bbm',
+  'laporan_bbm',
+  'spj_oli',
+  'nota_dinas',
+  'pengguna_tim',
+];
+
+// Permission keys yang memerlukan pengisian tim/kategori
+export const PERMISSION_REQUIRES_TEAM: PermissionKey[] = ['pengguna_tim'];
+
+export const ADMINISTRATOR_KEY = 'administrator' as PermissionKey;
+
+// --- Predicate functions versi baru (menerima roles: string[]) ---
+
+export const isSuperAdminRoles = (roles: string[]): boolean =>
+  roles.includes('administrator');
+
+export const isPimpinanRoles = (roles: string[]): boolean =>
+  roles.includes('pimpinan');
+
+export const isAdminBbmRoles = (roles: string[]): boolean =>
+  roles.includes('bbm') || roles.includes('bbm_pusat');
+
+export const isAdminBbmPusatRoles = (roles: string[]): boolean =>
+  roles.includes('bbm_pusat');
+
+export const isLaporanBbmRoles = (roles: string[]): boolean =>
+  roles.includes('laporan_bbm');
+
+export const isSpjOliRoles = (roles: string[]): boolean =>
+  roles.includes('spj_oli');
+
+export const isNotaDinasRoles = (roles: string[]): boolean =>
+  roles.includes('nota_dinas');
+
+export const isAdminWilayahRoles = (roles: string[]): boolean =>
+  roles.includes('laporan_kerja') || roles.includes('rencana_kerja');
+
+export const canManageReportEntriesRoles = (roles: string[]): boolean =>
+  roles.some(r => ['administrator', 'laporan_kerja', 'pengguna_tim'].includes(r));
+
+export const canManageWorkPlansRoles = (roles: string[]): boolean =>
+  roles.some(r => ['administrator', 'rencana_kerja', 'pengguna_tim'].includes(r));
+
+export const canAccessFuelAreaRoles = (roles: string[]): boolean =>
+  roles.some(r => ['administrator', 'pimpinan', 'bbm', 'bbm_pusat', 'laporan_bbm', 'spj_oli'].includes(r));
+
+export const rolesRequireRegion = (roles: string[]): boolean =>
+  roles.some(r => (PERMISSION_REQUIRES_REGION as string[]).includes(r));
+
+export const roleRequiresTeamRoles = (roles: string[]): boolean =>
+  roles.includes('pengguna_tim');
+
+export const getRoleLandingPathRoles = (roles: string[]): string => {
+  if (roles.includes('administrator')) return '/admin';
+  if (roles.includes('pimpinan')) return '/laporan/rekap';
+  if (roles.includes('bbm_pusat')) return '/bbm/pusat';
+  if (roles.includes('laporan_bbm')) return '/bbm/laporan';
+  if (roles.includes('spj_oli')) return '/bbm/spj-oli';
+  if (roles.includes('bbm')) return '/bbm';
+  if (roles.includes('laporan_kerja') || roles.includes('rencana_kerja')) return '/laporan';
+  if (roles.includes('rekap_lembur')) return '/lembur';
+  if (roles.includes('nota_dinas')) return '/nota-dinas';
+  if (roles.includes('pengguna_tim')) return '/laporan';
+  return '/laporan';
+};
+
+export const getLoginDestinationRoles = (roles: string[]): string =>
+  getRoleLandingPathRoles(roles);
+
+export const getRoleLabelRoles = (roles: string[]): string => {
+  if (roles.length === 0) return 'Tidak ada hak akses';
+  return roles
+    .map(r => PERMISSION_LABELS[r as PermissionKey] ?? r)
+    .join(' + ');
+};

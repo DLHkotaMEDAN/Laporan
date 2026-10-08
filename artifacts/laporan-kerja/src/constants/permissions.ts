@@ -26,7 +26,10 @@ export interface Permission {
 }
 
 export interface AuthContext {
-  role: UserRole | null;
+  /** Multi-role array (preferred). Introduced in multi-role refactor. */
+  roles: UserRole[];
+  /** @deprecated Kept for backward compat — prefer `roles`. Will be removed after full migration. */
+  role?: UserRole | null;
   id?: string | null;
   regionId: string | null;
   teamId: string | null;

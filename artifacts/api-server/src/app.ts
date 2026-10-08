@@ -27,7 +27,31 @@ app.use(
     },
   }),
 );
-app.use(cors());
+// Batasi CORS hanya ke origin yang dikenal.
+// Request same-origin (frontend di Replit/Dyad yang sama) tidak butuh CORS
+// karena origin === undefined — sudah otomatis diizinkan.
+const ALLOWED_ORIGINS = new Set([
+  "http://localhost:5173",  // Vite dev server
+  "http://localhost:4173",  // Vite preview
+  "http://localhost:19762", // Dyad/Replit dev port
+]);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Same-origin requests: origin header tidak dikirim browser (undefined)
+      if (!origin) return callback(null, true);
+      // Izinkan semua subdomain *.replit.app dan *.replit.dev (production Dyad)
+      if (/\.replit\.(app|dev)$/.test(origin)) return callback(null, true);
+      // Izinkan origin lokal yang terdaftar
+      if (ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+      // Tolak semua origin lain
+      callback(new Error(`CORS: origin tidak diizinkan — ${origin}`));
+    },
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  }),
+);
 // A print-ready report contains the rendered table and its styles, so it can
 // legitimately be larger than Express' default 100 KB JSON body limit.
 app.use(express.json({ limit: "12mb" }));

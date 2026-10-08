@@ -38,8 +38,9 @@ export const AuthorizeRoute = ({
         setDenyReason('No session');
         return;
       }
-      // Build context from profile (role, region_id, team_id, email)
+      // Build context from profile (roles array, region_id, team_id, email)
       const ctx: AuthContext = {
+        roles: (profile?.roles ?? []) as import('@/constants/access-control').UserRole[],
         role: profile?.role ?? null,
         id: session.user.id,
         regionId: profile?.region_id ?? null,

@@ -24,6 +24,7 @@ type CreateUserInput = {
   password: string;
   username: string;
   role: string;
+  roles?: string[];
   regionId?: string | null;
   teamId?: string | null;
   workPlanCategories?: string[];
@@ -107,10 +108,13 @@ Deno.serve(async (request) => {
     );
     const { data: callerProfile, error: callerError } = await adminClient
       .from('profiles')
-      .select('role')
+      .select('role, roles')
       .eq('id', caller.id)
       .single();
-    if (callerError || callerProfile?.role !== 'admin') throw new Error('Hanya Super Admin yang dapat membuat akun.');
+    const callerRoles: string[] = (callerProfile?.roles && callerProfile.roles.length > 0)
+      ? callerProfile.roles
+      : (callerProfile?.role ? [callerProfile.role] : []);
+    if (callerError || !callerRoles.includes('admin')) throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
     const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput | ListUserEmailsInput | SetUserActiveInput;
     if ('action' in input && input.action === 'list-user-emails') {
@@ -166,6 +170,16 @@ Deno.serve(async (request) => {
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
     if (!validRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
+
+    // Build effective roles array: prefer new `roles` param, fall back to single `role`
+    const effectiveRoles: string[] = (Array.isArray(input.roles) && input.roles.length > 0)
+      ? input.roles
+      : [input.role];
+    // Validate each role in the array
+    for (const r of effectiveRoles) {
+      if (!validRoles.has(r as keyof typeof USER_ROLES)) throw new Error(`Hak akses tidak valid: ${r}`);
+    }
+
     const assignedRegionId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.regionId;
     const assignedTeamId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.teamId;
     const workPlanCategories = input.role === USER_ROLES.ADMIN_RENCANA_KERJA
@@ -210,6 +224,7 @@ Deno.serve(async (request) => {
       id: created.user.id,
       username: input.username.trim(),
       role: input.role,
+      roles: effectiveRoles,
       region_id: assignedRegionId ?? null,
       team_id: assignedTeamId ?? null,
       work_plan_categories: workPlanCategories,
