@@ -239,7 +239,7 @@ const getDatabaseRecordCount = async (
 
 const Index = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { session, profile, signOut, loading: authLoading } = useAuth();
   const savedViewStateRef = useRef<IndexViewState>(readIndexViewState());
   const hasRestoredScrollRef = useRef(false);
@@ -395,6 +395,8 @@ const Index = () => {
       && (requestedTab !== "laporan_bbm" || canViewLaporanBbm)
       && (requestedTab !== "fuel_reports_pusat" || isAdmin || isAdminBbmPusat)) {
       setActiveTab(requestedTab);
+      // Hapus ?tab= dari URL setelah diproses agar refresh tidak memaksa tab yang sama
+      setSearchParams(prev => { prev.delete('tab'); return prev; }, { replace: true });
     } else if (isAdminBbmPusat) {
       setActiveTab("fuel_reports_pusat");
     } else if (isAdminLaporanBbm) {

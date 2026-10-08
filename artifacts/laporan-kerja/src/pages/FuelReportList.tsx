@@ -537,7 +537,7 @@ const FuelReportList = ({ reportType = 'admin_bbm' }: FuelReportListProps) => {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => navigate('/?tab=workplans')}
+                    onClick={() => navigate('/')}
                     className="h-9 w-9 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                     aria-label="Kembali ke Dashboard"
                   >
