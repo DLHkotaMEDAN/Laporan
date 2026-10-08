@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,7 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { isGlobalFuelAdmin, isSuperAdminAccess } from '@/constants/access-control';
+import { isGlobalFuelAdmin, isSuperAdminAccess,
+  getLoginDestination
+} from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -503,7 +505,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         showSuccess("Laporan BBM disimpan");
       }
       await clearDraft();
-      navigate(routeBase);
+      navigate(getLoginDestination(profile?.role));
     } catch (error: any) {
       const message = error?.message || "Terjadi kesalahan database";
       if (/refresh token|jwt|unauthorized|not authenticated/i.test(message)) {
@@ -860,3 +862,4 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
 };
 
 export default FuelReportForm;
+

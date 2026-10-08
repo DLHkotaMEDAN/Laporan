@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getLoginDestination } from '@/constants/access-control';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,7 +85,7 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
       else await overtimeService.create(payload);
       await clearDraft();
       showSuccess(initialData ? 'Data lembur berhasil diperbarui.' : 'Data lembur berhasil disimpan.');
-      navigate('/overtime');
+      navigate(getLoginDestination(profile?.role));
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Gagal menyimpan data lembur.');
     } finally { setSaving(false); }
@@ -115,3 +116,4 @@ const OvertimeForm = ({ initialData }: { initialData?: OvertimeRecord }) => {
 };
 
 export default OvertimeForm;
+

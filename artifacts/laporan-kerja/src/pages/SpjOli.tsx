@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowUpDown, ChevronDown, ChevronUp, Edit, FilterX, Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,9 @@ import { WorkPlan } from '@/types/workPlan';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { isSpjOliAdmin, isSuperAdminAccess, isPimpinanAccess } from '@/constants/access-control';
+import { isSpjOliAdmin, isSuperAdminAccess, isPimpinanAccess,
+  getLoginDestination
+} from '@/constants/access-control';
 import TotalRecordLabel from '@/components/TotalRecordLabel';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -252,7 +254,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
-    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); await clearDraft(); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate('/'); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
+    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); await clearDraft(); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate(getLoginDestination(profile?.role)); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
   };
   const remove = (recordId: string) => setDeleteSpjConfirm({ open: true, id: recordId });
 
@@ -368,3 +370,4 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   );
 
 }
+

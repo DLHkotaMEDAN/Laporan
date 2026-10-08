@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,7 +23,9 @@ import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft, useValueDraft } from '@/hooks/useFormDraft';
-import { isCategoryScopedWorkPlanAdmin, isGlobalWorkPlanAdmin, isPimpinanAccess } from '@/constants/access-control';
+import { isCategoryScopedWorkPlanAdmin, isGlobalWorkPlanAdmin, isPimpinanAccess,
+  getLoginDestination
+} from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -539,7 +541,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         showSuccess(isDuplicateMode ? "Rencana Kerja baru berhasil dibuat dari duplikat!" : "Rencana Kerja disimpan!");
       }
       await clearDraft();
-      navigate('/work-plans');
+      navigate(getLoginDestination(profile?.role));
     } catch (error: any) {
       console.error(error);
       showError("Gagal menyimpan: " + (error.message || "Terjadi kesalahan database"));
@@ -822,7 +824,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         )}
 
         <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" onClick={() => navigate('/work-plans')} className="px-2 md:px-4">Batal</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(getLoginDestination(profile?.role))} className="px-2 md:px-4">Batal</Button>
           <Button type="submit" disabled={isSubmitting || isPimpinan} className={cn("bg-blue-600 hover:bg-blue-700 px-2 md:px-8", isPimpinan && "opacity-50 cursor-not-allowed")}>{isSubmitting ? "Menyimpan..." : isDuplicateMode ? "Simpan Sebagai Baru" : "Simpan Rencana Kerja"}</Button>
         </div>
       </form>
@@ -921,3 +923,4 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
 };
 
 export default WorkPlanForm;
+
