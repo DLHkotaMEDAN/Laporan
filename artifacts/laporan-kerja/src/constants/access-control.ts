@@ -132,6 +132,15 @@ export const canAccessAllSpjOliRegions = (role: string | null | undefined, regio
   || role === USER_ROLES.ADMIN_SPJ_BBM
   || (isSpjOliAdmin(role) && !regionId);
 
+/** Multi-role variant: check if user with roles[] has global SPJ Oli access.
+ * Legacy admin_spj_bbm → spj_oli gives global access regardless of region.
+ * New 'spj_oli' key gives global access only if user has no region_id.
+ * Backward compat: legacy profile.role is still checked via canAccessAllSpjOliRegions().
+ */
+export const canAccessAllSpjOliRoles = (roles: string[], regionId?: string | null): boolean =>
+  roles.includes('administrator')
+  || (roles.includes('spj_oli') && !regionId);
+
 export const isAdminWilayahAccess = (role: string | null | undefined) =>
   role === USER_ROLES.ADMIN_WILAYAH || role === USER_ROLES.ADMIN_WILAYAH_BBM;
 
@@ -338,17 +347,19 @@ export const roleRequiresTeamRoles = (roles: string[]): boolean =>
   roles.includes('pengguna_tim');
 
 export const getRoleLandingPathRoles = (roles: string[]): string => {
-  if (roles.includes('administrator')) return '/admin';
-  if (roles.includes('pimpinan')) return '/laporan/rekap';
-  if (roles.includes('bbm_pusat')) return '/bbm/pusat';
-  if (roles.includes('laporan_bbm')) return '/bbm/laporan';
-  if (roles.includes('spj_oli')) return '/bbm/spj-oli';
-  if (roles.includes('bbm')) return '/bbm';
-  if (roles.includes('laporan_kerja') || roles.includes('rencana_kerja')) return '/laporan';
-  if (roles.includes('rekap_lembur')) return '/lembur';
-  if (roles.includes('nota_dinas')) return '/nota-dinas';
-  if (roles.includes('pengguna_tim')) return '/laporan';
-  return '/laporan';
+  // Semua path di sini menggunakan path yang ada di router App.tsx
+  if (roles.includes('administrator')) return '/';
+  if (roles.includes('pimpinan')) return '/';
+  if (roles.includes('bbm_pusat')) return '/?tab=fuel_reports_pusat';
+  if (roles.includes('laporan_bbm')) return '/laporan-bbm';
+  if (roles.includes('spj_oli')) return '/?tab=spj_oli';
+  if (roles.includes('bbm')) return '/fuel-reports';
+  if (roles.includes('nota_dinas')) return '/?tab=nota_dinas';
+  // rencana_kerja murni (tanpa laporan_kerja) -> langsung ke rencana kerja
+  if (roles.includes('rencana_kerja') && !roles.includes('laporan_kerja')) return '/work-plans/daily-rekap';
+  if (roles.includes('rekap_lembur')) return '/overtime';
+  // laporan_kerja, combined, pengguna_tim -> dashboard utama
+  return '/';
 };
 
 export const getLoginDestinationRoles = (roles: string[]): string =>

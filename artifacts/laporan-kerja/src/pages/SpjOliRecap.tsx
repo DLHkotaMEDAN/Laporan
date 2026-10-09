@@ -13,7 +13,7 @@ import { SpjOliRecord } from '@/types/spjOli';
 import { showError } from '@/utils/toast';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { exportSpjOliExcel } from '@/utils/spj-oli-excel';
-import { canAccessAllSpjOliRegions, isSpjOliAdmin } from '@/constants/access-control';
+import { canAccessAllSpjOliRegions, canAccessAllSpjOliRoles, isSpjOliAdmin } from '@/constants/access-control';
 
 export type SpjOliRecapPeriod = 'daily' | 'weekly' | 'monthly';
 type LogoMode = 'with-logo' | 'without-logo';
@@ -129,7 +129,9 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
 
   const regionName = (id: string) => regions.find((region) => region.id === id)?.name || '-';
   const teamName = (id: string) => teams.find((team) => team.id === id)?.name || '-';
-  const showRegionColumn = canAccessAllSpjOliRegions(profile?.role, profile?.region_id);
+  const showRegionColumn = (profile?.roles && profile.roles.length > 0)
+    ? canAccessAllSpjOliRoles(profile.roles, profile?.region_id)
+    : canAccessAllSpjOliRegions(profile?.role, profile?.region_id);
   const columnCount = showRegionColumn ? 12 : 11;
   // Total selalu 100% supaya kolom terakhir (Keterangan) tidak keluar dari
   // batas A3 saat browser membuka dialog cetak.

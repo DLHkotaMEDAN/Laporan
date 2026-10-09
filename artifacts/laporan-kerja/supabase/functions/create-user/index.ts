@@ -195,21 +195,26 @@ Deno.serve(async (request) => {
       return Response.json({ id: input.userId, isActive: input.isActive }, { headers: corsHeaders });
     }
 
-    if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
+    if (!input.email || !input.password || !input.username) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
-    if (!allValidRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
+    // role field is no longer sent from UI (dropdown removed from form).
+    // If client still sends it (backward compat), we ignore it in favor of roles[].
+    // We'll validate roles[] below.
 
-    // Build effective roles array: prefer new `roles` param, fall back to single `role`.
-    // If `roles` is provided and non-empty, it is the authoritative source.
-    // We intentionally IGNORE input.role as the primary field when roles[] is present —
-    // this prevents form inconsistency where the legacy dropdown and the checkbox
-    // multi-select could disagree. The legacy `role` column in profiles is set to
-    // effectiveRoles[0] (the first selected permission key) for backward compat.
+    // Build effective roles array: use roles[] as authoritative source.
+    // role field is now optional (deprecated). If roles[] is not provided,
+    // fall back to [input.role] for backward compat with old clients.
+    if (!Array.isArray(input.roles) || input.roles.length === 0) {
+      // Backward compat: old client sent only `role`
+      if (!input.role || !allValidRoles.has(input.role)) {
+        throw new Error('Minimal satu hak akses (roles) harus dipilih.');
+      }
+    }
     const effectiveRoles: string[] = (Array.isArray(input.roles) && input.roles.length > 0)
       ? input.roles
-      : [input.role];
+      : [input.role as string];
     // Derive the legacy single-role value from the first effective role.
-    // This keeps profile.role consistent with profile.roles regardless of what
+    // This keeps profile.role consistent with profile.roles[0] regardless of what
     // the caller sent in the `role` field.
     const legacyRole = effectiveRoles[0];
     // Validate each role in the array against all valid roles (legacy + new)

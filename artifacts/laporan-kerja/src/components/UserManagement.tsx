@@ -228,23 +228,30 @@ const UserManagement = () => {
   const handleCreateUser = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canMutateUsers) { showError('Akun nonaktif hanya dapat melihat data.'); return; }
+    // Validate: at least one permission key must be selected via checkbox
+    if (newUser.roles.length === 0) { showError('Pilih minimal satu hak akses.'); return; }
     setCreating(true);
     try {
+      // Derive effective roles from checkbox selection only — do NOT use newUser.role
+      // (legacy dropdown was removed; role column is derived server-side from roles[0])
+      const effectiveRoles = newUser.roles;
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           username: newUser.username,
           email: newUser.email,
           password: newUser.password,
-          role: newUser.role,
-          roles: newUser.roles.length > 0 ? newUser.roles : [newUser.role],
-          regionId: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
-          teamId: roleRequiresTeam(newUser.role) ? newUser.teamId : null,
-          workPlanCategories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUserWorkPlanCategories : [],
+          // Send only roles[] — Edge Function derives the legacy `role` column from roles[0]
+          roles: effectiveRoles,
+          // role field omitted intentionally; Edge Function handles it via legacyRole = effectiveRoles[0]
+          // Region: required if any selected role requires it
+          regionId: rolesRequireRegion(effectiveRoles) ? newUser.regionId || null : null,
+          teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
+          workPlanCategories: [],
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'PROFILE', entityId: data.id, details: { username: newUser.username.trim(), email: data.email || newUser.email.trim().toLowerCase(), role: newUser.role } });
+      void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'PROFILE', entityId: data.id, details: { username: newUser.username.trim(), email: data.email || newUser.email.trim().toLowerCase(), roles: effectiveRoles } });
       showSuccess('Akun aktif berhasil dibuat tanpa konfirmasi email');
       await clearNewUserDraft();
       setProfiles(currentProfiles => [
@@ -252,12 +259,12 @@ const UserManagement = () => {
           id: data.id,
           username: newUser.username.trim(),
           email: data.email || newUser.email.trim().toLowerCase(),
-          role: newUser.role,
-          roles: newUser.roles.length > 0 ? newUser.roles : [newUser.role],
+          role: (effectiveRoles[0] ?? '') as UserRole,
+          roles: effectiveRoles,
           category: null,
-          work_plan_categories: isCategoryScopedWorkPlanAdmin(newUser.role) ? newUserWorkPlanCategories : [],
-          region_id: roleCanSelectRegion(newUser.role) ? newUser.regionId || null : null,
-          team_id: roleRequiresTeam(newUser.role) ? newUser.teamId || null : null,
+          work_plan_categories: [],
+          region_id: rolesRequireRegion(effectiveRoles) ? newUser.regionId || null : null,
+          team_id: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId || null : null,
           is_active: true,
           updated_at: new Date().toISOString(),
         },
@@ -519,7 +526,7 @@ const UserManagement = () => {
           <h3 className="font-bold text-blue-950">Buat Akun Baru <span className="ml-2 text-[10px] font-normal text-blue-700">{newUserLastSavedAt ? 'Draft tersimpan' : 'Draft akan tersimpan otomatis'}</span></h3>
           <p className="text-xs text-blue-700">Akun langsung aktif dan tidak memerlukan konfirmasi email.</p>
         </div>
-        <div className={cn("grid items-end gap-3", roleRequiresTeam(newUser.role) ? "md:grid-cols-6" : "md:grid-cols-5")}>
+        <div className={cn("grid items-end gap-3", roleRequiresTeamRoles(newUser.roles) ? "md:grid-cols-5" : "md:grid-cols-4")}>
           <div className="min-w-0 space-y-1.5">
             <label htmlFor="new-user-username" className="text-xs font-semibold text-blue-900">Nama pengguna</label>
             <Input id="new-user-username" required disabled={!canMutateUsers} placeholder="Masukkan nama pengguna" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} />
@@ -533,24 +540,15 @@ const UserManagement = () => {
             <Input id="new-user-password" required disabled={!canMutateUsers} minLength={8} type="password" placeholder="Minimal 8 karakter" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} />
           </div>
           <div className="min-w-0 space-y-1.5">
-            <label className="text-xs font-semibold text-blue-900">Hak akses</label>
-            <Select value={newUser.role} onValueChange={role => setNewUser({
-              ...newUser,
-              role: role as UserRole,
-              regionId: roleCanSelectRegion(role) ? newUser.regionId : '',
-              teamId: '',
-              workPlanCategories: isCategoryScopedWorkPlanAdmin(role) ? newUserWorkPlanCategories : [],
-            })} disabled={!canMutateUsers}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="min-w-0 space-y-1.5">
             <label className="text-xs font-semibold text-blue-900">Cakupan wilayah</label>
-            <Select value={isGlobalFuelAdmin(newUser.role) ? 'all' : newUser.regionId || (isSpjOliAdmin(newUser.role) ? 'all' : '')} onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })} disabled={!canMutateUsers || isGlobalFuelAdmin(newUser.role) || !roleCanSelectRegion(newUser.role)}>
+            <Select
+              value={newUser.roles.includes('bbm_pusat') ? 'all' : newUser.regionId || (newUser.roles.includes('spj_oli') ? 'all' : '')}
+              onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })}
+              disabled={!canMutateUsers || newUser.roles.includes('bbm_pusat') || !rolesRequireRegion(newUser.roles)}
+            >
               <SelectTrigger className="w-full"><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
               <SelectContent>
-                {(isGlobalFuelAdmin(newUser.role) || isSpjOliAdmin(newUser.role)) && <SelectItem value="all">Semua Wilayah</SelectItem>}
+                {(newUser.roles.includes('bbm_pusat') || newUser.roles.includes('spj_oli')) && <SelectItem value="all">Semua Wilayah</SelectItem>}
                 {regions.map(region => <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -564,7 +562,7 @@ const UserManagement = () => {
               <p className="text-[11px] text-blue-700">Pilih satu atau lebih kategori. Akun ini tetap dapat mengakses semua wilayah.</p>
             </div>
           )}
-          {roleRequiresTeam(newUser.role) && (
+          {roleRequiresTeamRoles(newUser.roles) && (
             <div className="min-w-0 space-y-1.5">
               <label className="text-xs font-semibold text-blue-900">Tim</label>
               <Select value={newUser.teamId} onValueChange={teamId => setNewUser({ ...newUser, teamId })} disabled={!canMutateUsers || !newUser.regionId}>
@@ -577,7 +575,7 @@ const UserManagement = () => {
         {/* Multi-role checkbox — primary permission selector */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-blue-900">Hak akses tambahan (bisa pilih lebih dari satu)</label>
+            <label className="text-xs font-semibold text-blue-900">Hak akses (pilih satu atau lebih)</label>
             {newUser.roles.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {newUser.roles.map(r => (
@@ -599,12 +597,12 @@ const UserManagement = () => {
                   checked={newUser.roles.includes(key)}
                   disabled={!canMutateUsers || (key !== ADMINISTRATOR_KEY && newUser.roles.includes(ADMINISTRATOR_KEY))}
                   onChange={() => handleRoleToggle(key, newUser.roles, (roles) => {
-                    const primary = roles.length > 0 ? roles[0] : newUser.role;
                     setNewUser({
                       ...newUser,
                       roles,
-                      role: primary as UserRole,
-                      regionId: roleCanSelectRegion(primary) ? newUser.regionId : '',
+                      // Keep derived role for region/team helpers still used in UI
+                      role: (roles.length > 0 ? roles[0] : USER_ROLES.ADMIN_WILAYAH) as UserRole,
+                      regionId: rolesRequireRegion(roles) ? newUser.regionId : '',
                       teamId: '',
                     });
                   })}
@@ -613,9 +611,9 @@ const UserManagement = () => {
               </label>
             ))}
           </div>
-          <p className="text-[11px] text-blue-700">Pilih satu atau lebih. Jika Administrator dipilih, tidak bisa dikombinasikan dengan hak akses lain. Hak akses di kolom "Hak akses" di atas tetap digunakan jika kolom ini kosong.</p>
+          <p className="text-[11px] text-blue-700">Pilih satu atau lebih. Jika Administrator dipilih, tidak bisa dikombinasikan dengan hak akses lain. Minimal satu hak akses harus dipilih.</p>
         </div>
-        <Button type="submit" disabled={!canMutateUsers || creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId) || (isCategoryScopedWorkPlanAdmin(newUser.role) && newUserWorkPlanCategories.length === 0)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
+        <Button type="submit" disabled={!canMutateUsers || creating || newUser.roles.length === 0 || (rolesRequireRegion(newUser.roles) && !newUser.regionId) || (roleRequiresTeamRoles(newUser.roles) && !newUser.teamId)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -676,38 +674,16 @@ const UserManagement = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Select 
-                        value={profile.role} 
-                        onValueChange={(val) => {
-                          const role = val as UserRole;
-                          // Only update the legacy `role` column — do NOT touch `roles[]`.
-                          // Writing roles: [role] here would erase multi-role state for users
-                          // who already have more than one permission key.
-                          // Use the full Edit dialog (Pencil button) to change roles[].
-                          void handleUpdateProfile(profile.id, {
-                            role,
-                            region_id: roleCanSelectRegion(role) ? profile.region_id : null,
-                            team_id: roleRequiresTeam(role) ? profile.team_id : null,
-                            work_plan_categories: isCategoryScopedWorkPlanAdmin(role)
-                              ? (profile.work_plan_categories?.length ? profile.work_plan_categories : workPlanCategories)
-                              : [],
-                          });
-                        }}
-                        disabled={!canMutateUsers || updatingId === profile.id}
-                      >
-                        <SelectTrigger className={cn(
-                          "h-9 text-[10px] font-bold uppercase",
-                          getRoleBadgeClass(profile.role)
-                        )}>
-                          <div className="flex items-center gap-2">
-                            <Shield size={12} />
-                            <SelectValue />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value} className="text-xs font-bold">{option.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-wrap gap-1">
+                        {(profile.roles && profile.roles.length > 0 ? profile.roles : [profile.role]).filter(Boolean).map((r, idx) => (
+                          <Badge key={`${r}-${idx}`} variant="outline" className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200">
+                            {PERMISSION_LABELS[r as PermissionKey] ?? r}
+                          </Badge>
+                        ))}
+                        {(!profile.roles || profile.roles.length === 0) && !profile.role && (
+                          <span className="text-xs text-slate-400 italic">Tidak ada hak akses</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {roleRequiresTeam(profile.role) ? (
