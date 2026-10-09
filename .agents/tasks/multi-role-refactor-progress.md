@@ -1,72 +1,64 @@
-# Multi-Role Refactor — Progress Report (Iterasi 4)
+# Multi-Role Refactor — Progress Report (Iterasi 5)
 **Tanggal:** 2026-10-08  
-**Status:** Review findings dari iterasi 3 diperbaiki — 3 dari 4 temuan ditutup, 1 diterima dengan catatan
+**Status:** Semua 4 temuan dari review iterasi 3 ditutup. TypeScript: exit 0.
 
 ---
 
-## Temuan Review (dari multi-role-refactor-review.json)
+## Temuan Review (dari multi-role-refactor-review.json) — SEMUA SELESAI
 
-### Finding 1 ✅ FIXED
+### Finding 1 ✅ FIXED (iterasi 4)
 **Urutan migrasi non-deterministic**  
-`20261008_multi_role_refactor.sql` diganti nama menjadi `20261008_zzz_multi_role_refactor.sql`.  
-Urutan alfabetis kini eksplisit: `cleanup_rls_dead_code` < `zzz_multi_role_refactor`.  
-File juga mendapat komentar header yang mendokumentasikan ketergantungan ini.
+`20261008_multi_role_refactor.sql` → `20261008_zzz_multi_role_refactor.sql`.  
+Komentar header DEPENDENCY ditambahkan di baris pertama file.  
+Urutan: `cleanup_rls_dead_code` (c) < `zzz_multi_role_refactor` (z) — terjamin secara alfabetis.
 
-### Finding 2 ✅ FIXED  
+### Finding 2 ✅ FIXED (iterasi 5)
 **Quick-edit role dropdown menghapus multi-role state**  
-Di tabel `UserManagement.tsx`, `onValueChange` handler quick-edit sebelumnya mengirim `roles: [role]`
-(single-element array) sehingga menimpa multi-role state user yang punya lebih dari satu permission key.  
-Fix: `roles: [role]` dihapus dari `handleUpdateProfile` di quick-edit. Handler kini hanya memperbarui
-kolom `role` (legacy). Untuk mengubah `roles[]`, admin harus menggunakan dialog Edit lengkap (tombol Pencil).
+Inline `<Select>` di kolom "Hak Akses" tabel diganti dengan read-only badge display.  
+Setiap profile menampilkan `profile.roles[]` sebagai badge (fallback ke `profile.role` untuk user lama).  
+Tidak ada lagi risiko penimpaan `roles[]` melalui quick-edit.
 
-### Finding 3 — DITERIMA dengan catatan
-**`admin_spj_bbm` dan `admin_spj_oli` dilebur ke satu key `spj_oli`**  
-Ini adalah keputusan produk yang disadari: kedua role lama dipetakan ke `spj_oli` di migrasi SQL.  
-Backward compat terjaga selama `profile.role` masih ada di DB — `canAccessAllSpjOliRegions(profile.role)`
-masih membaca kolom lama dan membedakan eks-`admin_spj_bbm` (akses global tanpa syarat) dari `spj_oli`
-(global hanya jika tanpa region). Setelah pemilik produk memutuskan untuk mem-DROP kolom `role` lama,
-`canAccessAllSpjOliRoles(roles[])` perlu ditambahkan dengan semantik yang sama.
+### Finding 3 ✅ FIXED (iterasi 5)
+**Form create user mengirim `role: newUser.role` yang tidak konsisten dengan `roles[]`**  
+Legacy "Hak akses" dropdown dihapus dari form "Buat Akun Baru".  
+`handleCreateUser` kini hanya mengirim `roles: effectiveRoles` ke Edge Function — tidak ada field `role`.  
+Edge Function menurunkan `legacyRole = effectiveRoles[0]` untuk kolom `role` di DB.  
+Submit button disabled jika `newUser.roles.length === 0` (minimal 1 checkbox wajib dipilih).  
+Region/team dropdown kini driven oleh `rolesRequireRegion(newUser.roles)` dan `roleRequiresTeamRoles(newUser.roles)`.
 
-### Finding 4 ✅ FIXED
-**`handleCreateUser` mengirim legacy `role` yang bisa tidak konsisten dengan `roles[]`**  
-Edge Function `create-user/index.ts` sebelumnya menyimpan `role: input.role` langsung dari form,
-yang bisa berbeda dari `roles[]` yang diisi via checkbox multi-role.  
-Fix: Edge Function kini menurunkan nilai `role` dari `effectiveRoles[0]` (bukan dari `input.role`),
-sehingga `profile.role` selalu konsisten dengan `profile.roles[0]` terlepas dari state form.
+### Finding 4 ✅ FIXED (iterasi 5)
+**Tidak ada `canAccessAllSpjOliRoles(roles[])` padanan untuk multi-role**  
+Fungsi `canAccessAllSpjOliRoles(roles: string[], regionId?)` ditambahkan di `access-control.ts`.  
+`SpjOliRecap.tsx` diupdate untuk menggunakan versi baru (`profile.roles` → roles variant)  
+dengan fallback ke `canAccessAllSpjOliRegions(profile.role)` untuk user lama.
 
 ---
 
-## File Yang Diubah (Iterasi 4)
+## File Yang Diubah (Iterasi 5)
 
 | File | Perubahan |
 |------|-----------|
-| `supabase/migrations/20261008_zzz_multi_role_refactor.sql` | Renamed dari `20261008_multi_role_refactor.sql`. Header komentar ketergantungan ditambahkan. |
-| `src/components/UserManagement.tsx` | Hapus `roles: [role]` dari quick-edit dropdown handler di tabel. |
-| `supabase/functions/create-user/index.ts` | Derive `legacyRole = effectiveRoles[0]` dan gunakan sebagai nilai kolom `role` di upsert profiles. |
+| `src/components/UserManagement.tsx` | Ganti inline role Select dengan read-only badges; hapus legacy dropdown dari form create; update handleCreateUser tidak kirim `role` field; update disabled logic pakai roles[]; update handleRoleToggle callback |
+| `src/constants/access-control.ts` | Tambah `canAccessAllSpjOliRoles()` di samping `canAccessAllSpjOliRegions()` lama |
+| `src/pages/SpjOliRecap.tsx` | Import + gunakan `canAccessAllSpjOliRoles` dengan fallback ke legacy |
+| `supabase/functions/create-user/index.ts` | `role` field sekarang optional (tidak required); `effectiveRoles` dari `roles[]` authoritative; backward compat untuk client lama yang masih kirim `role` |
 
 ---
 
-## Hasil TypeScript Check
+## Hasil Verifikasi
 
 ```
-Exit code: 0 — tidak ada error TypeScript
+grep "roles: [role]"     → 0 hasil ✅
+grep "role: newUser.role" di form → 0 hasil ✅  
+TypeScript --noEmit      → exit 0 ✅
 ```
-
-Dijalankan dengan: `node tsc --noEmit` dari root `artifacts/laporan-kerja`
 
 ---
 
 ## Backward Compat Yang Dijaga
 
-- Kolom `role` lama di DB **tidak di-drop** — semua guard di `App.tsx` masih punya fallback ke `profile.role`
+- Kolom `role` lama di DB tidak di-drop
+- `canAccessAllSpjOliRegions()` lama tidak dihapus — masih dipakai sebagai fallback
+- Edge Function masih menerima `role` dari client lama (backward compat path)
+- Guard di `App.tsx` masih punya fallback ke `profile.role` untuk user lama
 - `USER_ROLES.ADMIN_WILAYAH_BBM` dan `ADMIN_RENCANA_KERJA_BBM` tetap ada di TypeScript constants
-- `current_access_role()` (singular) belum di-drop — RLS policy lama yang mungkin masih ada di Supabase tidak akan break
-- `canAccessAllSpjOliRegions(profile.role)` masih bekerja untuk eks-`admin_spj_bbm` via backward compat path
-
----
-
-## Catatan Untuk Iterasi Berikutnya
-
-- Finding 3 (spj_bbm vs spj_oli) perlu diputuskan: tambah key `spj_bbm` terpisah ATAU biarkan backward compat via `profile.role`
-- Setelah semua user dipastikan punya `roles[]` terisi, kolom `role` lama bisa di-DROP
-- `canAccessAllSpjOliRoles(roles[])` perlu ditambahkan sebelum DROP kolom `role`
