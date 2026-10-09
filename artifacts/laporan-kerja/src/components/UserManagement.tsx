@@ -423,7 +423,9 @@ const UserManagement = () => {
   const handleSaveProfile = async () => {
     if (!canMutateUsers) { showError('Akun nonaktif tidak dapat mengubah data pengguna.'); return; }
     if (!editingProfile) return;
-    const requiresRegion = roleRequiresRegion(editUser.role);
+    // Use multi-role validation: requiresRegion if ANY role in array needs it
+    const effectiveRoles = editUser.roles.length > 0 ? editUser.roles : [editUser.role];
+    const requiresRegion = rolesRequireRegion(effectiveRoles) || roleRequiresRegion(editUser.role);
     const canSelectRegion = roleCanSelectRegion(editUser.role);
     if (!editUser.username.trim()) {
       showError('Nama pengguna wajib diisi.');
@@ -433,7 +435,7 @@ const UserManagement = () => {
       showError('Akun berbasis wilayah wajib memilih wilayah.');
       return;
     }
-    if (roleRequiresTeam(editUser.role) && !editUser.teamId) {
+    if ((roleRequiresTeamRoles(effectiveRoles) || roleRequiresTeam(editUser.role)) && !editUser.teamId) {
       showError('Pengguna tim wajib memilih tim.');
       return;
     }
@@ -442,14 +444,12 @@ const UserManagement = () => {
       return;
     }
 
-    const effectiveRoles = editUser.roles.length > 0 ? editUser.roles : [editUser.role];
-
     const updates = {
       username: editUser.username.trim(),
       role: editUser.role,
       roles: effectiveRoles,
       region_id: canSelectRegion ? editUser.regionId || null : null,
-      team_id: roleRequiresTeam(editUser.role) ? editUser.teamId : null,
+      team_id: (roleRequiresTeamRoles(effectiveRoles) || roleRequiresTeam(editUser.role)) ? editUser.teamId : null,
       work_plan_categories: isCategoryScopedWorkPlanAdmin(editUser.role) ? editUserWorkPlanCategories : [],
     };
 
@@ -573,6 +573,47 @@ const UserManagement = () => {
             </div>
           )}
         </div>
+        {/* Multi-role checkbox — primary permission selector */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-blue-900">Hak akses tambahan (bisa pilih lebih dari satu)</label>
+            {newUser.roles.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {newUser.roles.map(r => (
+                  <Badge key={r} variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-800 border-blue-300">
+                    {PERMISSION_LABELS[r as PermissionKey] ?? r}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-3 md:grid-cols-4">
+            {(Object.keys(PERMISSION_LABELS) as PermissionKey[]).map(key => (
+              <label key={key} className={cn(
+                "flex cursor-pointer items-center gap-2 text-xs text-slate-700 select-none",
+                (!canMutateUsers || (key !== ADMINISTRATOR_KEY && newUser.roles.includes(ADMINISTRATOR_KEY))) && "opacity-50 cursor-not-allowed"
+              )}>
+                <input
+                  type="checkbox"
+                  checked={newUser.roles.includes(key)}
+                  disabled={!canMutateUsers || (key !== ADMINISTRATOR_KEY && newUser.roles.includes(ADMINISTRATOR_KEY))}
+                  onChange={() => handleRoleToggle(key, newUser.roles, (roles) => {
+                    const primary = roles.length > 0 ? roles[0] : newUser.role;
+                    setNewUser({
+                      ...newUser,
+                      roles,
+                      role: primary as UserRole,
+                      regionId: roleCanSelectRegion(primary) ? newUser.regionId : '',
+                      teamId: '',
+                    });
+                  })}
+                />
+                {PERMISSION_LABELS[key]}
+              </label>
+            ))}
+          </div>
+          <p className="text-[11px] text-blue-700">Pilih satu atau lebih. Jika Administrator dipilih, tidak bisa dikombinasikan dengan hak akses lain. Hak akses di kolom "Hak akses" di atas tetap digunakan jika kolom ini kosong.</p>
+        </div>
         <Button type="submit" disabled={!canMutateUsers || creating || (roleRequiresRegion(newUser.role) && !newUser.regionId) || (roleRequiresTeam(newUser.role) && !newUser.teamId) || (isCategoryScopedWorkPlanAdmin(newUser.role) && newUserWorkPlanCategories.length === 0)}>{creating ? 'Membuat akun...' : 'Buat Akun Aktif'}</Button>
       </form>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -640,6 +681,8 @@ const UserManagement = () => {
                           const role = val as UserRole;
                           void handleUpdateProfile(profile.id, {
                             role,
+                            // Also update roles[] so multi-role checks work immediately
+                            roles: [role],
                             region_id: roleCanSelectRegion(role) ? profile.region_id : null,
                             team_id: roleRequiresTeam(role) ? profile.team_id : null,
                             work_plan_categories: isCategoryScopedWorkPlanAdmin(role)
@@ -808,6 +851,47 @@ const UserManagement = () => {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
+            </div>
+            {/* Multi-role checkbox for edit dialog */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <label className="text-sm font-medium">Hak akses tambahan (multi-pilih)</label>
+                {editUser.roles.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {editUser.roles.map(r => (
+                      <Badge key={r} variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-800 border-blue-300">
+                        {PERMISSION_LABELS[r as PermissionKey] ?? r}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 rounded-md border bg-slate-50 p-3">
+                {(Object.keys(PERMISSION_LABELS) as PermissionKey[]).map(key => (
+                  <label key={key} className={cn(
+                    "flex cursor-pointer items-center gap-2 text-xs text-slate-700 select-none",
+                    (key !== ADMINISTRATOR_KEY && editUser.roles.includes(ADMINISTRATOR_KEY)) && "opacity-50 cursor-not-allowed"
+                  )}>
+                    <input
+                      type="checkbox"
+                      checked={editUser.roles.includes(key)}
+                      disabled={key !== ADMINISTRATOR_KEY && editUser.roles.includes(ADMINISTRATOR_KEY)}
+                      onChange={() => handleRoleToggle(key, editUser.roles, (roles) => {
+                        const primary = roles.length > 0 ? roles[0] : editUser.role;
+                        setEditUser({
+                          ...editUser,
+                          roles,
+                          role: primary as UserRole,
+                          regionId: roleCanSelectRegion(primary) ? editUser.regionId : '',
+                          teamId: '',
+                        });
+                      })}
+                    />
+                    {PERMISSION_LABELS[key]}
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">Jika Administrator dipilih, tidak bisa dikombinasikan. "Hak akses" di atas digunakan sebagai fallback jika ini kosong.</p>
             </div>
             {isGlobalFuelAdmin(editUser.role) ? (
               <div className="space-y-1.5">

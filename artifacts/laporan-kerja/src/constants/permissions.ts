@@ -235,3 +235,25 @@ export const ROLE_PERMISSIONS: Partial<Record<UserRole, Permission[]>> = {
     { resource: 'profiles',   action: 'update', condition: ctx => ctx.id === ctx.resourceId },
   ],
 };
+
+// ============================================================
+// NEW PERMISSION KEYS → ROLE_PERMISSIONS alias mapping
+// Maps the 11 new atomic permission keys to their ROLE_PERMISSIONS entries.
+// hasPermission() loops ctx.roles — for new-key users this lookup succeeds.
+// ============================================================
+
+// We cast to Record<string, Permission[]> to allow string-keyed additions
+// without requiring changes to the UserRole union type.
+const ROLE_PERMISSIONS_EXTENDED = ROLE_PERMISSIONS as Record<string, Permission[]>;
+
+ROLE_PERMISSIONS_EXTENDED['administrator']  = ROLE_PERMISSIONS[USER_ROLES.ADMIN] ?? [];
+ROLE_PERMISSIONS_EXTENDED['pimpinan']       = ROLE_PERMISSIONS[USER_ROLES.PIMPINAN] ?? [];
+ROLE_PERMISSIONS_EXTENDED['laporan_kerja']  = ROLE_PERMISSIONS[USER_ROLES.LAPORAN] ?? [];
+ROLE_PERMISSIONS_EXTENDED['rencana_kerja']  = ROLE_PERMISSIONS[USER_ROLES.ADMIN_RENCANA_KERJA] ?? [];
+ROLE_PERMISSIONS_EXTENDED['rekap_lembur']   = ROLE_PERMISSIONS[USER_ROLES.ADMIN_REKAP_LEMBUR] ?? [];
+ROLE_PERMISSIONS_EXTENDED['bbm']            = ROLE_PERMISSIONS[USER_ROLES.ADMIN_BBM] ?? [];
+ROLE_PERMISSIONS_EXTENDED['bbm_pusat']      = ROLE_PERMISSIONS[USER_ROLES.ADMIN_BBM_PUSAT] ?? [];
+ROLE_PERMISSIONS_EXTENDED['laporan_bbm']    = ROLE_PERMISSIONS[USER_ROLES.ADMIN_LAPORAN_BBM] ?? [];
+ROLE_PERMISSIONS_EXTENDED['spj_oli']        = ROLE_PERMISSIONS[USER_ROLES.ADMIN_SPJ_OLI] ?? [];
+ROLE_PERMISSIONS_EXTENDED['nota_dinas']     = ROLE_PERMISSIONS[USER_ROLES.ADMIN_NOTA_DINAS] ?? [];
+ROLE_PERMISSIONS_EXTENDED['pengguna_tim']   = ROLE_PERMISSIONS[USER_ROLES.USER] ?? [];

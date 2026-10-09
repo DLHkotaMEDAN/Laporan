@@ -74,6 +74,24 @@ const USER_ROLES = {
 
 const validRoles = new Set(Object.values(USER_ROLES));
 
+// New permission keys (multi-role system) — must also be accepted in validation
+const validNewPermissionKeys = new Set([
+  'administrator',
+  'pimpinan',
+  'laporan_kerja',
+  'rencana_kerja',
+  'rekap_lembur',
+  'bbm',
+  'bbm_pusat',
+  'laporan_bbm',
+  'spj_oli',
+  'nota_dinas',
+  'pengguna_tim',
+]);
+
+// Combined: legacy + new permission keys
+const allValidRoles = new Set([...validRoles, ...validNewPermissionKeys]);
+
 // Harus identik dengan REGION_REQUIRED_ROLES di src/constants/access-control.ts.
 const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_WILAYAH,
@@ -84,6 +102,15 @@ const regionRequiredRoles = new Set([
   USER_ROLES.ADMIN_REKAP_LEMBUR,
   USER_ROLES.ADMIN_NOTA_DINAS,
   USER_ROLES.USER,
+  // New permission keys that also require region
+  'laporan_kerja',
+  'rencana_kerja',
+  'rekap_lembur',
+  'bbm',
+  'laporan_bbm',
+  'spj_oli',
+  'nota_dinas',
+  'pengguna_tim',
 ]);
 
 Deno.serve(async (request) => {
@@ -114,7 +141,7 @@ Deno.serve(async (request) => {
     const callerRoles: string[] = (callerProfile?.roles && callerProfile.roles.length > 0)
       ? callerProfile.roles
       : (callerProfile?.role ? [callerProfile.role] : []);
-    if (callerError || !callerRoles.includes('admin')) throw new Error('Hanya Super Admin yang dapat membuat akun.');
+    if (callerError || !callerRoles.includes('admin') && !callerRoles.includes('administrator')) throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
     const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput | ListUserEmailsInput | SetUserActiveInput;
     if ('action' in input && input.action === 'list-user-emails') {
@@ -169,27 +196,34 @@ Deno.serve(async (request) => {
 
     if (!input.email || !input.password || !input.username || !input.role) throw new Error('Data akun belum lengkap.');
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
-    if (!validRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
+    if (!allValidRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
 
     // Build effective roles array: prefer new `roles` param, fall back to single `role`
     const effectiveRoles: string[] = (Array.isArray(input.roles) && input.roles.length > 0)
       ? input.roles
       : [input.role];
-    // Validate each role in the array
+    // Validate each role in the array against all valid roles (legacy + new)
     for (const r of effectiveRoles) {
-      if (!validRoles.has(r as keyof typeof USER_ROLES)) throw new Error(`Hak akses tidak valid: ${r}`);
+      if (!allValidRoles.has(r)) throw new Error(`Hak akses tidak valid: ${r}`);
     }
 
-    const assignedRegionId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.regionId;
-    const assignedTeamId = input.role === USER_ROLES.ADMIN_RENCANA_KERJA ? null : input.teamId;
-    const workPlanCategories = input.role === USER_ROLES.ADMIN_RENCANA_KERJA
+    // Region/team assignment: use effectiveRoles (any role requiring region triggers it)
+    const effectiveRoleRequiresRegion = effectiveRoles.some(r => regionRequiredRoles.has(r));
+    // For backward-compat checks (work_plan_categories, team), still check input.role for legacy roles
+    const assignedRegionId = effectiveRoles.some(r => r === 'rencana_kerja' || r === USER_ROLES.ADMIN_RENCANA_KERJA)
+      ? null
+      : input.regionId;
+    const assignedTeamId = effectiveRoles.some(r => r === 'rencana_kerja' || r === USER_ROLES.ADMIN_RENCANA_KERJA)
+      ? null
+      : input.teamId;
+    const workPlanCategories = effectiveRoles.some(r => r === USER_ROLES.ADMIN_RENCANA_KERJA)
       ? Array.from(new Set((input.workPlanCategories || []).map(category => category.trim()).filter(Boolean)))
       : [];
-    if (regionRequiredRoles.has(input.role) && !assignedRegionId) {
+    if (effectiveRoleRequiresRegion && !assignedRegionId) {
       throw new Error('Admin berbasis wilayah wajib memiliki wilayah.');
     }
-    if (input.role === USER_ROLES.USER && !assignedTeamId) throw new Error('Pengguna tim wajib memiliki tim.');
-    if (input.role === USER_ROLES.ADMIN_RENCANA_KERJA && workPlanCategories.length === 0) {
+    if ((effectiveRoles.includes('pengguna_tim') || effectiveRoles.includes(USER_ROLES.USER)) && !assignedTeamId) throw new Error('Pengguna tim wajib memiliki tim.');
+    if (effectiveRoles.includes(USER_ROLES.ADMIN_RENCANA_KERJA) && workPlanCategories.length === 0) {
       throw new Error('Pilih minimal satu kategori untuk Admin Rencana Kerja.');
     }
 
