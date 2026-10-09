@@ -680,10 +680,12 @@ const UserManagement = () => {
                         value={profile.role} 
                         onValueChange={(val) => {
                           const role = val as UserRole;
+                          // Only update the legacy `role` column — do NOT touch `roles[]`.
+                          // Writing roles: [role] here would erase multi-role state for users
+                          // who already have more than one permission key.
+                          // Use the full Edit dialog (Pencil button) to change roles[].
                           void handleUpdateProfile(profile.id, {
                             role,
-                            // Also update roles[] so multi-role checks work immediately
-                            roles: [role],
                             region_id: roleCanSelectRegion(role) ? profile.region_id : null,
                             team_id: roleRequiresTeam(role) ? profile.team_id : null,
                             work_plan_categories: isCategoryScopedWorkPlanAdmin(role)

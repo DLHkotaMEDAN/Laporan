@@ -1,3 +1,9 @@
+-- DEPENDENCY: This migration MUST run AFTER 20261008_cleanup_rls_dead_code.sql.
+-- The 'zzz' prefix guarantees alphabetical ordering keeps it last among all
+-- 20261008_* migrations. Do NOT rename this file to an earlier suffix.
+-- Migrasi ini menambahkan kolom roles[] dan menimpa fungsi has_record_access()
+-- yang didefinisikan ulang di 20261008_cleanup_rls_dead_code.sql.
+
 -- Tambah kolom roles (array) ke tabel profiles
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS roles text[] NOT NULL DEFAULT '{}';
 

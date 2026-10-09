@@ -199,10 +199,19 @@ Deno.serve(async (request) => {
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
     if (!allValidRoles.has(input.role)) throw new Error('Hak akses tidak valid.');
 
-    // Build effective roles array: prefer new `roles` param, fall back to single `role`
+    // Build effective roles array: prefer new `roles` param, fall back to single `role`.
+    // If `roles` is provided and non-empty, it is the authoritative source.
+    // We intentionally IGNORE input.role as the primary field when roles[] is present —
+    // this prevents form inconsistency where the legacy dropdown and the checkbox
+    // multi-select could disagree. The legacy `role` column in profiles is set to
+    // effectiveRoles[0] (the first selected permission key) for backward compat.
     const effectiveRoles: string[] = (Array.isArray(input.roles) && input.roles.length > 0)
       ? input.roles
       : [input.role];
+    // Derive the legacy single-role value from the first effective role.
+    // This keeps profile.role consistent with profile.roles regardless of what
+    // the caller sent in the `role` field.
+    const legacyRole = effectiveRoles[0];
     // Validate each role in the array against all valid roles (legacy + new)
     for (const r of effectiveRoles) {
       if (!allValidRoles.has(r)) throw new Error(`Hak akses tidak valid: ${r}`);
@@ -259,7 +268,10 @@ Deno.serve(async (request) => {
     const { error: profileError } = await adminClient.from('profiles').upsert({
       id: created.user.id,
       username: input.username.trim(),
-      role: input.role,
+      // Use legacyRole (derived from effectiveRoles[0]) to keep role consistent with roles[].
+      // Never use input.role directly when roles[] was provided — the form legacy dropdown
+      // and the checkbox multi-select could have been out of sync.
+      role: legacyRole,
       roles: effectiveRoles,
       region_id: assignedRegionId ?? null,
       team_id: assignedTeamId ?? null,
