@@ -117,3 +117,112 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- ── Update fungsi-fungsi RLS yang masih pakai current_access_role() lama ─
+
+-- 1. SPJ Oli — has_spj_oli_record_access()
+CREATE OR REPLACE FUNCTION public.has_spj_oli_record_access(target_region uuid, action text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT auth.uid() IS NOT NULL AND (
+    -- administrator: akses penuh
+    'administrator' = ANY(public.current_access_roles())
+    -- pimpinan: baca & update
+    OR ('pimpinan' = ANY(public.current_access_roles()) AND action IN ('select', 'update'))
+    -- spj_oli: akses semua wilayah jika tidak ada region, atau wilayah sendiri
+    OR (
+      'spj_oli' = ANY(public.current_access_roles())
+      AND action IN ('select', 'insert', 'update', 'delete')
+      AND (
+        public.current_access_region() IS NULL
+        OR target_region = public.current_access_region()
+      )
+    )
+  );
+$$;
+
+-- 2. Nota Dinas — has_nota_dinas_region_access()
+CREATE OR REPLACE FUNCTION public.has_nota_dinas_region_access(target_region uuid, action text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT auth.uid() IS NOT NULL
+    AND (
+      'administrator' = ANY(public.current_access_roles())
+      OR (
+        'nota_dinas' = ANY(public.current_access_roles())
+        AND target_region IS NOT NULL
+        AND target_region = public.current_access_region()
+        AND action IN ('select', 'insert', 'update')
+      )
+    );
+$$;
+
+-- 3. Nota Dinas — assign_nota_dinas_region_from_profile() trigger
+CREATE OR REPLACE FUNCTION public.assign_nota_dinas_region_from_profile()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  IF 'nota_dinas' = ANY(public.current_access_roles()) THEN
+    IF public.current_access_region() IS NULL THEN
+      RAISE EXCEPTION 'Akun Nota Dinas belum memiliki wilayah.';
+    END IF;
+    NEW.region_id := public.current_access_region();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- 4. Laporan BBM — update inline policies pakai current_access_roles()
+DROP POLICY IF EXISTS "laporan_bbm_reports_select" ON public.laporan_bbm_reports;
+CREATE POLICY "laporan_bbm_reports_select"
+ON public.laporan_bbm_reports FOR SELECT TO authenticated
+USING (
+  'administrator' = ANY(public.current_access_roles())
+  OR (
+    'laporan_bbm' = ANY(public.current_access_roles())
+    AND region_id = public.current_access_region()
+  )
+);
+
+DROP POLICY IF EXISTS "laporan_bbm_reports_insert" ON public.laporan_bbm_reports;
+CREATE POLICY "laporan_bbm_reports_insert"
+ON public.laporan_bbm_reports FOR INSERT TO authenticated
+WITH CHECK (
+  'administrator' = ANY(public.current_access_roles())
+  OR (
+    'laporan_bbm' = ANY(public.current_access_roles())
+    AND region_id = public.current_access_region()
+  )
+);
+
+DROP POLICY IF EXISTS "laporan_bbm_reports_update" ON public.laporan_bbm_reports;
+CREATE POLICY "laporan_bbm_reports_update"
+ON public.laporan_bbm_reports FOR UPDATE TO authenticated
+USING (
+  'administrator' = ANY(public.current_access_roles())
+  OR (
+    'laporan_bbm' = ANY(public.current_access_roles())
+    AND region_id = public.current_access_region()
+  )
+)
+WITH CHECK (
+  'administrator' = ANY(public.current_access_roles())
+  OR (
+    'laporan_bbm' = ANY(public.current_access_roles())
+    AND region_id = public.current_access_region()
+  )
+);
+
+DROP POLICY IF EXISTS "laporan_bbm_reports_delete" ON public.laporan_bbm_reports;
+CREATE POLICY "laporan_bbm_reports_delete"
+ON public.laporan_bbm_reports FOR DELETE TO authenticated
+USING (
+  'administrator' = ANY(public.current_access_roles())
+  OR (
+    'laporan_bbm' = ANY(public.current_access_roles())
+    AND region_id = public.current_access_region()
+  )
+);

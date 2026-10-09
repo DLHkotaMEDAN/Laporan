@@ -1,0 +1,10 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    "Urutan migrasi non-deterministic: 20261008_cleanup_rls_dead_code.sql dan 20261008_multi_role_refactor.sql berbagi prefix tanggal identik. Urutan alfabetik saat ini kebetulan benar (cleanup < multi), tapi rename salah satu file akan membalik urutan dan membuat DB kembali ke semantik single-role. Rename file multi_role_refactor agar urutan terjamin secara eksplisit.",
+    "Quick-edit role dropdown di tabel UserManagement.tsx memanggil handleUpdateProfile dengan roles: [role] (single-element array), yang menimpa multi-role state user yang ada. User dengan ['laporan_kerja','rencana_kerja'] akan kehilangan 'rencana_kerja' jika admin menyentuh dropdown ini tanpa sadar. Hapus quick-edit dropdown atau ubah agar tidak menyentuh kolom roles.",
+    "admin_spj_bbm dan admin_spj_oli keduanya dipetakan ke satu key 'spj_oli' dalam migrasi. canAccessAllSpjOliRegions() masih membedakan keduanya lewat profile.role lama (backward compat terjaga), tetapi tidak ada fungsi canAccessAllSpjOliRoles(roles[]) padanan untuk semantik multi-role, sehingga kode baru tidak bisa membedakan eks-admin_spj_bbm (global tanpa syarat) dari spj_oli (global hanya jika tidak ada region).",
+    "Form create user mengirim role: newUser.role (dari dropdown ACCESS_OPTIONS lama) bersamaan dengan roles: newUser.roles (dari checkbox multi-role). Jika checkbox diisi tapi dropdown dibiarkan di nilai default, profil akan menyimpan role dan roles yang tidak konsisten. Edge Function menyimpan keduanya tanpa koreksi. Turunkan nilai role dari roles[0] di Edge Function atau hapus field role dari form."
+  ],
+  "reviewDoc": "c:\\Users\\dlhup\\dyad-apps\\laporan\\.agents\\tasks\\multi-role-refactor-review-doc.md"
+}
