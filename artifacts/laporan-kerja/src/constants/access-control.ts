@@ -284,7 +284,9 @@ export const PERMISSION_REQUIRES_REGION: PermissionKey[] = [
   'rekap_lembur',
   'bbm',
   'laporan_bbm',
-  'spj_oli',
+  // 'spj_oli' intentionally excluded: region is optional for spj_oli.
+  // Without region, spj_oli gets global access (consistent with
+  // canAccessAllSpjOliRegions() and ROLE_PERMISSIONS[ADMIN_SPJ_OLI] condition).
   'nota_dinas',
   'pengguna_tim',
 ];

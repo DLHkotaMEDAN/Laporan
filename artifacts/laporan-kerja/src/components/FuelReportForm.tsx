@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { isGlobalFuelAdmin, isSuperAdminAccess,
-  getLoginDestination
+  getLoginDestination, getLoginDestinationRoles
 } from '@/constants/access-control';
 import {
   Dialog,
@@ -505,7 +505,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         showSuccess("Laporan BBM disimpan");
       }
       await clearDraft();
-      navigate(getLoginDestination(profile?.role));
+      navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role));
     } catch (error: any) {
       const message = error?.message || "Terjadi kesalahan database";
       if (/refresh token|jwt|unauthorized|not authenticated/i.test(message)) {

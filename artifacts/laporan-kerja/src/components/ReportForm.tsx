@@ -26,7 +26,7 @@ import { useAuth } from '@/context/AuthContext';
 import { cn, uniqueAutocompleteValues } from "@/lib/utils";
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { isPimpinanAccess, isSuperAdminAccess, getLoginDestination } from '@/constants/access-control';
+import { isPimpinanAccess, isSuperAdminAccess, getLoginDestination, getLoginDestinationRoles } from '@/constants/access-control';
 import {
   Dialog,
   DialogContent,
@@ -463,7 +463,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
         }
       }
       await clearDraft();
-      navigate(getLoginDestination(profile?.role));
+      navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role));
     } catch (error) {
       console.error(error);
       showError("Gagal menyimpan data");

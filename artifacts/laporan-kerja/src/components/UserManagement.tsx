@@ -426,7 +426,8 @@ const UserManagement = () => {
     // Use multi-role validation: requiresRegion if ANY role in array needs it
     const effectiveRoles = editUser.roles.length > 0 ? editUser.roles : [editUser.role];
     const requiresRegion = rolesRequireRegion(effectiveRoles) || roleRequiresRegion(editUser.role);
-    const canSelectRegion = roleCanSelectRegion(editUser.role);
+    // canSelectRegion: multi-role aware — region is sent if any role requires or allows it
+    const canSelectRegion = rolesRequireRegion(effectiveRoles) || roleCanSelectRegion(editUser.role);
     if (!editUser.username.trim()) {
       showError('Nama pengguna wajib diisi.');
       return;

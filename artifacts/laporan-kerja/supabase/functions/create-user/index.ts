@@ -108,7 +108,8 @@ const regionRequiredRoles = new Set([
   'rekap_lembur',
   'bbm',
   'laporan_bbm',
-  'spj_oli',
+  // 'spj_oli' intentionally excluded: region is optional for spj_oli.
+  // Without region, spj_oli gets global access (consistent with access-control.ts).
   'nota_dinas',
   'pengguna_tim',
 ]);
@@ -209,13 +210,14 @@ Deno.serve(async (request) => {
 
     // Region/team assignment: use effectiveRoles (any role requiring region triggers it)
     const effectiveRoleRequiresRegion = effectiveRoles.some(r => regionRequiredRoles.has(r));
-    // For backward-compat checks (work_plan_categories, team), still check input.role for legacy roles
-    const assignedRegionId = effectiveRoles.some(r => r === 'rencana_kerja' || r === USER_ROLES.ADMIN_RENCANA_KERJA)
-      ? null
-      : input.regionId;
-    const assignedTeamId = effectiveRoles.some(r => r === 'rencana_kerja' || r === USER_ROLES.ADMIN_RENCANA_KERJA)
-      ? null
-      : input.teamId;
+    // rencana_kerja / ADMIN_RENCANA_KERJA is global (no region needed) — BUT only when
+    // it is the sole role that could trigger a region requirement.
+    // If combined with laporan_kerja or other region-requiring roles, region IS needed.
+    const isOnlyRkGlobal =
+      effectiveRoles.some(r => r === 'rencana_kerja' || r === USER_ROLES.ADMIN_RENCANA_KERJA) &&
+      !effectiveRoles.some(r => regionRequiredRoles.has(r) && r !== 'rencana_kerja' && r !== USER_ROLES.ADMIN_RENCANA_KERJA);
+    const assignedRegionId = isOnlyRkGlobal ? null : input.regionId;
+    const assignedTeamId = isOnlyRkGlobal ? null : input.teamId;
     const workPlanCategories = effectiveRoles.some(r => r === USER_ROLES.ADMIN_RENCANA_KERJA)
       ? Array.from(new Set((input.workPlanCategories || []).map(category => category.trim()).filter(Boolean)))
       : [];
