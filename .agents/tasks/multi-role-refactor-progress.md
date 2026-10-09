@@ -1,92 +1,72 @@
-# Multi-Role Refactor — Progress Report (Iterasi 3)
+# Multi-Role Refactor — Progress Report (Iterasi 4)
 **Tanggal:** 2026-10-08  
-**Status:** Review findings dari iterasi 2 diperbaiki — semua 5 temuan ditutup
+**Status:** Review findings dari iterasi 3 diperbaiki — 3 dari 4 temuan ditutup, 1 diterima dengan catatan
 
 ---
 
-## File Yang Diubah (Iterasi 3)
+## Temuan Review (dari multi-role-refactor-review.json)
+
+### Finding 1 ✅ FIXED
+**Urutan migrasi non-deterministic**  
+`20261008_multi_role_refactor.sql` diganti nama menjadi `20261008_zzz_multi_role_refactor.sql`.  
+Urutan alfabetis kini eksplisit: `cleanup_rls_dead_code` < `zzz_multi_role_refactor`.  
+File juga mendapat komentar header yang mendokumentasikan ketergantungan ini.
+
+### Finding 2 ✅ FIXED  
+**Quick-edit role dropdown menghapus multi-role state**  
+Di tabel `UserManagement.tsx`, `onValueChange` handler quick-edit sebelumnya mengirim `roles: [role]`
+(single-element array) sehingga menimpa multi-role state user yang punya lebih dari satu permission key.  
+Fix: `roles: [role]` dihapus dari `handleUpdateProfile` di quick-edit. Handler kini hanya memperbarui
+kolom `role` (legacy). Untuk mengubah `roles[]`, admin harus menggunakan dialog Edit lengkap (tombol Pencil).
+
+### Finding 3 — DITERIMA dengan catatan
+**`admin_spj_bbm` dan `admin_spj_oli` dilebur ke satu key `spj_oli`**  
+Ini adalah keputusan produk yang disadari: kedua role lama dipetakan ke `spj_oli` di migrasi SQL.  
+Backward compat terjaga selama `profile.role` masih ada di DB — `canAccessAllSpjOliRegions(profile.role)`
+masih membaca kolom lama dan membedakan eks-`admin_spj_bbm` (akses global tanpa syarat) dari `spj_oli`
+(global hanya jika tanpa region). Setelah pemilik produk memutuskan untuk mem-DROP kolom `role` lama,
+`canAccessAllSpjOliRoles(roles[])` perlu ditambahkan dengan semantik yang sama.
+
+### Finding 4 ✅ FIXED
+**`handleCreateUser` mengirim legacy `role` yang bisa tidak konsisten dengan `roles[]`**  
+Edge Function `create-user/index.ts` sebelumnya menyimpan `role: input.role` langsung dari form,
+yang bisa berbeda dari `roles[]` yang diisi via checkbox multi-role.  
+Fix: Edge Function kini menurunkan nilai `role` dari `effectiveRoles[0]` (bukan dari `input.role`),
+sehingga `profile.role` selalu konsisten dengan `profile.roles[0]` terlepas dari state form.
+
+---
+
+## File Yang Diubah (Iterasi 4)
 
 | File | Perubahan |
 |------|-----------|
-| `src/components/OvertimeForm.tsx` | Import `getLoginDestinationRoles`, pakai multi-role fallback di post-save navigate |
-| `src/components/ReportForm.tsx` | Import `getLoginDestinationRoles`, pakai multi-role fallback di post-save navigate |
-| `src/components/FuelReportForm.tsx` | Import `getLoginDestinationRoles`, pakai multi-role fallback di post-save navigate |
-| `src/components/WorkPlanForm.tsx` | Import `getLoginDestinationRoles`, pakai multi-role fallback di post-save navigate (2 lokasi: save + Batal) |
-| `src/pages/SpjOli.tsx` | Import `getLoginDestinationRoles`, pakai multi-role fallback di post-save navigate |
-| `src/components/UserManagement.tsx` | `handleSaveProfile`: `canSelectRegion` kini pakai `rolesRequireRegion(effectiveRoles)` (multi-role), bukan `roleCanSelectRegion(editUser.role)` (single-role) |
-| `src/constants/access-control.ts` | `PERMISSION_REQUIRES_REGION`: hapus `spj_oli` — region opsional untuk spj_oli (konsisten dengan `canAccessAllSpjOliRegions`) |
-| `src/constants/permissions.ts` | `ROLE_PERMISSIONS_EXTENDED['rencana_kerja']`: bukan alias ke `ADMIN_RENCANA_KERJA` lagi. Sekarang menggunakan permission dengan region condition (`ctx.regionId === ctx.resourceRegionId`) untuk mencegah privilege escalation work_plans bagi user `admin_wilayah` yang dimigrasi ke `['laporan_kerja','rencana_kerja']` |
-| `supabase/functions/create-user/index.ts` | Fix `assignedRegionId` null override: hanya null jika `rencana_kerja`/`ADMIN_RENCANA_KERJA` adalah SATU-SATUNYA role yang region-relevant. Kombinasi `['rencana_kerja','laporan_kerja']` sekarang bisa dibuat dengan region. Hapus `spj_oli` dari `regionRequiredRoles` (konsisten dengan access-control.ts) |
-
----
-
-## Summary Perubahan Per Temuan
-
-### [1] Post-save navigation broken di 5 form komponen ✅ FIXED
-**File:** `ReportForm.tsx`, `WorkPlanForm.tsx`, `FuelReportForm.tsx`, `OvertimeForm.tsx`, `SpjOli.tsx`  
-**Perbaikan:** Semua navigate post-save kini memakai pola fallback:
-```ts
-navigate((profile?.roles && profile.roles.length > 0)
-  ? getLoginDestinationRoles(profile.roles)
-  : getLoginDestination(profile?.role))
-```
-Konsisten dengan `Login.tsx` yang sudah diperbaiki di iterasi 2. User baru dengan new permission keys (misalnya `laporan_kerja`) kini diarahkan ke halaman yang benar.
-
-### [2] `handleSaveProfile` persistence region pakai single-role check ✅ FIXED
-**File:** `UserManagement.tsx`  
-**Perbaikan:** `canSelectRegion` kini dihitung dari multi-role check:
-```ts
-const canSelectRegion = rolesRequireRegion(effectiveRoles) || roleCanSelectRegion(editUser.role);
-```
-Sebelumnya: `roleCanSelectRegion(editUser.role)` — single-role. Asimetri antara validasi dan persistence dihilangkan.
-
-### [3] `admin_wilayah` → privilege escalation work_plans ✅ FIXED
-**File:** `src/constants/permissions.ts`  
-**Perbaikan:** `ROLE_PERMISSIONS_EXTENDED['rencana_kerja']` bukan lagi alias ke `ADMIN_RENCANA_KERJA` (global, tanpa region condition). Kini mendefinisikan permission dengan condition `ctx.regionId === ctx.resourceRegionId`:
-```ts
-ROLE_PERMISSIONS_EXTENDED['rencana_kerja'] = [
-  { resource: 'work_plans', action: 'create' },
-  { resource: 'work_plans', action: 'read',   condition: ctx => ctx.regionId === ctx.resourceRegionId },
-  { resource: 'work_plans', action: 'update', condition: ctx => ctx.regionId === ctx.resourceRegionId },
-  { resource: 'work_plans', action: 'delete', condition: ctx => ctx.regionId === ctx.resourceRegionId },
-  { resource: 'profiles',   action: 'read' },
-];
-```
-User `admin_wilayah` yang dimigrasi ke `['laporan_kerja','rencana_kerja']` tetap hanya akses work_plans di wilayah mereka. User yang benar-benar `admin_rencana_kerja` (legacy role) tetap pakai `ROLE_PERMISSIONS[ADMIN_RENCANA_KERJA]` global.
-
-### [4] Edge function `assignedRegionId` null override ✅ FIXED
-**File:** `supabase/functions/create-user/index.ts`  
-**Perbaikan:** Logic null assignment diubah — hanya null jika `rencana_kerja`/`ADMIN_RENCANA_KERJA` adalah satu-satunya role yang region-relevant:
-```ts
-const isOnlyRkGlobal =
-  effectiveRoles.some(r => r === 'rencana_kerja' || r === USER_ROLES.ADMIN_RENCANA_KERJA) &&
-  !effectiveRoles.some(r => regionRequiredRoles.has(r) && r !== 'rencana_kerja' && r !== USER_ROLES.ADMIN_RENCANA_KERJA);
-const assignedRegionId = isOnlyRkGlobal ? null : input.regionId;
-```
-Kombinasi `['rencana_kerja','laporan_kerja']` sekarang bisa dibuat dengan region.
-
-### [5] `spj_oli` region required vs opsional ✅ FIXED
-**File:** `src/constants/access-control.ts`, `supabase/functions/create-user/index.ts`  
-**Perbaikan:** `spj_oli` dihapus dari `PERMISSION_REQUIRES_REGION` dan dari `regionRequiredRoles` di edge function. Konsisten dengan:
-- `canAccessAllSpjOliRegions()` yang memberi akses global jika tidak ada region
-- `ROLE_PERMISSIONS[ADMIN_SPJ_OLI]` condition `!ctx.regionId || ctx.regionId === ctx.resourceRegionId`
+| `supabase/migrations/20261008_zzz_multi_role_refactor.sql` | Renamed dari `20261008_multi_role_refactor.sql`. Header komentar ketergantungan ditambahkan. |
+| `src/components/UserManagement.tsx` | Hapus `roles: [role]` dari quick-edit dropdown handler di tabel. |
+| `supabase/functions/create-user/index.ts` | Derive `legacyRole = effectiveRoles[0]` dan gunakan sebagai nilai kolom `role` di upsert profiles. |
 
 ---
 
 ## Hasil TypeScript Check
 
 ```
-node [tsc path] --noEmit
-(no output — zero errors)
+Exit code: 0 — tidak ada error TypeScript
 ```
-**Status: CLEAN ✅**
+
+Dijalankan dengan: `node tsc --noEmit` dari root `artifacts/laporan-kerja`
 
 ---
 
 ## Backward Compat Yang Dijaga
 
-- Kolom `role` lama di DB tidak di-drop
-- Fungsi predicate lama (`getLoginDestination`, `roleCanSelectRegion`, dll) tetap ada
-- `ROLE_PERMISSIONS` map untuk legacy roles tidak diubah
-- `ADMIN_RENCANA_KERJA` legacy role tetap mendapat global work_plans access (melalui `ROLE_PERMISSIONS[USER_ROLES.ADMIN_RENCANA_KERJA]`)
-- Hanya `rencana_kerja` (new permission key) yang diberi region-scoped access
+- Kolom `role` lama di DB **tidak di-drop** — semua guard di `App.tsx` masih punya fallback ke `profile.role`
+- `USER_ROLES.ADMIN_WILAYAH_BBM` dan `ADMIN_RENCANA_KERJA_BBM` tetap ada di TypeScript constants
+- `current_access_role()` (singular) belum di-drop — RLS policy lama yang mungkin masih ada di Supabase tidak akan break
+- `canAccessAllSpjOliRegions(profile.role)` masih bekerja untuk eks-`admin_spj_bbm` via backward compat path
+
+---
+
+## Catatan Untuk Iterasi Berikutnya
+
+- Finding 3 (spj_bbm vs spj_oli) perlu diputuskan: tambah key `spj_bbm` terpisah ATAU biarkan backward compat via `profile.role`
+- Setelah semua user dipastikan punya `roles[]` terisi, kolom `role` lama bisa di-DROP
+- `canAccessAllSpjOliRoles(roles[])` perlu ditambahkan sebelum DROP kolom `role`
