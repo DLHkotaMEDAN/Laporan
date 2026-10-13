@@ -146,15 +146,25 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     officerNames: new Set<string>()
   });
 
-  const canEditPrice = profile?.role === 'admin'
+  const userRoles = profile?.roles ?? [];
+  const canEditPrice = userRoles.includes('administrator')
+    || userRoles.includes('bbm')
+    || userRoles.includes('bbm_pusat')
+    || userRoles.includes('laporan_bbm')
+    // fallback ke role lama untuk user yang belum dimigrasi
+    || profile?.role === 'admin'
     || profile?.role === 'admin_bbm'
     || profile?.role === 'admin_bbm_pusat'
     || profile?.role === 'admin_rencana_kerja_bbm'
     || profile?.role === 'admin_wilayah_bbm'
     || profile?.role === 'admin_laporan_bbm'
     || isSuperAdminAccess(profile?.role, session?.user?.email);
-  const isSuperAdmin = isSuperAdminAccess(profile?.role, session?.user?.email);
-  const isAdminBbm = profile?.role === 'admin_bbm' || profile?.role === 'admin_rencana_kerja_bbm' || profile?.role === 'admin_wilayah_bbm';
+  const isSuperAdmin = userRoles.includes('administrator')
+    || isSuperAdminAccess(profile?.role, session?.user?.email);
+  const isAdminBbm = userRoles.includes('bbm')
+    || profile?.role === 'admin_bbm'
+    || profile?.role === 'admin_rencana_kerja_bbm'
+    || profile?.role === 'admin_wilayah_bbm';
   // User yang wilayahnya di-lock = user yang PUNYA region_id di profil,
   // kecuali super admin dan admin_bbm_pusat.
   // admin_bbm tanpa region_id tetap bebas memilih wilayah.
@@ -385,8 +395,13 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       return;
     }
     const isAllowed = isLaporanBbm
-      ? isSuperAdmin || profile?.role === 'admin_laporan_bbm'
-      : profile?.role === 'admin'
+      ? isSuperAdmin || userRoles.includes('laporan_bbm') || profile?.role === 'admin_laporan_bbm'
+      : userRoles.includes('administrator')
+        || userRoles.includes('bbm')
+        || userRoles.includes('bbm_pusat')
+        || userRoles.includes('laporan_bbm')
+        // fallback ke role lama untuk user yang belum dimigrasi
+        || profile?.role === 'admin'
         || profile?.role === 'admin_bbm'
         || profile?.role === 'admin_bbm_pusat'
         || profile?.role === 'admin_rencana_kerja_bbm'

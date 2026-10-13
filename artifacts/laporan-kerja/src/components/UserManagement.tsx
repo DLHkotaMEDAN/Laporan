@@ -27,7 +27,6 @@ import { useValueDraft } from '@/hooks/useFormDraft';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import {
-  ACCESS_OPTIONS,
   USER_ROLES,
   UserRole,
   getRoleBadgeClass,
@@ -746,19 +745,6 @@ const UserManagement = () => {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Nama pengguna</label>
               <Input value={editUser.username} onChange={event => setEditUser({ ...editUser, username: event.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Hak akses</label>
-              <Select value={editUser.role} onValueChange={role => setEditUser({
-                ...editUser,
-                role: role as UserRole,
-                regionId: roleCanSelectRegion(role) ? editUser.regionId : '',
-                teamId: roleRequiresTeam(role) ? editUser.teamId : '',
-                workPlanCategories: isCategoryScopedWorkPlanAdmin(role) ? editUserWorkPlanCategories : [],
-              })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{ACCESS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-              </Select>
             </div>
             {/* Multi-role dropdown untuk edit dialog */}
             <div className="space-y-2">
