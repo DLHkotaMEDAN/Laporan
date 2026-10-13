@@ -259,12 +259,12 @@ export const notaDinasTemplateService = {
   buildDefaultTemplate(kategori: NotaDinasCategory): NotaDinasTemplate {
     const defaults = DEFAULT_NOTA_TEMPLATES[kategori || 'permintaan_alat'];
     return {
+      ...defaults,
       id: '',
       nama: 'Template Default',
       regionId: null,
       kategori: kategori || 'permintaan_alat',
       isDefault: true,
-      ...defaults,
       kolomPerbaikan: null,
       kolomPermintaan: null,
       createdAt: '',

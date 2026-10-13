@@ -16,9 +16,19 @@ import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
 import { isPimpinanAccess } from '@/constants/access-control';
 
-const CLIENT_ID = "323264526689-91gea696tm6ftv49jt4lb4tqjo5a1947.apps.googleusercontent.com"; 
-const API_KEY = "AIzaSyDzRtvJVVWSYJ1e9VGKBhA1CxRYtlda1PY";
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
+
+// Check if Google Drive feature is enabled
+const GOOGLE_DRIVE_ENABLED = !!(CLIENT_ID && API_KEY);
+
+if (!GOOGLE_DRIVE_ENABLED) {
+  console.warn(
+    "Google Drive upload is disabled. Please set VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY in your .env file. " +
+    "See .env.example for instructions on how to setup Google Cloud Console credentials."
+  );
+}
 
 interface DriveUploadDialogProps {
   isOpen: boolean;
@@ -190,13 +200,13 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
     <Dialog 
       open={isOpen} 
       modal={!isPickerOpen}
-      onOpenChange={(open) => { 
+      onOpenChange={(open) => {
         if (!open && !isUploading && !isCreatingFolder && !isPickerOpen) {
-          onClose(); 
+          onClose();
         }
       }}
     >
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[450px]"
         onInteractOutside={(e) => {
           if (isPickerOpen || isUploading || isCreatingFolder) {
@@ -211,13 +221,30 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <CloudUpload className="text-blue-600 h-6 w-6" /> 
+            <CloudUpload className="text-blue-600 h-6 w-6" />
             {uploadResult ? "Berhasil Diunggah" : "Simpan ke Drive"}
           </DialogTitle>
           <DialogDescription>
             {uploadResult ? "File dan folder sekarang tersedia secara publik." : "Pilih akun Google dan tentukan lokasi penyimpanan."}
           </DialogDescription>
         </DialogHeader>
+
+        {!GOOGLE_DRIVE_ENABLED && !uploadResult && (
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg space-y-2">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-900">Fitur Google Drive Dinonaktifkan</p>
+                <p className="text-xs text-amber-700">
+                  Google credentials belum dikonfigurasi. Hubungi administrator atau setup environment variables:
+                </p>
+                <code className="block text-xs bg-amber-100 px-2 py-1 rounded text-amber-800">
+                  VITE_GOOGLE_CLIENT_ID dan VITE_GOOGLE_API_KEY
+                </code>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isPimpinan && !uploadResult && (
           <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2 text-amber-800 text-xs">
@@ -279,10 +306,10 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
           ) : (
             <div className="flex w-full gap-3">
               <Button variant="ghost" onClick={onClose} disabled={isUploading} className="flex-1">Batal</Button>
-              <Button 
-                onClick={handleFinalUpload} 
-                disabled={isUploading || !accessToken || showNewFolderInput || isPimpinan} 
-                className={cn("bg-blue-600 flex-[2] h-11 font-bold", isPimpinan && "opacity-50 cursor-not-allowed")}
+              <Button
+                onClick={handleFinalUpload}
+                disabled={isUploading || !accessToken || showNewFolderInput || isPimpinan || !GOOGLE_DRIVE_ENABLED}
+                className={cn("bg-blue-600 flex-[2] h-11 font-bold", (isPimpinan || !GOOGLE_DRIVE_ENABLED) && "opacity-50 cursor-not-allowed")}
               >
                 {isUploading ? <><Loader2 className="animate-spin h-4 w-4 mr-2" /> Mengunggah...</> : "Mulai Unggah"}
               </Button>

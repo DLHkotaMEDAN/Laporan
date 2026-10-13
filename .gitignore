@@ -53,6 +53,10 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+.env.staging
+.env.test
 
 # Local migration backups / database dumps
 .migration-backup/

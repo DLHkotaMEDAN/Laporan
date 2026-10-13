@@ -22,7 +22,8 @@ export async function exportSpjOliExcel(
 ) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Rekap SPJ Oli', {
-    pageSetup: { orientation: 'landscape', paperSize: 8, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    // Keep A3 (paper-size code 8); ExcelJS's PaperSize declaration omits this valid OOXML value.
+    pageSetup: { orientation: 'landscape', paperSize: 8 as ExcelJS.PaperSize, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
   const headers = [
     'No', 'No. SPJ', 'Tanggal',

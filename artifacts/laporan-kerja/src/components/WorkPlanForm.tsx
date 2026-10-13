@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from "@/components/ui/button";
@@ -87,32 +87,6 @@ const matchesGlobalSearch = (query: string, searchableValues: string[]) => {
   return normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean).every(queryToken => searchableText.includes(queryToken));
 };
 
-type WorkPlanItemFormValue = WorkPlan["items"][number] & {
-  uiMode?: 'full' | 'activity_location' | 'location_only';
-};
-
-const getToolsSignature = (item: Pick<WorkPlanItemFormValue, "tools">) => JSON.stringify(
-  (item.tools || []).map(tool => ({
-    name: tool.name || "",
-    unit: Number(tool.unit || 0),
-    usage: tool.usage || "",
-    members: Number(tool.members || 0),
-  }))
-);
-
-const withInferredUiModes = <T extends WorkPlanItemFormValue>(items: T[]) => items.map((item, index) => {
-  const previous = items[index - 1];
-  const hasSameToolsAsPrevious = previous && getToolsSignature(previous) === getToolsSignature(item);
-  const hasSameDescriptionAsPrevious = previous && (previous.description || "").trim() === (item.description || "").trim();
-
-  return {
-    ...item,
-    uiMode: hasSameToolsAsPrevious
-      ? (hasSameDescriptionAsPrevious ? 'location_only' as const : 'activity_location' as const)
-      : 'full' as const,
-  };
-});
-
 const toolSchema = z.object({
   name: z.string().optional().default(""),
   unit: z.coerce.number().default(0),
@@ -137,6 +111,30 @@ const itemSchema = z.object({
   basis: z.string().default(""),
   remarks: z.string().optional().default(""),
   uiMode: z.enum(['full', 'activity_location', 'location_only']).default('full'),
+});
+
+type WorkPlanItemFormValue = z.input<typeof itemSchema>;
+
+const getToolsSignature = (item: Pick<WorkPlanItemFormValue, "tools">) => JSON.stringify(
+  (item.tools || []).map(tool => ({
+    name: tool.name || "",
+    unit: Number(tool.unit || 0),
+    usage: tool.usage || "",
+    members: Number(tool.members || 0),
+  }))
+);
+
+const withInferredUiModes = <T extends WorkPlanItemFormValue>(items: T[]) => items.map((item, index) => {
+  const previous = items[index - 1];
+  const hasSameToolsAsPrevious = previous && getToolsSignature(previous) === getToolsSignature(item);
+  const hasSameDescriptionAsPrevious = previous && (previous.description || "").trim() === (item.description || "").trim();
+
+  return {
+    ...item,
+    uiMode: hasSameToolsAsPrevious
+      ? (hasSameDescriptionAsPrevious ? 'location_only' as const : 'activity_location' as const)
+      : 'full' as const,
+  };
 });
 
 const formSchema = z.object({
@@ -199,8 +197,8 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     return tomorrow.toISOString().split('T')[0];
   };
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.input<typeof formSchema>, unknown, z.output<typeof formSchema>>({
+    resolver: zodResolver(formSchema) as Resolver<z.input<typeof formSchema>, unknown, z.output<typeof formSchema>>,
     defaultValues: initialData ? {
       date: initialData.date,
       category: initialData.category,
@@ -209,7 +207,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       items: withInferredUiModes(initialData.items.map(item => ({
         ...item,
         target_area: item.target_area ?? 0,
-        fuel_need_liters: item.fuel_need_liters ?? 0,
+        fuel_need_liters: Number(item.fuel_need_liters ?? 0),
         fuel_usage_estimate: item.fuel_usage_estimate ?? "",
         foreman: item.foreman ?? "",
         tools: item.tools.map((tool, toolIndex) => ({
@@ -292,7 +290,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           && state.selectionStart !== null
           && state.selectionEnd !== null
         ) {
-          element.setSelectionRange(state.selectionStart, state.selectionEnd);
+          element.setSelectionRange(state.selectionStart ?? null, state.selectionEnd ?? null);
         }
         window.scrollTo(state.scrollX, state.scrollY);
       });
@@ -406,7 +404,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
         tools: isGlobalStyle ? [] : [{ name: "", unit: 1, usage: "", members: 0 }], 
         coordinator: defaultCoord, 
         foreman: defaultForeman,
-        personnel: { members: isGlobalStyle ? form.getValues("globalMembers") : lastItem?.personnel.members || 0 }, 
+        personnel: { members: isGlobalStyle ? form.getValues("globalMembers") ?? 0 : lastItem?.personnel.members || 0 },
         basis: lastItem?.basis || "", 
         remarks: "", 
         uiMode: 'full' 
@@ -415,13 +413,13 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       replaceItems([
         ...items.slice(0, -1),
         { ...lastItem, fuel_need_liters: 0, fuel_usage_estimate: "", remarks: "" },
-        { description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, fuel_usage_estimate: movedFuelUsageEstimate, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'activity_location' }
+        { description: defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, fuel_usage_estimate: movedFuelUsageEstimate, tools: (lastItem.tools || []).map(t => ({ ...t })), coordinator: lastItem.coordinator || "", foreman: lastItem.foreman || "", personnel: { members: lastItem.personnel?.members ?? 0 }, basis: lastItem.basis || "", remarks: movedRemarks, uiMode: 'activity_location' }
       ]);
     } else if (mode === 'location_only') {
       replaceItems([
         ...items.slice(0, -1),
         { ...lastItem, fuel_need_liters: 0, fuel_usage_estimate: "", remarks: "" },
-        { description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, fuel_usage_estimate: movedFuelUsageEstimate, tools: lastItem.tools.map(t => ({ ...t })), coordinator: lastItem.coordinator, foreman: lastItem.foreman || "", personnel: { ...lastItem.personnel }, basis: lastItem.basis, remarks: movedRemarks, uiMode: 'location_only' }
+        { description: lastItem.description || defaultDesc, location: { street: "", village: [""], subDistrict: lastItem?.location.subDistrict || "" }, target_area: 0, fuel_need_liters: movedFuelNeedLiters, fuel_usage_estimate: movedFuelUsageEstimate, tools: (lastItem.tools || []).map(t => ({ ...t })), coordinator: lastItem.coordinator || "", foreman: lastItem.foreman || "", personnel: { members: lastItem.personnel?.members ?? 0 }, basis: lastItem.basis || "", remarks: movedRemarks, uiMode: 'location_only' }
       ]);
     }
     setShowWizard(false);
@@ -446,7 +444,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
     openCopyDialog();
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.output<typeof formSchema>) => {
     if (profile?.is_active === false) {
       showError("Akun nonaktif hanya dapat melihat dan mencetak data.");
       return;
@@ -773,17 +771,18 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
               <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold flex items-center gap-2"><ClipboardList className="text-blue-600" /> Daftar Lokasi & Kegiatan</h2></div>
               {itemFields.map((item, index) => {
                 const uiMode = form.watch(`items.${index}.uiMode`);
+                const subDistrict = form.watch(`items.${index}.location.subDistrict`) || "";
                 const nextItemMode = form.watch("items")[index + 1]?.uiMode;
                 const hasMovedFuelAndRemarks = nextItemMode === 'activity_location' || nextItemMode === 'location_only';
                 return (
                   <Card key={item.id} className="border-l-4 border-l-blue-400 shadow-md overflow-hidden">
                     <CardHeader className="bg-slate-50/50 py-3 flex flex-row items-center justify-between"><div className="flex items-center gap-3"><Badge className="bg-blue-600">Lokasi #{index + 1}</Badge>{uiMode !== 'full' && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]"><Check size={10} className="mr-1" /> {uiMode === 'location_only' ? 'Alat & Kegiatan Sama' : 'Alat Sama'}</Badge>}</div><div className="flex items-center gap-2">{uiMode !== 'full' && <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px] text-blue-600" onClick={() => form.setValue(`items.${index}.uiMode`, 'full')}>Tampilkan Semua</Button>}{itemFields.length > 1 && <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4" /></Button>}</div></CardHeader>
                     <CardContent className="p-6 space-y-6">
-                      {uiMode !== 'location_only' && <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (<FormItem><FormLabel className="font-bold">Detail Kegiatan</FormLabel><FormControl><Textarea rows={2} {...field} list="wp-history-descriptions" placeholder="Contoh: Pembabatan rumput..." className="resize-none" /></FormControl></FormItem>)} />}
+                      {uiMode !== 'location_only' && <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (<FormItem><FormLabel className="font-bold">Detail Kegiatan</FormLabel><FormControl><Textarea rows={2} {...field} placeholder="Contoh: Pembabatan rumput..." className="resize-none" /></FormControl></FormItem>)} />}
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <FormField control={form.control} name={`items.${index}.location.street`} render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel>Nama Jalan</FormLabel><FormControl><Input {...field} list="wp-history-streets" /></FormControl></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.location.subDistrict`} render={({ field }) => (<FormItem><FormLabel>Kecamatan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{Object.keys(medanDistricts).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></FormItem>)} />
-                        <FormField control={form.control} name={`items.${index}.location.village.0`} render={({ field }) => (<FormItem><FormLabel>Kelurahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{form.watch(`items.${index}.location.subDistrict`) && form.watch(`items.${index}.location.subDistrict`) !== " " && medanDistricts[form.watch(`items.${index}.location.subDistrict`)].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+                        <FormField control={form.control} name={`items.${index}.location.village.0`} render={({ field }) => (<FormItem><FormLabel>Kelurahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger></FormControl><SelectContent><SelectItem value=" ">Abaikan / Kosong</SelectItem>{subDistrict && subDistrict !== " " && (medanDistricts[subDistrict] ?? []).map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></FormItem>)} />
                         <FormField control={form.control} name={`items.${index}.target_area`} render={({ field }) => (<FormItem><FormLabel>Target Luas Kerja (M²)</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />
                         {isFuelNeedCategory && !hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_need_liters`} render={({ field }) => (<FormItem><FormLabel>Kebutuhan BBM/Liter</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl></FormItem>)} />}
                         {isFuelEstimateCategory && !hasMovedFuelAndRemarks && <FormField control={form.control} name={`items.${index}.fuel_usage_estimate`} render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel>Estimasi Penggunaan BBM (Liter)</FormLabel><FormControl><Textarea rows={3} {...field} placeholder="Tuliskan estimasi penggunaan BBM..." /></FormControl></FormItem>)} />}
@@ -793,7 +792,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                           <div className="pt-4 border-t space-y-4">
                             <div className="flex items-center justify-between">
                               <FormLabel className="flex items-center gap-2 text-blue-700 font-bold"><Wrench size={16} /> Alat Operasional</FormLabel>
-                              <Button type="button" variant="outline" size="sm" className="h-8 px-2 md:px-3" onClick={() => { const current = form.getValues(`items.${index}.tools`); form.setValue(`items.${index}.tools`, [...current, { name: "", unit: 1, usage: "", members: 0 }]); }}><Plus size={14} className="md:mr-1" /> <span className="hidden md:inline">Tambah Alat</span></Button>
+                              <Button type="button" variant="outline" size="sm" className="h-8 px-2 md:px-3" onClick={() => { const current = form.getValues(`items.${index}.tools`) ?? []; form.setValue(`items.${index}.tools`, [...current, { name: "", unit: 1, usage: "", members: 0 }]); }}><Plus size={14} className="md:mr-1" /> <span className="hidden md:inline">Tambah Alat</span></Button>
                             </div>
                             {form.watch(`items.${index}.tools`)?.map((_, toolIdx) => (
                               <div key={toolIdx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50 p-3 rounded-lg border">
@@ -803,7 +802,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
                                 {selectedCategory === "Tim Pohon" && (
                                   <div className="md:col-span-2"><FormField control={form.control} name={`items.${index}.tools.${toolIdx}.members`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase">Jumlah Personel</FormLabel><FormControl><Input type="number" min={0} className="h-9" {...field} /></FormControl></FormItem>)} /></div>
                                 )}
-                                <div className="md:col-span-1 flex justify-end"><Button type="button" variant="ghost" size="icon" className="text-red-400 h-9 w-9" onClick={() => { const current = form.getValues(`items.${index}.tools`); form.setValue(`items.${index}.tools`, current.filter((_, i) => i !== toolIdx)); }}><Trash2 size={16} /></Button></div>
+                                <div className="md:col-span-1 flex justify-end"><Button type="button" variant="ghost" size="icon" className="text-red-400 h-9 w-9" onClick={() => { const current = form.getValues(`items.${index}.tools`) ?? []; form.setValue(`items.${index}.tools`, current.filter((_, i) => i !== toolIdx)); }}><Trash2 size={16} /></Button></div>
                               </div>
                             ))}
                           </div>

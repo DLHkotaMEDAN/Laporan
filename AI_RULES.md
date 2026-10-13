@@ -1,127 +1,57 @@
 # AI_RULES.md
 
-## 🧱 Tech Stack
+## Tech stack
 
-* Frontend: Next.js (React)
-* Styling: Tailwind CSS
-* Backend: Supabase (PostgreSQL, Auth, Storage)
-* API: Next.js API Routes / REST API
-* Database: PostgreSQL (via Supabase)
-* Authentication: Supabase Auth
-* Deployment: Vercel
-* Version Control: Git + GitHub
+- Frontend: React, TypeScript, Vite, and Tailwind CSS.
+- Data, authentication, and file storage: Supabase (PostgreSQL, Supabase Auth, and Storage).
+- Backend: Express with TypeScript for server-side endpoints such as PDF generation.
+- API contracts and shared packages: workspace libraries under `lib/`.
+- Package manager: pnpm workspaces.
+- Deployment configuration: Vercel and the configured Dyad/Replit runtime; check the target before changing deployment behavior.
 
----
+## Project structure
 
-## 📁 Project Structure Rules
+- `artifacts/laporan-kerja/src/pages` contains page-level screens.
+- `artifacts/laporan-kerja/src/components` contains reusable interface components.
+- `artifacts/laporan-kerja/src/services` contains Supabase data-access logic.
+- `artifacts/laporan-kerja/supabase/migrations` contains database changes for the Supabase project.
+- `artifacts/api-server/src` contains Express endpoints and server-only logic.
+- `lib/` contains shared API and tooling packages.
+- Keep UI, data access, and business logic in appropriately separated modules.
 
-* Keep a clean folder structure:
+## Frontend rules
 
-  * `/components` → UI components
-  * `/pages` or `/app` → routing
-  * `/lib` → utilities / helpers
-  * `/services` → API / Supabase logic
-* Avoid placing all logic in one file
-* Separate UI, logic, and data layer
+- Use functional React components and hooks.
+- Use Tailwind CSS classes for styling and keep components reusable.
+- Keep components focused; aim for no more than 300 lines. When existing components exceed this, split them incrementally without changing behavior.
+- Use the shared Supabase client and existing service modules for database access.
+- Preserve route, role, and region access behavior when changing UI or data loading.
 
----
+## Backend and API rules
 
-## 🎨 Frontend Rules
+- Use Express for server-side endpoints and keep server-only credentials on the server.
+- Validate request input and return appropriate status codes and JSON errors.
+- Use async/await consistently and handle expected failures explicitly.
+- Do not add a second database access path without an explicit architecture decision.
 
-* Use functional components only
-* Use React hooks (useState, useEffect, etc.)
-* Use Tailwind CSS (no inline CSS)
-* Keep components reusable and modular
-* Avoid large components (>300 lines)
+## Database rules
 
----
+- Supabase is the application database source of truth.
+- Make schema and policy changes through reviewed SQL migrations in `artifacts/laporan-kerja/supabase/migrations`.
+- Preserve PostgreSQL naming, primary keys, foreign keys, and row-level security policies.
+- Do not run Drizzle `push` against the application database. `lib/db` is an unused scaffold until its adoption is explicitly planned; its schema is not authoritative.
+- Never use a direct schema push as a substitute for the Supabase migration history.
 
-## ⚙️ Backend Rules
+## Authentication and security
 
-* Use Supabase client for all DB operations
-* Avoid direct raw SQL unless necessary
-* Use async/await consistently
-* Handle all errors using try/catch
-* Validate input before processing
+- Use Supabase Auth; protect private routes and preserve existing role checks.
+- Treat Row Level Security as a required server-side boundary for client-accessible tables.
+- Keep secrets in ignored environment files and never commit real credentials.
+- Validate and sanitize user input; do not expose service-role keys or other server secrets to the browser.
 
----
+## Code quality and delivery
 
-## 🗄️ Database Rules
-
-* Use snake_case for table & column names
-* Always define primary keys (id)
-* Use proper relations (foreign keys)
-* Avoid duplicate data (normalize tables)
-
----
-
-## 🔐 Authentication Rules
-
-* Use Supabase Auth only
-* Do not create custom auth system
-* Protect private routes
-* Never expose tokens or secrets
-
----
-
-## 🌐 API Rules
-
-* Follow RESTful conventions
-* Use clear endpoint naming
-* Return JSON responses only
-* Include proper status codes (200, 400, 500)
-* Handle errors gracefully
-
----
-
-## 🔒 Security Rules
-
-* Store secrets in `.env`
-* Never commit `.env` to GitHub
-* Sanitize all user inputs
-* Prevent XSS and SQL Injection
-
----
-
-## 🚀 Deployment Rules
-
-* Ensure environment variables are set in Vercel
-* Test build before deployment
-* Separate dev and production configs
-
----
-
-## 📦 Library Usage Rules
-
-* Use Tailwind CSS for styling
-* Use Supabase JS SDK for backend
-* Use native fetch or Axios for API calls
-* Avoid unnecessary external libraries
-* Prefer built-in Next.js features
-
----
-
-## 🧪 Code Quality Rules
-
-* Use meaningful variable names
-* Write clean and readable code
-* Add comments for complex logic
-* Avoid duplicated code (DRY principle)
-
----
-
-## 🔁 Git Rules
-
-* Commit frequently with clear messages
-* Use meaningful commit messages
-* Do not commit sensitive data
-* Keep main branch stable
-
----
-
-## 📝 Final Guidelines
-
-* Prioritize simplicity and maintainability
-* Optimize for performance when needed
-* Follow best practices of Next.js and Supabase
-* Keep code scalable for future development
+- Use meaningful names, avoid duplicated logic, and comment complex behavior.
+- Run the relevant typecheck/build after code changes when the local dependencies are available.
+- Keep migrations, environment-specific configuration, and deployment behavior explicit.
+- Do not commit sensitive data; keep changes focused and reviewable.

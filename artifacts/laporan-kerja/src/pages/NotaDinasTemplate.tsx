@@ -196,15 +196,16 @@ const NotaDinasTemplate = () => {
 
   const handleSave = async () => {
     if (!editingTemplate) return;
-    if (!editingTemplate.nama?.trim()) {
+    const nama = editingTemplate.nama?.trim();
+    if (!nama) {
       showError("Nama template tidak boleh kosong.");
       return;
     }
     setSaving(true);
     try {
       await notaDinasTemplateService.save({
-        id: editingTemplate.id,
-        nama: editingTemplate.nama ?? "Template Baru",
+        id: editingTemplate.id ?? "",
+        nama,
         regionId: effectiveRegionId,
         kategori,
         isDefault: editingTemplate.isDefault ?? false,
