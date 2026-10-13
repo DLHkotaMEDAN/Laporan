@@ -20,7 +20,9 @@ type LogoMode = 'with-logo' | 'without-logo';
 type SignatureMode = 'with-signature' | 'without-signature';
 
 const labels: Record<SpjOliRecapPeriod, string> = { daily: 'Harian', weekly: 'Mingguan', monthly: 'Bulanan' };
-const canAccess = (role?: string) => ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
+const canAccess = (role?: string, roles?: string[]) =>
+  (roles && (roles.includes('administrator') || roles.includes('spj_oli') || roles.includes('pimpinan')))
+  || ['admin', 'admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
 const getLogoUrl = (fileName: string) => supabase.storage.from('assets').getPublicUrl(fileName).data.publicUrl;
 const LOGO_MEDAN_URL = getLogoUrl('logo-medan.jpg');
 const LOGO_DLH_URL = getLogoUrl('logo-dlh.jpg');
@@ -168,7 +170,7 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
     }
   };
 
-  if (!canAccess(profile?.role)) return null;
+  if (!canAccess(profile?.role, profile?.roles)) return null;
 
   const recapMenu = (
     <DropdownMenu>

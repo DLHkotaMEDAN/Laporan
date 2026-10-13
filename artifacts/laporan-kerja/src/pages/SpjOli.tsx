@@ -129,7 +129,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
 
   const load = async () => { try { setLoading(true); setRecords(await spjOliService.getAll()); } catch { showError('Gagal memuat data SPJ Oli'); } finally { setLoading(false); } };
   useEffect(() => {
-    if (!canAccess(profile?.role, session?.user?.email) && profile) { navigate('/', { replace: true }); return; }
+    if (!canAccess(profile?.role, session?.user?.email, profile?.roles) && profile) { navigate('/', { replace: true }); return; }
     if (lockedRegionId) {
       setRegionId(lockedRegionId);
       setTeamId('semua');
@@ -260,7 +260,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   };
   const remove = (recordId: string) => setDeleteSpjConfirm({ open: true, id: recordId });
 
-  if (!canAccess(profile?.role, session?.user?.email)) return null;
+  if (!canAccess(profile?.role, session?.user?.email, profile?.roles)) return null;
   if (isForm) return <SpjOliInputForm form={form} regions={regions} teams={teams} selectedTeam={selectedTeam} savedRecords={savedRecordsForForm} spjNumberRecords={records} vehicleOptions={vehicleOptions} editable={editable} editing={Boolean(id)} regionLocked={Boolean(lockedRegionId)} lastSavedAt={lastSavedAt} onChange={update} onSubmit={submit} onCancel={() => navigate('/', { replace: true })} />;
 
   return (
