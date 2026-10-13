@@ -23,8 +23,7 @@ laporan/
 ├── lib/
 │   ├── api-client-react/    # React API client
 │   ├── api-spec/            # OpenAPI specification
-│   ├── api-zod/             # Zod schemas
-│   └── db/                  # Unused Drizzle scaffold; not the application schema source
+│   └── api-zod/             # Zod schemas
 ├── scripts/                 # Build and utility scripts
 └── artifacts/laporan-kerja/supabase/ # Supabase migrations & functions
 ```
@@ -88,7 +87,7 @@ GOOGLE_API_KEY=<your-server-side-google-api-key>
 
 4. **Database and migrations**
 
-The application uses Supabase directly through its client and service modules. The SQL files in `artifacts/laporan-kerja/supabase/migrations` are the authoritative database change history. Apply only migrations that are pending for the intended Supabase project, in filename order, using the Supabase SQL Editor after checking that project's migration state. These files extend the existing application schema; they are not a blank-database bootstrap. The `lib/db` Drizzle package is an unused scaffold and must not be used to push schema changes.
+The application uses Supabase directly through its client and service modules. The SQL files in `artifacts/laporan-kerja/supabase/migrations` are the authoritative database change history. Apply only migrations that are pending for the intended Supabase project, in filename order, using the Supabase SQL Editor after checking that project's migration state. These files extend the existing application schema; they are not a blank-database bootstrap. Do not add a second schema-management path without an explicit architecture decision.
 
 5. **Start development servers**
 
@@ -217,12 +216,57 @@ pnpm typecheck          # TypeScript type check
 
 ## 🧪 Testing
 
-Saat ini project belum memiliki test infrastructure. Planned improvements:
+Project memiliki test infrastructure dengan Vitest (unit testing) dan Playwright (e2e testing).
 
-- [ ] Setup Vitest untuk unit testing
-- [ ] Setup Playwright untuk e2e testing
-- [ ] Target 70% code coverage
-- [ ] Integration tests untuk API endpoints
+### Unit Testing (Vitest)
+
+```bash
+cd artifacts/laporan-kerja
+
+# Run tests in watch mode
+pnpm test
+
+# Run tests once
+pnpm test:run
+
+# Run tests with UI
+pnpm test:ui
+
+# Run tests with coverage report
+pnpm test:coverage
+```
+
+### E2E Testing (Playwright)
+
+```bash
+cd artifacts/laporan-kerja
+
+# Run e2e tests
+pnpm test:e2e
+
+# Run e2e tests with UI
+pnpm test:e2e:ui
+
+# Run e2e tests in headed mode
+pnpm test:e2e:headed
+```
+
+### Test Files
+
+- Unit tests: `src/test/*.test.ts` dan `src/test/*.test.tsx`
+- E2E tests: `e2e/*.spec.ts`
+- Test setup: `src/test/setup.ts`
+
+### Coverage Target
+
+Target minimum code coverage: 70% (lines, functions, branches, statements)
+
+### Planned Improvements
+
+- [ ] Add unit tests untuk komponen critical
+- [ ] Add integration tests untuk API endpoints
+- [ ] Add e2e tests untuk user flows penting
+- [ ] Achieve 70% code coverage
 
 ## 📝 Development Guidelines
 

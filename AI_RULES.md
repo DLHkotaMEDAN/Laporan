@@ -39,7 +39,7 @@
 - Supabase is the application database source of truth.
 - Make schema and policy changes through reviewed SQL migrations in `artifacts/laporan-kerja/supabase/migrations`.
 - Preserve PostgreSQL naming, primary keys, foreign keys, and row-level security policies.
-- Do not run Drizzle `push` against the application database. `lib/db` is an unused scaffold until its adoption is explicitly planned; its schema is not authoritative.
+- Do not introduce a second database access path or run Drizzle schema pushes. Any future server-side PostgreSQL access requires an explicit architecture decision and must preserve Supabase migrations as the schema source of truth.
 - Never use a direct schema push as a substitute for the Supabase migration history.
 
 ## Authentication and security

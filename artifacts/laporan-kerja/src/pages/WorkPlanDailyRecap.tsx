@@ -1,3 +1,6 @@
+// TODO: This component is 1046 lines. Consider decomposing into smaller components.
+// Future: Extract table, filters, actions into separate components after test coverage is established.
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { WorkPlan } from '@/types/workPlan';
