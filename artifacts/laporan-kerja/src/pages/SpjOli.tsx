@@ -22,8 +22,10 @@ import TotalRecordLabel from '@/components/TotalRecordLabel';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 const emptyRecord = { date: new Date().toISOString().slice(0, 10), region_id: '', team_id: '', spj_number: '', vehicle_name: '', receiver_name: '', operator_name: '', oil_name: '', quantity: 0, unit: 'Liter', location: '', remarks: '' };
-const canAccess = (role?: string, email?: string | null) =>
-  isSuperAdminAccess(role, email) || ['admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
+const canAccess = (role?: string, email?: string | null, roles?: string[]) =>
+  isSuperAdminAccess(role, email)
+  || (roles && (roles.includes('administrator') || roles.includes('spj_oli') || roles.includes('pimpinan')))
+  || ['admin_spj_bbm', 'admin_spj_oli', 'pimpinan'].includes(role || '');
 const defaultOilOptions = ['Oli Hydraulic', 'Oli Mesin', 'Minyak Rem'];
 
 type SortDirection = 'asc' | 'desc';

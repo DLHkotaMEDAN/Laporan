@@ -249,16 +249,14 @@ const ROLE_PERMISSIONS_EXTENDED = ROLE_PERMISSIONS as Record<string, Permission[
 ROLE_PERMISSIONS_EXTENDED['administrator']  = ROLE_PERMISSIONS[USER_ROLES.ADMIN] ?? [];
 ROLE_PERMISSIONS_EXTENDED['pimpinan']       = ROLE_PERMISSIONS[USER_ROLES.PIMPINAN] ?? [];
 ROLE_PERMISSIONS_EXTENDED['laporan_kerja']  = ROLE_PERMISSIONS[USER_ROLES.LAPORAN] ?? [];
-// rencana_kerja: region-scoped permissions (not global like ADMIN_RENCANA_KERJA).
-// Users with only 'rencana_kerja' can access work_plans in their own region.
-// ADMIN_RENCANA_KERJA (legacy) gives global access; the new 'rencana_kerja' key
-// intentionally restricts to the user's region to preserve the admin_wilayah
-// access scope after migration (admin_wilayah → ['laporan_kerja','rencana_kerja']).
+// rencana_kerja: akses global jika user tidak punya region_id (eks-admin_rencana_kerja),
+// per wilayah jika punya region_id (eks-admin_wilayah atau admin_wilayah_bbm).
+// Ini mengikuti perilaku ADMIN_RENCANA_KERJA lama yang global saat region_id null.
 ROLE_PERMISSIONS_EXTENDED['rencana_kerja']  = [
   { resource: 'work_plans', action: 'create' },
-  { resource: 'work_plans', action: 'read',   condition: (ctx: AuthContext) => ctx.regionId === ctx.resourceRegionId },
-  { resource: 'work_plans', action: 'update', condition: (ctx: AuthContext) => ctx.regionId === ctx.resourceRegionId },
-  { resource: 'work_plans', action: 'delete', condition: (ctx: AuthContext) => ctx.regionId === ctx.resourceRegionId },
+  { resource: 'work_plans', action: 'read',   condition: (ctx: AuthContext) => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+  { resource: 'work_plans', action: 'update', condition: (ctx: AuthContext) => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
+  { resource: 'work_plans', action: 'delete', condition: (ctx: AuthContext) => !ctx.regionId || ctx.regionId === ctx.resourceRegionId },
   { resource: 'profiles',   action: 'read' },
 ];
 ROLE_PERMISSIONS_EXTENDED['rekap_lembur']   = ROLE_PERMISSIONS[USER_ROLES.ADMIN_REKAP_LEMBUR] ?? [];

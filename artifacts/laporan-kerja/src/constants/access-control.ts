@@ -353,12 +353,17 @@ export const getRoleLandingPathRoles = (roles: string[]): string => {
   if (roles.includes('bbm_pusat')) return '/?tab=fuel_reports_pusat';
   if (roles.includes('laporan_bbm')) return '/laporan-bbm';
   if (roles.includes('spj_oli')) return '/?tab=spj_oli';
-  if (roles.includes('bbm')) return '/fuel-reports';
+  // Kombinasi rencana_kerja + bbm → dashboard utama agar kedua tab terlihat
+  if (roles.includes('rencana_kerja') && roles.includes('bbm')) return '/';
+  // Kombinasi laporan_kerja + bbm → dashboard utama agar kedua tab terlihat
+  if (roles.includes('laporan_kerja') && roles.includes('bbm')) return '/';
+  // bbm murni (tanpa rencana/laporan kerja) → langsung ke halaman BBM
+  if (roles.includes('bbm') && !roles.includes('rencana_kerja') && !roles.includes('laporan_kerja')) return '/fuel-reports';
   if (roles.includes('nota_dinas')) return '/?tab=nota_dinas';
-  // rencana_kerja murni (tanpa laporan_kerja) -> langsung ke rencana kerja
+  // rencana_kerja murni (tanpa laporan_kerja dan bbm) → langsung ke rencana kerja
   if (roles.includes('rencana_kerja') && !roles.includes('laporan_kerja')) return '/work-plans/daily-rekap';
   if (roles.includes('rekap_lembur')) return '/overtime';
-  // laporan_kerja, combined, pengguna_tim -> dashboard utama
+  // laporan_kerja, combined, pengguna_tim → dashboard utama
   return '/';
 };
 

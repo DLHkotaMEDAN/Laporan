@@ -1,10 +1,46 @@
 {
   "verdict": "CHANGES_REQUESTED",
   "findings": [
-    "Urutan migrasi non-deterministic: 20261008_cleanup_rls_dead_code.sql dan 20261008_multi_role_refactor.sql berbagi prefix tanggal identik. Urutan alfabetik saat ini kebetulan benar (cleanup < multi), tapi rename salah satu file akan membalik urutan dan membuat DB kembali ke semantik single-role. Rename file multi_role_refactor agar urutan terjamin secara eksplisit.",
-    "Quick-edit role dropdown di tabel UserManagement.tsx memanggil handleUpdateProfile dengan roles: [role] (single-element array), yang menimpa multi-role state user yang ada. User dengan ['laporan_kerja','rencana_kerja'] akan kehilangan 'rencana_kerja' jika admin menyentuh dropdown ini tanpa sadar. Hapus quick-edit dropdown atau ubah agar tidak menyentuh kolom roles.",
-    "admin_spj_bbm dan admin_spj_oli keduanya dipetakan ke satu key 'spj_oli' dalam migrasi. canAccessAllSpjOliRegions() masih membedakan keduanya lewat profile.role lama (backward compat terjaga), tetapi tidak ada fungsi canAccessAllSpjOliRoles(roles[]) padanan untuk semantik multi-role, sehingga kode baru tidak bisa membedakan eks-admin_spj_bbm (global tanpa syarat) dari spj_oli (global hanya jika tidak ada region).",
-    "Form create user mengirim role: newUser.role (dari dropdown ACCESS_OPTIONS lama) bersamaan dengan roles: newUser.roles (dari checkbox multi-role). Jika checkbox diisi tapi dropdown dibiarkan di nilai default, profil akan menyimpan role dan roles yang tidak konsisten. Edge Function menyimpan keduanya tanpa koreksi. Turunkan nilai role dari roles[0] di Edge Function atau hapus field role dari form."
+    {
+      "id": "rencana_kerja_scope_regression",
+      "severity": "blocking",
+      "summary": "Regresi scope `rencana_kerja`: user yang di-migrasi dari `admin_rencana_kerja` (global, tanpa region_id) akan mendapat permission `rencana_kerja` dengan condition `ctx.regionId === ctx.resourceRegionId`. Karena mereka tidak punya region_id, semua kondisi menghasilkan `null === <uuid>` → false → akses ditolak ke semua work_plans.",
+      "location": "supabase/migrations/20261008_zzz_multi_role_refactor.sql baris 'UPDATE profiles SET roles = ARRAY[''rencana_kerja''] WHERE role = ''admin_rencana_kerja'''; src/constants/permissions.ts ROLE_PERMISSIONS_EXTENDED['rencana_kerja']",
+      "confidence": "confirmed",
+      "action": "Opsi A: buat key terpisah 'rencana_kerja_global' untuk eks-ADMIN_RENCANA_KERJA tanpa condition region. Opsi B: hapus condition dari 'rencana_kerja' dan gunakan mekanisme lain (region_id null = akses global) seperti ADMIN_RENCANA_KERJA lama."
+    },
+    {
+      "id": "spj_pages_canaccess_hardcode",
+      "severity": "blocking",
+      "summary": "canAccess() di SpjOli.tsx (baris 25) dan SpjOliRecap.tsx (baris 23) hardcode string legacy ['admin_spj_bbm', 'admin_spj_oli', 'pimpinan']. User dengan profile.role='administrator' (new key) yang sudah melewati SpjOliRoute guard akan mendapat return null di SpjOli.tsx baris 261 → halaman kosong.",
+      "location": "src/pages/SpjOli.tsx baris 25, 130, 261; src/pages/SpjOliRecap.tsx baris 23, 171",
+      "confidence": "confirmed",
+      "action": "Update canAccess() di kedua file untuk juga mengecek profile.roles (new keys): tambahkan 'administrator' dan 'spj_oli' ke list, atau gunakan isSuperAdminRoles()/isSpjOliRoles() yang sudah ada."
+    },
+    {
+      "id": "pages_single_role_filter",
+      "severity": "medium",
+      "summary": "Halaman FuelReportList, DailyRecap, WeeklyRecap, MonthlyRecap, FuelDailyRecap, FuelWeeklyRecap, FuelMonthlyRecap, FuelYearlyRecap, WorkPlanDailyRecap masih menggunakan profile?.role (single-string) untuk menghitung isAdmin, fuelRegionId, dan filter data. Pada user multi-role, behavior ditentukan oleh roles[0] saja.",
+      "location": "src/pages/FuelReportList.tsx baris 157–167; src/pages/FuelDailyRecap.tsx baris 75–78; src/pages/DailyRecap.tsx baris 96–98; dan pages fuel recap lainnya",
+      "confidence": "confirmed",
+      "action": "Scope pekerjaan ini besar — bisa dilakukan sebagai iterasi terpisah. Minimal dokumentasikan bahwa pages ini akan di-update di iterasi berikutnya dan behavior saat ini tergantung roles[0]."
+    },
+    {
+      "id": "form_submit_button_disabled_check",
+      "severity": "low",
+      "summary": "Tombol submit form 'Buat Akun' mengecek roleRequiresRegion(newUser.role) untuk disabled state, tapi newUser.role adalah legacy dropdown yang tidak selalu mencerminkan roles[] checkbox. Jika admin hanya mengisi checkbox (tanpa menyentuh dropdown), tombol bisa aktif meski region belum diisi.",
+      "location": "src/components/UserManagement.tsx — disabled prop pada tombol 'Buat Akun Aktif'",
+      "confidence": "confirmed",
+      "action": "Ganti roleRequiresRegion(newUser.role) dengan rolesRequireRegion(newUser.roles.length > 0 ? newUser.roles : [newUser.role]) pada disabled prop tombol submit."
+    },
+    {
+      "id": "optimistic_update_wrong_role",
+      "severity": "low",
+      "summary": "Optimistic update di handleCreateUser menggunakan role: newUser.role (nilai dropdown awal), bukan effectiveRoles[0]. Jika roles[] diisi via checkbox, tabel akan menampilkan role yang salah sampai fetchProfiles() selesai.",
+      "location": "src/components/UserManagement.tsx handleCreateUser, setProfiles() call setelah createUser sukses",
+      "confidence": "confirmed",
+      "action": "Hitung effectiveRole = newUser.roles.length > 0 ? newUser.roles[0] : newUser.role sebelum memanggil setProfiles() dan gunakan nilai tersebut untuk kolom role di optimistic update."
+    }
   ],
   "reviewDoc": "c:\\Users\\dlhup\\dyad-apps\\laporan\\.agents\\tasks\\multi-role-refactor-review-doc.md"
 }

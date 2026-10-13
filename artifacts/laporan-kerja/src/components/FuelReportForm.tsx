@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, Save, Loader2, Fuel, MapPin, Info, 
-  Plus, Trash2, MessageSquare, HelpCircle, MapPinned, Calculator, Lock, Unlock
+  Plus, Trash2, MessageSquare, HelpCircle, MapPinned, Calculator, Lock, Unlock, Copy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -137,6 +137,10 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTypePrompt, setShowTypePrompt] = useState(false);
   const [appendSourceIndex, setAppendSourceIndex] = useState<number | null>(null);
+  // State untuk fitur duplikat
+  const [isDuplicateMode, setIsDuplicateMode] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicateDate, setDuplicateDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Autocomplete States
   const [history, setHistory] = useState({
@@ -308,6 +312,14 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
   const handleAddClick = () => {
     setAppendSourceIndex(null);
     setShowTypePrompt(true);
+  };
+
+  // Handler duplikat: salin data form ke tanggal baru
+  const handleDuplicate = () => {
+    form.setValue("date", duplicateDate);
+    setIsDuplicateMode(true);
+    showSuccess(`Data disalin ke tanggal ${duplicateDate}. Periksa dan klik Simpan.`);
+    setShowDuplicateDialog(false);
   };
 
   const handleTypeSelection = (requiresFuel: boolean) => {
@@ -500,7 +512,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         return;
       }
 
-      if (isEditing && initialData) {
+      if (isEditing && initialData && !isDuplicateMode) {
         if (isLaporanBbm) {
           await laporanBbmService.updateReport(initialData.id, finalData);
         } else if (isAdminBbmPusat) {
@@ -517,7 +529,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
         } else {
           await fuelService.createReport(finalData);
         }
-        showSuccess("Laporan BBM disimpan");
+        showSuccess(isDuplicateMode ? "Laporan BBM baru berhasil dibuat dari duplikat!" : "Laporan BBM disimpan");
       }
       await clearDraft();
       navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role));
@@ -550,14 +562,46 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
           </Button>
           <div className="text-left sm:text-center">
             <h1 className="text-2xl font-bold tracking-tight text-primary sm:text-3xl">
-              {isEditing ? (isLaporanBbm ? "Edit Laporan BBM" : isAdminBbmPusat ? "Edit Admin BBM Pusat" : "Edit Laporan BBM & Oli") : (isLaporanBbm ? "Input Laporan BBM" : isAdminBbmPusat ? "Input Admin BBM Pusat" : "Input Laporan BBM & Oli")}
+              {isEditing && !isDuplicateMode ? (isLaporanBbm ? "Edit Laporan BBM" : isAdminBbmPusat ? "Edit Admin BBM Pusat" : "Edit Laporan BBM & Oli") : (isLaporanBbm ? "Input Laporan BBM" : isAdminBbmPusat ? "Input Admin BBM Pusat" : "Input Laporan BBM & Oli")}
             </h1>
+            {isDuplicateMode && (
+              <Badge className="bg-amber-100 text-amber-700 border-amber-200 mt-1 animate-pulse">
+                <Copy size={10} className="mr-1" /> Mode Duplikat: Belum Tersimpan
+              </Badge>
+            )}
             <p className="mt-1 text-xs text-slate-500">{lastSavedAt ? "Draft tersimpan otomatis" : "Draft akan tersimpan otomatis"}</p>
           </div>
-          <Button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 shadow-sm hover:bg-blue-700 sm:w-auto">
-            {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Simpan...</> : <><Save className="h-4 w-4 mr-2" /> Simpan</>}
-          </Button>
+          <div className="flex gap-2">
+            {isEditing && !isDuplicateMode && (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 md:px-4"
+                onClick={() => { setDuplicateDate(new Date().toISOString().split('T')[0]); setShowDuplicateDialog(true); }}
+              >
+                <Copy className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Duplikat</span>
+              </Button>
+            )}
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 shadow-sm hover:bg-blue-700 sm:w-auto">
+              {isSubmitting
+                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Simpan...</>
+                : <><Save className="h-4 w-4 mr-2" /> {isDuplicateMode ? "Simpan Sebagai Baru" : "Simpan"}</>
+              }
+            </Button>
+          </div>
         </div>
+
+        {/* Banner peringatan mode duplikat */}
+        {isDuplicateMode && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
+            <Copy className="h-5 w-5 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Perhatian: Mode Duplikat Aktif</p>
+              <p className="text-xs opacity-90">Data laporan telah disalin ke tanggal baru. Perubahan yang Anda buat sekarang tidak akan mengubah laporan asli, melainkan akan disimpan sebagai <strong>Laporan Baru</strong> saat Anda menekan tombol Simpan.</p>
+            </div>
+          </div>
+        )}
 
         <Card className="overflow-hidden rounded-2xl border-slate-200 border-t-4 border-t-blue-600 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/60 pb-4"><CardTitle className="flex items-center gap-2 text-lg"><Info className="h-5 w-5 text-blue-500" /> {isLaporanBbm ? 'Informasi Wilayah, Tim & SPJ' : 'Informasi Wilayah & Tim'}</CardTitle></CardHeader>
@@ -847,6 +891,35 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
           </CardContent>
         </Card>
       </form>
+
+      {/* Dialog Duplikat Laporan BBM */}
+      <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="text-blue-600 h-5 w-5" /> Duplikat Laporan BBM
+            </DialogTitle>
+            <DialogDescription>
+              Pilih tanggal baru untuk menyalin data laporan ini ke formulir.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <label className="text-sm font-medium">Tanggal Baru</label>
+            <input
+              type="date"
+              value={duplicateDate}
+              onChange={e => setDuplicateDate(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowDuplicateDialog(false)}>Batal</Button>
+            <Button onClick={handleDuplicate} disabled={!duplicateDate} className="bg-blue-600 hover:bg-blue-700">
+              <Copy className="h-4 w-4 mr-2" /> Salin ke Form
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showTypePrompt} onOpenChange={setShowTypePrompt}>
         <DialogContent className="sm:max-w-[400px]">
