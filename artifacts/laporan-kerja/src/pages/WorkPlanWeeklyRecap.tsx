@@ -41,6 +41,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import '@/styles/printStyles.css';
 
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
@@ -706,37 +707,7 @@ const WorkPlanWeeklyRecap = () => {
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        /* Tumpangkan pemisah isi sel dengan garis antarbaris tabel saat cetak. */
-        .print-area td > div.border-t.border-black {
-          border-top-width: 1px !important;
-          position: relative;
-          top: -1px;
-        }
-        @media print {
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          .print-area {
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
-            overflow: visible !important;
-          }
-          @page { size: A3 landscape; margin: 1.5cm; }
-          .overflow-x-auto { overflow: visible !important; }
-          table { width: 100% !important; }
-          table thead { display: table-header-group !important; }
-          table tr { break-inside: avoid; page-break-inside: avoid; }
-          .keep-together { page-break-inside: avoid; break-inside: avoid; }
-          ::-webkit-scrollbar { display: none; }
-        }
-      `}} />
+
     </div>
   );
 };

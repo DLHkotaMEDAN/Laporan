@@ -49,7 +49,7 @@ app.use(
       callback(new Error(`CORS: origin tidak diizinkan — ${origin}`));
     },
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 // A print-ready report contains the rendered table and its styles, so it can

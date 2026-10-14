@@ -43,6 +43,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import '@/styles/printStyles.css';
 
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
@@ -981,67 +982,6 @@ const WorkPlanDailyRecap = () => {
           )}
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .work-plan-table {
-          border-width: 2px !important;
-        }
-        .work-plan-table th {
-          padding: 6px 5px !important;
-          border-width: 1.5px !important;
-          font-weight: 700;
-          line-height: 1.2 !important;
-        }
-        .work-plan-table td {
-          padding: 5px 6px !important;
-          border-width: 1.25px !important;
-          line-height: 1.35 !important;
-        }
-        .work-plan-table.split-table-before-footer {
-          border-bottom-width: 0 !important;
-        }
-        /* Tabel lanjutan langsung mengikuti tabel utama. Hilangkan sisi atas
-           tabel kedua agar tidak menumpuk dengan batas bawah baris terakhir. */
-        .work-plan-table.continuation-table {
-          border-top-width: 0 !important;
-        }
-        .work-plan-table.continuation-table tbody tr:first-child > td {
-          border-top-width: 0 !important;
-        }
-        /* Pemisah di dalam sel rowspan ditumpangkan ke garis baris tabel.
-           Dengan begitu tetap ada garis sambung, tanpa terlihat dobel/tebal saat dicetak. */
-        .print-area td > div.border-t.border-black {
-          border-top-width: 1px !important;
-          position: relative;
-          top: -1px;
-        }
-        @media print {
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          .print-area {
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
-            overflow: visible !important;
-          }
-          @page { size: A3 landscape; margin: 1.5cm; }
-          .overflow-x-auto { overflow: visible !important; }
-          table { width: 100% !important; }
-          table thead { display: table-header-group !important; }
-          /* Tabel lanjutan hanya memuat kelompok kegiatan terakhir; jangan
-             tampilkan ulang judul kolom di tengah rekap. */
-          table.continuation-table thead { display: none !important; }
-          table tr { break-inside: avoid; page-break-inside: avoid; }
-          .keep-together { page-break-inside: avoid; break-inside: avoid; }
-          ::-webkit-scrollbar { display: none; }
-        }
-      `}} />
     </div>
   );
 };

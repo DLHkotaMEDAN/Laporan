@@ -5,7 +5,7 @@ import { reportService, ReportFilters } from '@/services/reportService';
 import { getUnitByCategory, sortByCategory } from '@/utils/report-helpers';
 import {
   ArrowLeft, Printer, FileText, ChevronsUpDown,
-  Table, LogOut, LogIn, CloudUpload, 
+  Table, LogOut, LogIn, CloudUpload,
   Loader2, Lock, ChevronDown,
   Image as ImageIcon, ImageOff, PenTool, Calendar, Settings2, Edit, Share2
 } from 'lucide-react';
@@ -17,7 +17,9 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { logger } from '@/lib/logger';
 import ExcelJS from 'exceljs';
+import '@/styles/printStyles.css';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
@@ -174,7 +176,7 @@ const DailyRecap = () => {
         setReports(data);
       }
     } catch (error) {
-      console.error(error);
+      logger.error('Error loading daily recap data', error);
     } finally {
       if (requestId === dataRequestId.current) {
         setLoading(false);
@@ -206,7 +208,7 @@ const DailyRecap = () => {
         fileName: dailyPdfFileName("Laporan Harian", selectedDate, regionName),
       });
     } catch (error) {
-      console.error(error);
+      logger.error('Error sharing PDF', error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
     } finally {
       dismissToast(toastId);
@@ -244,7 +246,7 @@ const DailyRecap = () => {
       if (error) throw error;
       return data;
     } catch (error: any) {
-      console.error(error);
+      logger.error('Error uploading to Drive', error);
       showError("Gagal mengunggah: " + error.message);
       throw error;
     } finally {
@@ -351,7 +353,7 @@ const DailyRecap = () => {
                 const arrayBuffer = await blob.arrayBuffer();
                 const imageId = workbook.addImage({ buffer: arrayBuffer, extension: 'jpeg' });
                 worksheet.addImage(imageId, { tl: { col: colIndex - 1, row: row.number - 1 }, ext: { width: 140, height: 130 }, editAs: 'oneCell' });
-              } catch (e) { console.error(e); }
+              } catch (e) { logger.error('Error adding image to Excel', e); }
             };
             // Hitung index kolom foto secara dinamis
             let photoStartCol = 5; // Default jika kategori, uraian, dan lokasi ada
@@ -371,7 +373,7 @@ const DailyRecap = () => {
       dismissToast(toastId);
       showSuccess("Rekap Excel berhasil diunduh");
     } catch (error) {
-      console.error(error);
+      logger.error('Error exporting Excel', error);
       dismissToast(toastId);
       showError("Gagal membuat file Excel");
     }
@@ -780,45 +782,6 @@ const DailyRecap = () => {
           )}
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, 
-          [data-radix-portal], 
-          [role="menu"], 
-          [data-radix-popper-content-wrapper] { 
-            display: none !important; 
-            visibility: hidden !important;
-            opacity: 0 !important;
-          }
-          .print-area { 
-            box-shadow: none !important; 
-            border: none !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            width: 100% !important; 
-            max-width: none !important; 
-            background-color: white !important;
-            overflow: visible !important;
-          }
-          @page { size: A3 landscape; margin: 1.5cm; }
-          table { page-break-inside: auto; width: 100% !important; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          thead { display: table-header-group; }
-          .pdf-table-header th {
-            background-color: #42FF41 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          tfoot { display: table-footer-group; }
-          .pdf-report-block { page-break-inside: avoid; }
-          .keep-together { page-break-inside: avoid; break-inside: avoid; }
-          .bg-slate-50, .bg-slate-100 { background-color: white !important; }
-          .overflow-x-auto { overflow: visible !important; }
-          ::-webkit-scrollbar { display: none; }
-        }
-      `}} />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { chromium } from "playwright";
 import { existsSync } from "node:fs";
+import rateLimit from "express-rate-limit";
 import {
   safeFileName,
   validatePdfPayload,
@@ -8,12 +9,22 @@ import {
   PDF_THEAD_SCRIPT,
   PDF_PAGE_OPTIONS,
 } from "../lib/pdf-core.js";
+import { requireAuth, AuthRequest } from "../lib/auth-middleware.js";
 
 const router = Router();
 const LOCAL_CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
-router.post("/render-pdf", async (req, res) => {
-  const { documentHtml, fileName } = req.body ?? {};
+// Rate limiting: 10 requests per minute per IP
+const pdfLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Terlalu banyak permintaan PDF. Coba lagi dalam 1 menit.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/render-pdf", pdfLimiter, requireAuth, async (req: AuthRequest, res: any) => {
+  const { documentHtml, fileName } = (req.body as any) ?? {};
 
   const validationError = validatePdfPayload(documentHtml);
   if (validationError) {
@@ -26,7 +37,7 @@ router.post("/render-pdf", async (req, res) => {
     browser = await chromium.launch({
       headless: true,
       ...(existsSync(LOCAL_CHROME_PATH) ? { executablePath: LOCAL_CHROME_PATH } : {}),
-      args: ["--disable-gpu", "--disable-software-rasterizer", "--no-sandbox"],
+      args: ["--disable-gpu", "--disable-software-rasterizer"],
     });
 
     // JavaScript diaktifkan agar Playwright bisa menerapkan style cetak.

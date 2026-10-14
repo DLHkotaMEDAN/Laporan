@@ -1,0 +1,172 @@
+/* Shared Print Styles for Report Recaps */
+
+@media print {
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .no-print,
+  [data-radix-portal],
+  [role="menu"],
+  [data-radix-popper-content-wrapper] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  .print-area {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background-color: white !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  @page {
+    size: A3 landscape;
+    margin: 1.5cm;
+  }
+
+  table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  .pdf-table-header th {
+    font-size: 11px !important;
+    padding: 6px !important;
+    text-align: center !important;
+    background-color: #f0f0f0 !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .pdf-table-cell {
+    font-size: 10px !important;
+    padding: 4px !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .pdf-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+  }
+
+  .pdf-header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  /* DailyRecap specific styles */
+  .pdf-table-header th {
+    background-color: #42FF41 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  .pdf-report-block {
+    page-break-inside: avoid;
+  }
+
+  .keep-together {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .bg-slate-50,
+  .bg-slate-100 {
+    background-color: white !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* WorkPlan specific styles */
+  .work-plan-table {
+    border-width: 2px !important;
+  }
+
+  .work-plan-table th {
+    padding: 6px 5px !important;
+    border-width: 1.5px !important;
+    font-weight: 700;
+    line-height: 1.2 !important;
+  }
+
+  .work-plan-table td {
+    padding: 5px 6px !important;
+    border-width: 1.25px !important;
+    line-height: 1.35 !important;
+  }
+
+  .work-plan-table.split-table-before-footer {
+    border-bottom-width: 0 !important;
+  }
+
+  .work-plan-table.continuation-table {
+    border-top-width: 0 !important;
+  }
+
+  .work-plan-table.continuation-table tbody tr:first-child > td {
+    border-top-width: 0 !important;
+  }
+
+  .print-area td > div.border-t.border-black {
+    border-top-width: 1px !important;
+    position: relative;
+    top: -1px;
+  }
+
+  .sonner-toaster {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  table {
+    width: 100% !important;
+  }
+
+  table thead {
+    display: table-header-group !important;
+  }
+
+  table.continuation-table thead {
+    display: none !important;
+  }
+
+  table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

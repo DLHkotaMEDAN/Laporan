@@ -5,6 +5,7 @@ import { reportService } from '@/services/reportService';
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { ArrowLeft, Printer, Fuel, Users, Wrench, MessageSquare, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import '@/styles/printStyles.css';
 
 const PrintRekap = () => {
   const [searchParams] = useSearchParams();
@@ -178,19 +179,7 @@ const PrintRekap = () => {
         ))}
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body { background: white !important; }
-          .no-print { display: none !important; }
-          .print-container { padding: 0 !important; margin: 0 !important; }
-          .break-after-page { page-break-after: always; }
-          @page { margin: 1cm; size: portrait; }
-          .bg-slate-50 { background-color: transparent !important; }
-          .bg-slate-100 { background-color: #f1f5f9 !important; }
-          .border { border-color: #e2e8f0 !important; }
-          .border-black { border-color: #000000 !important; }
-        }
-      `}} />
+
     </div>
   );
 };

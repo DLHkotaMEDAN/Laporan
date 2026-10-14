@@ -1,7 +1,13 @@
+import { verifySession } from './lib/auth-utils';
+
 const MAX_DOCUMENT_SIZE = 4 * 1024 * 1024;
+
+// Simple in-memory rate limiter for Vercel functions
+const rateLimiter = new Map<string, number[]>();
 
 type RequestLike = {
   method?: string;
+  headers?: { [key: string]: string };
   body?: { documentHtml?: unknown; fileName?: unknown };
 };
 
@@ -26,6 +32,34 @@ const errorResponse = (response: ResponseLike, message: string, status = 500) =>
 export default async function handler(request: RequestLike, response: ResponseLike) {
   if (request.method !== "POST") {
     errorResponse(response, "Metode tidak didukung.", 405);
+    return;
+  }
+
+  // Rate limiting
+  const ip = request.headers?.['x-forwarded-for'] as string || 'unknown';
+  const now = Date.now();
+  const userRequests = rateLimiter.get(ip) || [];
+  const recentRequests = userRequests.filter(t => now - t < 60000); // 1 minute
+
+  if (recentRequests.length > 10) {
+    errorResponse(response, "Terlalu banyak permintaan. Coba lagi dalam 1 menit.", 429);
+    return;
+  }
+
+  userRequests.push(now);
+  rateLimiter.set(ip, userRequests);
+
+  // Auth check
+  const authHeader = request.headers?.['authorization'];
+  if (!authHeader) {
+    errorResponse(response, "Unauthorized", 401);
+    return;
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const user = await verifySession(token);
+  if (!user) {
+    errorResponse(response, "Invalid or expired token", 401);
     return;
   }
 

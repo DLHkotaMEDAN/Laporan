@@ -50,6 +50,7 @@ import ResetPasswordDialog from '@/components/ResetPasswordDialog';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import RolesDropdown from './UserManagement/RolesDropdown';
 import { getEdgeFunctionErrorMessage, executeWithConcurrency as runWithConcurrencyLimit } from './UserManagement/utils';
+import { getErrorMessage } from '@/types/common';
 
 const toggleWorkPlanCategory = (selected: string[], category: string) => (
   selected.includes(category)
@@ -268,8 +269,8 @@ const UserManagement = () => {
           .map(account => [account.id, account.email]),
       );
       setProfiles((data || []).map(profile => ({ ...profile, roles: profile.roles ?? [], email: emailsByUserId.get(profile.id) || null })));
-    } catch (error: any) {
-      showError("Gagal memuat daftar pengguna: " + error.message);
+    } catch (error: unknown) {
+      showError("Gagal memuat daftar pengguna: " + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -289,8 +290,8 @@ const UserManagement = () => {
       
       setProfiles(profiles.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
       showSuccess("Profil berhasil diperbarui");
-    } catch (error: any) {
-      showError("Gagal memperbarui profil: " + error.message);
+    } catch (error: unknown) {
+      showError("Gagal memperbarui profil: " + getErrorMessage(error));
     } finally {
       setUpdatingId(null);
     }
@@ -311,8 +312,8 @@ const UserManagement = () => {
           setProfiles(profiles.filter(p => p.id !== id));
           showSuccess("Profil dihapus");
           setUserActionConfirm(prev => ({ ...prev, open: false }));
-        } catch (error: any) {
-          showError("Gagal menghapus profil: " + error.message);
+        } catch (error: unknown) {
+          showError("Gagal menghapus profil: " + getErrorMessage(error));
         }
       },
     });
@@ -346,8 +347,8 @@ const UserManagement = () => {
           showSuccess(nextIsActive ? 'Akun berhasil diaktifkan.' : 'Akun berhasil dinonaktifkan.');
           void auditLogService.logCurrentUser({ action: 'UPDATE', entityType: 'PROFILE', entityId: profile.id, details: { username: profile.username, field: 'is_active', value: nextIsActive } });
           setUserActionConfirm(prev => ({ ...prev, open: false }));
-        } catch (error: any) {
-          const message = error?.message || 'Kolom status akun belum tersedia di database.';
+        } catch (error: unknown) {
+          const message = getErrorMessage(error) || 'Kolom status akun belum tersedia di database.';
           showError('Gagal mengubah status akun: ' + message);
         } finally {
           setUpdatingId(null);
@@ -428,8 +429,8 @@ const UserManagement = () => {
       await clearEditUserDraft();
       setEditingProfile(null);
       showSuccess('Data pengguna berhasil diperbarui.');
-    } catch (error: any) {
-      showError('Gagal memperbarui pengguna: ' + error.message);
+    } catch (error: unknown) {
+      showError('Gagal memperbarui pengguna: ' + getErrorMessage(error));
     } finally {
       setUpdatingId(null);
     }
@@ -446,8 +447,8 @@ const UserManagement = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setAccountDetails(data);
-    } catch (error: any) {
-      showError('Gagal memuat detail akun: ' + error.message);
+    } catch (error: unknown) {
+      showError('Gagal memuat detail akun: ' + getErrorMessage(error));
     } finally {
       setLoadingDetails(false);
     }

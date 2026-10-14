@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { UserRole } from '@/constants/access-control';
 import { auditLogService } from '@/services/auditLogService';
+import { getErrorMessage } from '@/types/common';
+import { logger } from '@/lib/logger';
 
 interface Profile {
   id: string;
@@ -63,7 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Profil tidak ditemukan — akun ini belum didaftarkan oleh admin.
           // Tolak sesi agar user tanpa profil tidak bisa masuk.
           // Admin harus membuat profil terlebih dahulu via tab Pengguna.
-          console.warn('Login ditolak: profil tidak ditemukan untuk user', userId);
+          logger.warn('Login ditolak: profil tidak ditemukan untuk user', userId);
           fetchingProfileRef.current = null;
           await supabase.auth.signOut();
           return;
@@ -83,7 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         break; // keluar loop, lanjut ke cleanup di bawah
       } catch (error) {
         if (attempt === 1) {
-          console.error("Error fetching profile:", error);
+          logger.error("Error fetching profile:", getErrorMessage(error));
           if (fetchingProfileRef.current === userId) {
             setProfile(null);
           }

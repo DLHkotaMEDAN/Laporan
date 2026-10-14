@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  ArrowLeft, Save, Loader2, Fuel, MapPin, Info, 
+import {
+  ArrowLeft, Save, Loader2, Fuel, MapPin, Info,
   Plus, Trash2, MessageSquare, HelpCircle, MapPinned, Calculator, Lock, Unlock, Copy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ import { medanDistricts } from '@/data/medan-districts';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { logger } from '@/lib/logger';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { isGlobalFuelAdmin, isSuperAdminAccess,
@@ -37,6 +38,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { getErrorMessage } from '@/types/common';
 
 const pusatTeams = ['Tim Babat 1', 'Tim Babat 2', 'Tim Babat 3', 'Tim Babat 4', 'Dumb Truck', 'Mobil Crane', 'Pickup', 'Mobil Tangga', 'Mobil Tangga 30M', 'Beco Loader'];
 
@@ -261,7 +263,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
           streets: new Set(streets.values()),
           officerNames: new Set(officers.values()),
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { logger.error('Error fetching fuel report history', e); }
     };
     fetchHistory();
     if (!isEditing) fetchPrices();
@@ -274,7 +276,7 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       const d = data.find(x => x.type === 'Dexlite')?.price || 14500;
       if (form.getValues("price_pertamax") === 13500) form.setValue("price_pertamax", p);
       if (form.getValues("price_dexlite") === 14500) form.setValue("price_dexlite", d);
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error('Error fetching fuel prices', e); }
   };
 
   const calculateLiter = (index: number, rp: number, type: 'Pertamax' | 'Dexlite') => {
@@ -371,24 +373,24 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
     performAppend(false, false, sourceIndex);
   };
 
-  const handleInvalidSubmit = (errors: Record<string, any>) => {
+  const handleInvalidSubmit = (errors: Record<string, unknown>) => {
     const firstInvalidField = document.querySelector<HTMLElement>('[aria-invalid="true"]');
     firstInvalidField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const errorDetails: string[] = [];
-    const collectErrors = (value: any, path = '') => {
+    const collectErrors = (value: unknown, path = '') => {
       if (!value || typeof value !== 'object') return;
-      if (typeof value.message === 'string') {
-        errorDetails.push(`${path || 'Form'}: ${value.message}`);
+      if (typeof value === 'object' && 'message' in value && typeof (value as { message: string }).message === 'string') {
+        errorDetails.push(`${path || 'Form'}: ${(value as { message: string }).message}`);
         return;
       }
-      Object.entries(value).forEach(([key, child]) => {
+      Object.entries(value as Record<string, unknown>).forEach(([key, child]) => {
         if (key === 'ref' || key === 'types') return;
         collectErrors(child, path ? `${path}.${key}` : key);
       });
     };
     collectErrors(errors);
-    console.error('Form validation failed', errorDetails);
+    logger.error('Form validation failed', errorDetails);
 
     if (errors.items) {
       showError(errorDetails.length ? errorDetails.slice(0, 2).join(' | ') : "Periksa kembali Kendaraan / Alat, Jenis BBM / Oli, dan Lokasi Kerja.");
@@ -533,8 +535,8 @@ const FuelReportForm = ({ initialData, isEditing = false, reportType = 'admin_bb
       }
       await clearDraft();
       navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role));
-    } catch (error: any) {
-      const message = error?.message || "Terjadi kesalahan database";
+    } catch (error: unknown) {
+      const message = getErrorMessage(error) || "Terjadi kesalahan database";
       if (/refresh token|jwt|unauthorized|not authenticated/i.test(message)) {
         showError("Sesi login sudah kedaluwarsa. Silakan login ulang, lalu coba simpan kembali.");
       } else {

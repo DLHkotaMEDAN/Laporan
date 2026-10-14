@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import '@/styles/printStyles.css';
 
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 const getLogoUrl = (fileName: string) => {
@@ -403,28 +404,7 @@ const FuelYearlyRecap = () => {
           </div>
         )}
       </div>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body { background: white !important; }
-          .no-print, [data-radix-portal], [role="menu"], [data-radix-popper-content-wrapper], .sonner-toaster { display: none !important; }
-          .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
-          @page { size: landscape; margin: 1cm; }
-          .overflow-x-auto { overflow: visible !important; }
-          table {
-            width: 100% !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            table-layout: fixed !important;
-          }
-          th, td {
-            box-sizing: border-box !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            overflow-wrap: anywhere !important;
-          }
-          @page { size: A3 landscape; margin: 10mm; }
-        }
-      `}} />
+
     </div>
   );
 };

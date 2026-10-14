@@ -19,6 +19,7 @@ import {
   getUniqueWorkPlanItems,
   getWorkPlanBasisKey,
 } from '@/utils/work-plan-display';
+import '@/styles/printStyles.css';
 
 const getLogoUrl = (fileName: string) => {
   const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
@@ -402,22 +403,7 @@ const PrintWorkPlan = () => {
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        /* Tumpangkan pemisah isi sel dengan garis antarbaris tabel saat cetak. */
-        .print-container td > div.border-t.border-black {
-          border-top-width: 1px !important;
-          position: relative;
-          top: -1px;
-        }
-        @media print {
-          body { background: white !important; }
-          .no-print { display: none !important; }
-          .print-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
-          @page { size: landscape; margin: 1cm; }
-          table { border-color: black !important; }
-          th, td { border-color: black !important; }
-        }
-      `}} />
+
     </div>
     <ConfirmDialog
       open={deleteConfirmOpen}

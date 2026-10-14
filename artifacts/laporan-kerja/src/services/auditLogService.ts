@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage } from '@/types/common';
+import { logger } from '@/lib/logger';
 
 export type AuditAction = 'LOGIN' | 'LOGOUT' | 'VIEW' | 'INTERACT' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'PRINT';
 export type EntityType = 'AUTH' | 'PAGE' | 'REPORT' | 'WORK_PLAN' | 'FUEL_REPORT' | 'OVERTIME' | 'SPJ_OLI' | 'PROFILE' | 'SETTINGS' | 'STORAGE' | string;
@@ -25,7 +27,7 @@ export const auditLogService = {
     action: AuditAction;
     entityType: EntityType;
     entityId?: string;
-    details: any;
+    details: Record<string, unknown>;
     userId: string;
     username?: string | null;
     userEmail?: string | null;
@@ -63,18 +65,18 @@ export const auditLogService = {
       if (error) {
         // Kompatibilitas dengan audit_logs lama sebelum migration kolom
         // user_email/role dijalankan di Supabase.
-        const isMissingExtendedColumn = /user_email|role|column|schema cache/i.test(error.message || '');
+        const isMissingExtendedColumn = /user_email|role|column|schema cache/i.test(getErrorMessage(error) || '');
         if (isMissingExtendedColumn) {
           const { user_email: _userEmail, role: _role, ...legacyPayload } = payload;
           const { error: legacyError } = await supabase.from('audit_logs').insert([legacyPayload]);
           if (!legacyError) return;
-          console.error("Gagal mencatat log versi lama:", legacyError);
+          logger.error("Gagal mencatat log versi lama:", getErrorMessage(legacyError));
         } else {
-          console.error("Gagal mencatat log:", error);
+          logger.error("Gagal mencatat log:", getErrorMessage(error));
         }
       }
-    } catch (e) {
-      console.error("Error audit log:", e);
+    } catch (error) {
+      logger.error("Error audit log:", getErrorMessage(error));
     }
   },
 
@@ -175,8 +177,9 @@ export const auditLogService = {
       .not('id', 'is', null);
       
     if (error) {
-      console.error("Database error saat hapus log:", error);
-      throw new Error(error.message);
+      const errorMessage = getErrorMessage(error);
+      logger.error("Database error saat hapus log:", errorMessage);
+      throw new Error(errorMessage);
     }
   }
 };

@@ -17,7 +17,9 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { logger } from '@/lib/logger';
 import ExcelJS from 'exceljs';
+import '@/styles/printStyles.css';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
@@ -776,40 +778,6 @@ const WeeklyRecap = () => {
           )}
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, 
-          [data-radix-portal], 
-          [role="menu"], 
-          [data-radix-popper-content-wrapper] { 
-            display: none !important; 
-            visibility: hidden !important;
-            opacity: 0 !important;
-          }
-          .print-area { 
-            box-shadow: none !important; 
-            border: none !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            width: 100% !important; 
-            max-width: none !important; 
-            background-color: white !important;
-            overflow: visible !important;
-          }
-          @page { size: A3 landscape; margin: 1.5cm; }
-          table { page-break-inside: auto; width: 100% !important; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          thead { display: table-header-group; }
-          tfoot { display: table-footer-group; }
-          .pdf-report-block { page-break-inside: avoid; }
-          .keep-together { page-break-inside: avoid; break-inside: avoid; }
-          .bg-slate-50, .bg-slate-100 { background-color: white !important; }
-          .overflow-x-auto { overflow: visible !important; }
-          ::-webkit-scrollbar { display: none; }
-        }
-      `}} />
     </div>
   );
 };
