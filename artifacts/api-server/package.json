@@ -10,7 +10,6 @@
     "typecheck": "tsc --build tsconfig.json"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.107.0",
     "@workspace/api-zod": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
