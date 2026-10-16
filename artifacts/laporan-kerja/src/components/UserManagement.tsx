@@ -179,6 +179,13 @@ const UserManagement = () => {
   const handleCreateUser = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canMutateUsers) { showError('Akun nonaktif hanya dapat melihat data.'); return; }
+    // Validate: username is required
+    if (!newUser.username.trim()) { showError('Nama pengguna wajib diisi.'); return; }
+    // Validate: email is required
+    if (!newUser.email.trim()) { showError('Email wajib diisi.'); return; }
+    // Validate: password is required
+    if (!newUser.password) { showError('Password wajib diisi.'); return; }
+    if (newUser.password.length < 8) { showError('Password minimal 8 karakter.'); return; }
     // Validate: at least one permission key must be selected via checkbox
     if (newUser.roles.length === 0) { showError('Pilih minimal satu hak akses.'); return; }
     // Validate: region is required for region-based roles
@@ -190,7 +197,29 @@ const UserManagement = () => {
       // Derive effective roles from checkbox selection only — do NOT use newUser.role
       // (legacy dropdown was removed; role column is derived server-side from roles[0])
       const effectiveRoles = newUser.roles;
+      console.log('Creating user with data:', {
+        username: newUser.username,
+        email: newUser.email,
+        password: newUser.password ? '***' : '',
+        roles: effectiveRoles,
+        regionId: rolesRequireRegion(effectiveRoles) ? (newUser.regionId || null) : null,
+        teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
+        rawRegionId: newUser.regionId,
+        rolesRequireRegion: rolesRequireRegion(effectiveRoles),
+      });
+      const requestBody = {
+        username: newUser.username.trim(),
+        email: newUser.email.trim(),
+        password: newUser.password,
+        roles: effectiveRoles,
+        regionId: rolesRequireRegion(effectiveRoles) ? (newUser.regionId || null) : null,
+        teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
+        workPlanCategories: [],
+      };
+      console.log('Request body:', requestBody);
       const { data, error } = await supabase.functions.invoke('create-user', {
+        body: requestBody,
+      });
         body: {
           username: newUser.username,
           email: newUser.email,

@@ -195,7 +195,14 @@ Deno.serve(async (request) => {
       return Response.json({ id: input.userId, isActive: input.isActive }, { headers: corsHeaders });
     }
 
-    if (!input.email || !input.password || !input.username) throw new Error('Data akun belum lengkap.');
+    if (!input.email || !input.password || !input.username) {
+      console.error('Missing fields:', { email: !!input.email, password: !!input.password, username: !!input.username });
+      throw new Error('Data akun belum lengkap.');
+    }
+    if (!input.email.trim() || !input.username.trim()) {
+      console.error('Empty fields after trim:', { email: input.email, username: input.username });
+      throw new Error('Data akun belum lengkap.');
+    }
     if (input.password.length < 8) throw new Error('Password minimal 8 karakter.');
     // role field is no longer sent from UI (dropdown removed from form).
     // If client still sends it (backward compat), we ignore it in favor of roles[].
