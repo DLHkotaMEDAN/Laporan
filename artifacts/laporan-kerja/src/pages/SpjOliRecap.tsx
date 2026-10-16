@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { spjOliService } from '@/services/spjOliService';
 import { SpjOliRecord } from '@/types/spjOli';
 import { showError } from '@/utils/toast';
+import { getErrorMessage } from '@/lib/logger';
 import { openShareablePdfPreview } from '@/utils/pdf-preview';
 import { exportSpjOliExcel } from '@/utils/spj-oli-excel';
 import { canAccessAllSpjOliRegions, canAccessAllSpjOliRoles, isSpjOliAdmin } from '@/constants/access-control';
@@ -158,8 +159,8 @@ export default function SpjOliRecap({ period }: { period: SpjOliRecapPeriod }) {
   const handlePdf = async () => {
     try {
       await openShareablePdfPreview({ fileName: `${recapFileName}.pdf` });
-    } catch (error: any) {
-      showError(error.message || 'Gagal membuat PDF');
+    } catch (error: unknown) {
+      showError(getErrorMessage(error) || 'Gagal membuat PDF');
     }
   };
   const handleExcel = async () => {

@@ -6,7 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Printer, Table, Filter, Settings2, PenTool, ChevronDown, FileText, CalendarDays } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { format, parseISO } from 'date-fns';
+
+// Excel column type
+interface ExcelColumn {
+  header: string;
+  key: string;
+  width: number;
+}
+
+// Excel row data type
+interface ExcelRowData {
+  no: number;
+  date?: string;
+  region?: string;
+  [key: string]: string | number | undefined;
+}
 import { id as localeId } from 'date-fns/locale';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -104,7 +120,7 @@ const FuelMonthlyRecap = () => {
       filtered.sort((a, b) => a.date.localeCompare(b.date) || a.region.localeCompare(b.region));
       if (requestId === dataRequestId.current) setReports(filtered);
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load fuel monthly reports", error);
     } finally {
       if (requestId === dataRequestId.current) setLoading(false);
     }
@@ -135,7 +151,7 @@ const FuelMonthlyRecap = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Rekap Bulanan BBM');
       
-      const columns: any[] = [{ header: 'No', key: 'no', width: 5 }];
+      const columns: ExcelColumn[] = [{ header: 'No', key: 'no', width: 5 }];
       if (visibleColumns.date) columns.push({ header: 'Tgl', key: 'date', width: 10 });
       if (showRegion) columns.push({ header: 'Wilayah', key: 'region', width: 15 });
       if (visibleColumns.team) columns.push({ header: 'Tim / Operator', key: 'team', width: 18 });
@@ -172,7 +188,7 @@ const FuelMonthlyRecap = () => {
       });
 
       flatItems.forEach((item, idx) => {
-        const rowData: any = { no: idx + 1 };
+        const rowData: ExcelRowData = { no: idx + 1 };
         if (visibleColumns.date && item.date) rowData.date = format(parseISO(item.date), 'dd/MM');
         if (showRegion) rowData.region = item.region;
         if (visibleColumns.team) rowData.team = item.team;
@@ -205,7 +221,7 @@ const FuelMonthlyRecap = () => {
       dismissToast(toastId);
       showSuccess("Excel berhasil diunduh");
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create Excel file", error);
       dismissToast(toastId);
       showError("Gagal membuat file Excel");
     }
@@ -214,7 +230,7 @@ const FuelMonthlyRecap = () => {
   const handleSharePdf = async () => {
     if (flatItems.length === 0) { showError("Tidak ada data untuk dibuatkan PDF"); return; }
     try { await openShareablePdfPreview({ fileName: `Rekap_Bulanan_BBM_${selectedMonth}_${selectedYear}.pdf` }); }
-    catch (error) { console.error(error); showError(error instanceof Error ? error.message : "PDF tidak dapat dibuat"); }
+    catch (error) { logger.error("Failed to create PDF", error); showError(error instanceof Error ? error.message : "PDF tidak dapat dibuat"); }
   };
 
   const groupedByRegion: Record<string, any[]> = {};

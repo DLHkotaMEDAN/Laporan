@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Report } from '@/types/report';
 import { reportService } from '@/services/reportService';
+import { logger } from '@/lib/logger';
 import { getUnitByCategory } from '@/utils/report-helpers';
 import { ArrowLeft, Printer, Fuel, Users, Wrench, MessageSquare, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,7 @@ const PrintRekap = () => {
       data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setReports(data);
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load print reports", error);
     } finally {
       setLoading(false);
     }

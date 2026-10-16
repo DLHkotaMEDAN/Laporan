@@ -17,6 +17,7 @@ import { medanDistricts } from '@/data/medan-districts';
 import ImageUpload from './ImageUpload';
 import { Badge } from "@/components/ui/badge";
 import { getUnitByCategory } from '@/utils/report-helpers';
+import { logger, getErrorMessage } from '@/lib/logger';
 import { reportService } from '@/services/reportService';
 import { workPlanService } from '@/services/workPlanService';
 import { storageService } from '@/services/storageService';
@@ -222,7 +223,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
           vehicles: vehicles,
           taskRemarks: tRemarks
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { logger.error("Failed to fetch report history", e); }
     };
     fetchHistory();
     if (!isEditing) fetchPrices();
@@ -235,7 +236,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
       const d = data.find(x => x.type === 'Dexlite')?.price || 14500;
       if (form.getValues("price_pertamax") === 13500) form.setValue("price_pertamax", p);
       if (form.getValues("price_dexlite") === 14500) form.setValue("price_dexlite", d);
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error("Failed to fetch fuel prices", e); }
   };
 
   const calculateLiter = (taskIdx: number, heIdx: number, rp: number, type: 'pertamax' | 'dexlite') => {
@@ -254,7 +255,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
           const match = plans.find(p => p.date === selectedDate && p.category === selectedCategory);
           if (match) { setMatchingWorkPlan(match); setShowWorkPlanPrompt(true); }
           else { setMatchingWorkPlan(null); }
-        } catch (e) { console.error(e); }
+        } catch (e) { logger.error("Failed to check work plan", e); }
       }
     };
     checkWorkPlan();
@@ -325,11 +326,11 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
   // Menggunakan Promise.allSettled agar 1 foto gagal tidak membatalkan seluruh submit.
   // Mengembalikan { updatedTasks, failedPhotos } — pemanggil bertanggung jawab
   // menampilkan peringatan jika failedPhotos tidak kosong.
-  const uploadTaskPhotos = async (tasks: any[]): Promise<{
-    updatedTasks: any[];
+  const uploadTaskPhotos = async (tasks: Task[]): Promise<{
+    updatedTasks: Task[];
     failedPhotos: string[];
   }> => {
-    const updatedTasks = tasks.map((task: any) => ({ ...task, photos: { ...task.photos } }));
+    const updatedTasks = tasks.map((task) => ({ ...task, photos: { ...task.photos } }));
     const failedPhotos: string[] = [];
 
     setUploadProgress('Mengunggah foto...');
@@ -364,7 +365,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
             } else {
               task.photos[key] = '';
               failedPhotos.push(`Foto ${label} kegiatan ke-${i + 1}`);
-              console.warn(`Upload gagal: ${fileName}`, result.reason);
+              logger.warn(`Upload gagal: ${fileName}`, result.reason);
             }
           }),
         );
@@ -392,16 +393,16 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
 
       const finalTasks = processedTasksWithUrls.map(task => {
         totalVolume += task.volume;
-        task.heavyEquipment.forEach((he: any) => {
+        task.heavyEquipment.forEach((he: HeavyEquipment) => {
           totalFuel.pertamax += he.fuel.pertamax;
           totalFuel.pertamax_liter = (totalFuel.pertamax_liter || 0) + (he.fuel.pertamax_liter || 0);
           totalFuel.dexlite += he.fuel.dexlite;
           totalFuel.dexlite_liter = (totalFuel.dexlite_liter || 0) + (he.fuel.dexlite_liter || 0);
           totalFuel.solar += he.fuel.solar;
           totalFuel.solar_liter = (totalFuel.solar_liter || 0) + (he.fuel.solar_liter || 0);
-          allHeavyEquipment.push(he as HeavyEquipment);
+          allHeavyEquipment.push(he);
         });
-        task.equipment.forEach((e: any) => allEquipment.push(e as Equipment));
+        task.equipment.forEach((e: Equipment) => allEquipment.push(e));
         totalMembers += task.personnel.members;
         return task;
       });
@@ -465,7 +466,7 @@ const ReportForm = ({ initialData, isEditing = false }: ReportFormProps) => {
       await clearDraft();
       navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role));
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to save report", error);
       showError("Gagal menyimpan data");
     } finally {
       setIsSubmitting(false);

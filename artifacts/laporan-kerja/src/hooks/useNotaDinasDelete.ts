@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { showError, showSuccess } from "@/utils/toast";
+import { logger } from "@/lib/logger";
 import { notaDinasService } from "@/services/notaDinasService";
 import type { NotaDinasRecord } from "@/types/notaDinas";
 import { readRecords, RECORDS_KEY } from "@/components/nota-dinas/notaDinasStorage";
@@ -44,7 +45,7 @@ export const useNotaDinasDelete = ({
       showSuccess("Nota Dinas berhasil dihapus.");
       setDeleteConfirm({ open: false, record: null });
     } catch (error) {
-      console.error("Gagal menghapus Nota Dinas:", error);
+      logger.error("Gagal menghapus Nota Dinas:", error);
       showError("Nota Dinas gagal dihapus. Periksa koneksi dan hak akses akun.");
     }
   };

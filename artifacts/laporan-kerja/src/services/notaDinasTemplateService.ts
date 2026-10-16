@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from '@/types/notaDinas';
 import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from '@/types/notaDinas';
 
@@ -64,7 +65,7 @@ export const notaDinasTemplateService = {
     const { data, error } = await query.order('region_id', { ascending: false, nullsFirst: false });
 
     if (error) {
-      console.error('Gagal memuat template Nota Dinas:', error);
+      logger.error('Gagal memuat template Nota Dinas:', error);
       return notaDinasTemplateService.buildDefaultTemplate(kategori);
     }
 
@@ -194,7 +195,7 @@ export const notaDinasTemplateService = {
       .select('*')
       .maybeSingle();
     if (insertError) {
-      console.error('Insert template error:', {
+      logger.error('Insert template error:', {
         code: insertError.code,
         message: insertError.message,
         details: insertError.details,
@@ -206,7 +207,7 @@ export const notaDinasTemplateService = {
     if (inserted) return toTemplate(inserted as TemplateRow);
 
     // INSERT berhasil tapi RLS blokir SELECT — coba fetch manual
-    console.warn('INSERT berhasil tapi tidak return data (kemungkinan RLS blokir SELECT). Mencoba fetch ulang...');
+    logger.warn('INSERT berhasil tapi tidak return data (kemungkinan RLS blokir SELECT). Mencoba fetch ulang...');
     let fetchAfterInsert = supabase
       .from('nota_dinas_templates')
       .select('*')
@@ -218,7 +219,7 @@ export const notaDinasTemplateService = {
       fetchAfterInsert = fetchAfterInsert.is('region_id', null);
     }
     const { data: afterInsert, error: afterInsertError } = await fetchAfterInsert.maybeSingle();
-    if (afterInsertError) console.error('Fetch setelah insert gagal:', afterInsertError);
+    if (afterInsertError) logger.error('Fetch setelah insert gagal:', afterInsertError);
     if (afterInsert) return toTemplate(afterInsert as TemplateRow);
 
     throw new Error('Template tidak tersimpan. Pastikan Anda memiliki akses yang cukup dan coba lagi.');

@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { showError, showSuccess } from "@/utils/toast";
+import { logger } from "@/lib/logger";
 import { notaDinasService } from "@/services/notaDinasService";
 import type { NotaDinasForm, NotaDinasRecord } from "@/types/notaDinas";
 import { EMPTY_FORM, getCurrentDate, SAMPLE_FORM } from "@/components/nota-dinas/notaDinasDefaults";
@@ -123,7 +124,7 @@ export const useNotaDinasRecordActions = ({
       await clearDraft();
       showSuccess(activeRecordId ? "Nota Dinas diperbarui" : "Nota Dinas disimpan ke Supabase");
     } catch (error) {
-      console.error("Gagal menyimpan Nota Dinas ke Supabase:", error);
+      logger.error("Gagal menyimpan Nota Dinas ke Supabase:", error);
       showError("Nota Dinas gagal disimpan ke Supabase. Periksa koneksi dan sesi login.");
     } finally {
       setSaving(false);

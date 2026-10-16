@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Settings2, Save, Loader2, Fuel } from 'lucide-react';
 import { fuelPriceService } from '@/services/fuelPriceService';
 import { fuelPusatPriceService } from '@/services/fuelPusatPriceService';
+import { logger } from '@/lib/logger';
 import { showSuccess, showError } from '@/utils/toast';
 
 interface FuelPriceSettingsProps {
@@ -38,7 +39,7 @@ const FuelPriceSettings = ({ isOpen, onClose, onUpdated, isPusat = false }: Fuel
       const d = data.find(x => x.type === 'Dexlite')?.price || 0;
       setPrices({ Pertamax: p, Dexlite: d });
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to load fuel prices", e);
     } finally {
       setLoading(false);
     }

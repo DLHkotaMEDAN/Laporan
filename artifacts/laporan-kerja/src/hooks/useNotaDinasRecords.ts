@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import { notaDinasService } from "@/services/notaDinasService";
 import type { NotaDinasForm, NotaDinasRecord } from "@/types/notaDinas";
 import { isNewerRecord, readRecords, removeSyncedLocalRecords } from "@/components/nota-dinas/notaDinasStorage";
@@ -63,7 +64,7 @@ export function useNotaDinasRecords({
             syncedLocalRecordIds.add(localRecord.id);
           } catch (migrationError) {
             hasPendingLocalRecords = true;
-            console.error("Gagal menyinkronkan Nota Dinas lokal:", migrationError);
+            logger.error("Gagal menyinkronkan Nota Dinas lokal:", migrationError);
           }
         }
 
@@ -75,7 +76,7 @@ export function useNotaDinasRecords({
           }
         }
       } catch (error) {
-        console.error("Gagal memuat Nota Dinas dari Supabase:", error);
+        logger.error("Gagal memuat Nota Dinas dari Supabase:", error);
         if (!cancelled) {
           setRecords(readRecords());
           setRecordsError("Data Supabase belum dapat dimuat. Data lokal ditampilkan sementara.");

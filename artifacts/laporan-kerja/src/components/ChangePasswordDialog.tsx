@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import { showError, showSuccess } from "@/utils/toast";
 import { auditLogService } from "@/services/auditLogService";
 
@@ -79,7 +80,7 @@ const ChangePasswordDialog = ({ open, onOpenChange }: ChangePasswordDialogProps)
       showSuccess("Password berhasil diubah.");
       onOpenChange(false);
     } catch (error) {
-      console.error("Error changing password:", error);
+      logger.error("Error changing password:", error);
       showError("Password gagal diubah. Silakan coba lagi.");
     } finally {
       setIsSaving(false);

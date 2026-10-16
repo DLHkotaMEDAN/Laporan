@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PimpinanNoteSection from '@/components/PimpinanNoteSection';
 import { useAuth } from '@/context/AuthContext';
+import { logger } from '@/lib/logger';
 import { isGlobalWorkPlanAdmin, isPimpinanAccess } from '@/constants/access-control';
 import { useRegionName } from '@/hooks/useRegionName';
 import { showSuccess, showError } from '@/utils/toast';
@@ -57,7 +58,7 @@ const PrintWorkPlan = () => {
       const data = await workPlanService.getWorkPlanById(planId);
       setPlan(data);
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load work plan for print", error);
     } finally {
       setLoading(false);
     }

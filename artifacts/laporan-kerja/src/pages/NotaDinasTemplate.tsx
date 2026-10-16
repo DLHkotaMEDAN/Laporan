@@ -12,6 +12,7 @@ import { notaDinasTemplateService } from "@/services/notaDinasTemplateService";
 import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import KolomPerbaikanEditor from "@/components/KolomPerbaikanEditor";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -139,7 +140,7 @@ const NotaDinasTemplate = () => {
       // Gunakan getOwnTemplates agar hanya melihat template milik sendiri
       .getOwnTemplates(kategori, effectiveRegionId)
       .then((tpls) => setTemplates(tpls))
-      .catch((err) => { console.error(err); setTemplates([]); })
+      .catch((err) => { logger.error("Failed to load templates", err); setTemplates([]); })
       .finally(() => setLoading(false));
   };
 
@@ -223,7 +224,7 @@ const NotaDinasTemplate = () => {
       loadTemplates();
       setEditingTemplate(null);
     } catch (err) {
-      console.error("Save template error:", JSON.stringify(err));
+      logger.error("Save template error:", JSON.stringify(err));
       const msg = (err as any)?.message || (err as any)?.error_description || JSON.stringify(err);
       showError(`Gagal menyimpan template: ${msg}`);
     } finally {

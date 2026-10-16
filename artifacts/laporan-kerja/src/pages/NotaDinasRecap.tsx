@@ -12,6 +12,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { notaDinasService } from "@/services/notaDinasService";
 import type { NotaDinasCategory, NotaDinasItem, NotaDinasRecord } from "@/types/notaDinas";
 import { useAuth } from "@/context/AuthContext";
+import { logger } from "@/lib/logger";
 
 export type NotaDinasRecapPeriod = "daily" | "weekly" | "monthly";
 
@@ -144,7 +145,7 @@ const NotaDinasRecap = ({ period }: { period: NotaDinasRecapPeriod }) => {
     void notaDinasService.getAll()
       .then((data) => { if (active) setRecords(data); })
       .catch((loadError) => {
-        console.error("Gagal memuat rekap Nota Dinas:", loadError);
+        logger.error("Gagal memuat rekap Nota Dinas:", loadError);
         if (active) setError("Data Nota Dinas belum dapat dimuat.");
       })
       .finally(() => { if (active) setLoading(false); });

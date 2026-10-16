@@ -61,8 +61,8 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "@vitest/ui": "^2.1.8",
     "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/ui": "^2.1.8",
     "@workspace/api-client-react": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
@@ -93,11 +93,11 @@
   },
   "dependencies": {
     "@sparticuz/chromium": "149.0.0",
-    "@supabase/supabase-js": "^2.107.0",
+    "@supabase/supabase-js": "^2.117.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "jspdf": "^4.2.1",
-    "pdfjs-dist": "^6.2.108",
+    "pdfjs-dist": "^6.4.299",
     "puppeteer-core": "25.6.0",
     "react-router-dom": "^7.16.0"
   }

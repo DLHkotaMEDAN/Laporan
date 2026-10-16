@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { emptyRecordCounts, type MainTab, type RecordCounts } from "@/components/index/indexConfig";
 import { getDatabaseRecordCount } from "@/services/indexRecordCountService";
+import { logger } from "@/lib/logger";
 import type { Report } from "@/types/report";
 import type { WorkPlan } from "@/types/workPlan";
 
@@ -93,7 +94,7 @@ export function useIndexRecordCounts({
       try {
         return [tab, await job] as const;
       } catch (error) {
-        console.warn(`Gagal menghitung record tab ${tab}:`, error);
+        logger.warn(`Gagal menghitung record tab ${tab}:`, error);
         return [tab, null] as const;
       }
     }));

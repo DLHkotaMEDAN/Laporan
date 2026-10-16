@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Task } from '@/types/report';
+import { logger, getErrorMessage } from '@/lib/logger';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -162,8 +164,8 @@ const Maintenance = () => {
         setLandingPhotoDrafts((current) => ({ ...current, [slot]: publicUrl }));
         showSuccess(`${profileInfo.label} berhasil diperbarui.`);
       }
-    } catch (error: any) {
-      showError(`Gagal menyimpan foto: ${error.message || 'izin ditolak'}`);
+    } catch (error: unknown) {
+      showError(`Gagal menyimpan foto: ${getErrorMessage(error) || 'izin ditolak'}`);
     } finally {
       setLandingPhotoSaving(null);
     }
@@ -199,9 +201,9 @@ const Maintenance = () => {
         if (isSameMonth(reportDate, now)) reportsThisMonth++;
         totalChars += JSON.stringify(report).length;
 
-        report.tasks?.forEach((task: any) => {
+        report.tasks?.forEach((task: Task) => {
           let taskPhotoCount = 0;
-          ['zero', 'fifty', 'hundred'].forEach(key => {
+          (['zero', 'fifty', 'hundred'] as const).forEach(key => {
             const url = task.photos?.[key];
             if (url && url.includes('report-photos/')) {
               taskPhotoCount++;
@@ -238,8 +240,8 @@ const Maintenance = () => {
         dbSizeEstimate: totalChars * 2
       }));
 
-    } catch (error: any) {
-      showError("Gagal menganalisis sistem: " + error.message);
+    } catch (error: unknown) {
+      showError("Gagal menganalisis sistem: " + getErrorMessage(error));
     } finally {
       setAnalyzing(false);
     }
@@ -252,8 +254,8 @@ const Maintenance = () => {
       showSuccess("Log aktivitas yang lebih dari seminggu telah dihapus");
       const logsData = await auditLogService.getLogs();
       setLogs(logsData);
-    } catch (e: any) {
-      showError("Gagal membersihkan log: " + (e.message || "Izin ditolak"));
+    } catch (e: unknown) {
+      showError("Gagal membersihkan log: " + (getErrorMessage(e) || "Izin ditolak"));
     } finally {
       setLoading(false);
     }
@@ -271,8 +273,8 @@ const Maintenance = () => {
           showSuccess("Seluruh riwayat aktivitas telah dibersihkan");
           setLogs([]);
           setMaintenanceConfirm(prev => ({ ...prev, open: false }));
-        } catch (e: any) {
-          showError("Gagal membersihkan database: " + (e.message || "Izin ditolak"));
+        } catch (e: unknown) {
+          showError("Gagal membersihkan database: " + (getErrorMessage(e) || "Izin ditolak"));
           const logsData = await auditLogService.getLogs();
           setLogs(logsData);
         } finally {
@@ -294,7 +296,7 @@ const Maintenance = () => {
       setDeletedReports(delReports);
       setDeletedWorkPlans(delPlans);
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to load deleted work plans", e);
     } finally {
       setLoading(false);
     }
@@ -363,8 +365,8 @@ const Maintenance = () => {
           showSuccess(`${fileNamesToDelete.length} file berhasil dibersihkan.`);
           setMaintenanceConfirm(prev => ({ ...prev, open: false }));
           await analyzeSystem();
-        } catch (error: any) {
-          showError("Gagal membersihkan: " + error.message);
+        } catch (error: unknown) {
+          showError("Gagal membersihkan: " + getErrorMessage(error));
         } finally {
           setLoading(false);
         }

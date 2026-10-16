@@ -20,6 +20,7 @@ import { auditLogService } from '@/services/auditLogService';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { cn, uniqueAutocompleteValues } from "@/lib/utils";
+import { logger, getErrorMessage } from '@/lib/logger';
 import { useAvailableTeams } from '@/hooks/useAvailableTeams';
 import { useRegionFilterOptions } from '@/hooks/useRegionFilterOptions';
 import { useFormDraft, useValueDraft } from '@/hooks/useFormDraft';
@@ -350,7 +351,7 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
           basis: basis,
           remarks: rems
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { logger.error("Failed to fetch work plan history", e); }
     };
     fetchHistory();
   }, [activeRegionId, initialData?.id]);
@@ -540,9 +541,9 @@ const WorkPlanForm = ({ initialData, isEditing = false }: { initialData?: WorkPl
       }
       await clearDraft();
       navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role));
-    } catch (error: any) {
-      console.error(error);
-      showError("Gagal menyimpan: " + (error.message || "Terjadi kesalahan database"));
+    } catch (error: unknown) {
+      logger.error("Failed to save work plan", error);
+      showError("Gagal menyimpan: " + getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

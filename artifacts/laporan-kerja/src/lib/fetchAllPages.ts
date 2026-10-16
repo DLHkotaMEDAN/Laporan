@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 /**
  * Mengambil semua baris dari Supabase dengan paginasi otomatis.
  * Berhenti ketika halaman terakhir mengembalikan data kurang dari pageSize,
@@ -34,7 +36,7 @@ export const fetchAllPages = async <T>(
   // Kalau loop selesai karena maxPages tercapai (bukan karena data habis),
   // kemungkinan ada data yang terpotong — catat di console agar developer tahu.
   if (rows.length >= maxPages * pageSize) {
-    console.warn(
+    logger.warn(
       `[fetchAllPages] Data mungkin terpotong: tercapai batas ${maxPages} halaman ` +
       `(${rows.length} baris). Pertimbangkan untuk menambah filter tanggal/wilayah.`
     );

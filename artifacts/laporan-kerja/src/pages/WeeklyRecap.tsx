@@ -17,8 +17,66 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { logger } from '@/lib/logger';
+import { logger, getErrorMessage } from '@/lib/logger';
 import ExcelJS from 'exceljs';
+
+// ExcelJS column definition type
+interface ExcelColumn {
+  header: string;
+  key: string;
+  width?: number;
+}
+
+// Excel row data type for weekly recap
+interface WeeklyRecapRowData {
+  no: string | number;
+  date?: string;
+  cat?: string;
+  desc?: string;
+  loc?: string;
+  vol?: string;
+  eq_type?: string;
+  eq_qty?: string;
+  he?: string;
+  coord?: string;
+  members?: number;
+  rem?: string;
+  p0?: string;
+  p50?: string;
+  p100?: string;
+  fp?: number;
+  fpl?: number;
+  fd?: number;
+  fdl?: number;
+  fs?: number;
+}
+
+// Task type for table rendering
+interface TableTask {
+  reportId: string;
+  reportDate: string;
+  description: string;
+  location: {
+    street: string;
+    village: string | string[];
+    subDistrict?: string;
+  };
+  volume: number;
+  equipment: Equipment[];
+  heavyEquipment: HeavyEquipment[];
+  personnel: {
+    coordinator: string;
+    members: number;
+  };
+  remarks?: string;
+  category?: string;
+  photos?: {
+    zero?: string;
+    fifty?: string;
+    hundred?: string;
+  };
+  reportRemarks?: string;
+}
 import '@/styles/printStyles.css';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
@@ -187,7 +245,7 @@ const WeeklyRecap = () => {
         setReports(data);
       }
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load weekly reports", error);
     } finally {
       if (requestId === dataRequestId.current) {
         setLoading(false);
@@ -219,7 +277,7 @@ const WeeklyRecap = () => {
         fileName: weeklyPdfFileName("Laporan Mingguan", weekStart, weekEnd, regionName),
       });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create shareable PDF", error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
     } finally {
       dismissToast(toastId);
@@ -256,9 +314,9 @@ const WeeklyRecap = () => {
       });
       if (error) throw error;
       return data;
-    } catch (error: any) {
-      console.error(error);
-      showError("Gagal mengunggah: " + error.message);
+    } catch (error: unknown) {
+      logger.error("Failed to upload to Google Drive", error);
+      showError("Gagal mengunggah: " + getErrorMessage(error));
       throw error;
     } finally {
       dismissToast(toastId);
@@ -278,7 +336,7 @@ const WeeklyRecap = () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Rekap Mingguan');
-      const columns: any[] = [{ header: 'No', key: 'no', width: 5 }];
+      const columns: ExcelColumn[] = [{ header: 'No', key: 'no', width: 5 }];
       if (visibleColumns.date) columns.push({ header: 'Hari / Tgl', key: 'date', width: 15 });
       if (visibleColumns.category) columns.push({ header: 'Tim/Kec.', key: 'cat', width: 15 });
       if (visibleColumns.description) columns.push({ header: 'Uraian Kegiatan', key: 'desc', width: 30 });
@@ -316,7 +374,7 @@ const WeeklyRecap = () => {
       worksheet.getCell('A3').value = recapTitle;
       worksheet.getCell('A3').font = { bold: true, size: 13 };
       worksheet.getCell('A3').alignment = { horizontal: 'center' };
-      const headerRow = worksheet.addRow(columns.map((c: any) => c.header));
+      const headerRow = worksheet.addRow(columns.map((c: ExcelColumn) => c.header));
       headerRow.eachCell(cell => {
         cell.fill = { type:'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
         cell.border = { top: { style: 'medium' }, left: { style: 'medium' }, bottom: { style: 'medium' }, right: { style: 'medium' } };
@@ -337,7 +395,7 @@ const WeeklyRecap = () => {
         for (let i = 0; i < reportTasks.length; i++) {
           const task = reportTasks[i];
           const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
-          const rowData: any = {
+          const rowData: WeeklyRecapRowData = {
             no: (i === 0 && report === reports.find(r => r.date === report.date)) ? currentNo : '',
             date: i === 0 ? new Date(report.date).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short' }) : '',
             cat: i === 0 ? report.category : '',
@@ -356,10 +414,10 @@ const WeeklyRecap = () => {
             const pertamaxLiter = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax_liter || 0), 0) || 0;
             const dexlite = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
             const dexliteLiter = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
-            rowData.fp = pertamax ? pertamax.toLocaleString('id-ID') : '';
-            rowData.fpl = pertamaxLiter || '';
-            rowData.fd = dexlite ? dexlite.toLocaleString('id-ID') : '';
-            rowData.fdl = dexliteLiter || '';
+            rowData.fp = pertamax;
+            rowData.fpl = pertamaxLiter;
+            rowData.fd = dexlite;
+            rowData.fdl = dexliteLiter;
             rowData.fs = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar || 0), 0) || 0;
           }
           const row = worksheet.addRow(rowData);
@@ -375,7 +433,7 @@ const WeeklyRecap = () => {
       dismissToast(toastId);
       showSuccess("Rekap Excel berhasil diunduh");
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create Excel file", error);
       dismissToast(toastId);
       showError("Gagal membuat file Excel");
     }
@@ -430,7 +488,7 @@ const WeeklyRecap = () => {
 
   const { flatTasks, noSpans, dateSpans } = getTableSpans();
 
-  const renderTaskRow = (task: any, idx: number, currentNo: number) => {
+  const renderTaskRow = (task: TableTask, idx: number, currentNo: number) => {
     const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
     const reportTasks = flatTasks.filter(t => t.reportId === task.reportId);
     const isFirstInReport = reportTasks[0] === task;
@@ -451,7 +509,7 @@ const WeeklyRecap = () => {
           </td>
         )}
         {visibleColumns.description && <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{task.description}</td>}
-        {visibleColumns.location && <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{`${task.location.street}, ${villages}, ${task.location.subDistrict}`}</td>}
+        {visibleColumns.location && <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{`${task.location.street}, ${villages}${task.location.subDistrict ? `, ${task.location.subDistrict}` : ''}`}</td>}
         {visibleColumns.photos && (
           <>
             <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.zero ? <img src={task.photos.zero} className="w-full h-full object-fill" alt="0%" /> : null}</div></td>
@@ -459,21 +517,21 @@ const WeeklyRecap = () => {
             <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.hundred ? <img src={task.photos.hundred} className="w-full h-full object-fill" alt="100%" /> : null}</div></td>
           </>
         )}
-        {visibleColumns.volume && <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {getUnitByCategory(task.category)}</td>}
+        {visibleColumns.volume && <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {task.category ? getUnitByCategory(task.category) : ''}</td>}
         {visibleColumns.equipment && (
           <>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {e.type}</div>))}</td>
-            <td className="border-2 border-black p-1.5 px-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="mb-0.5">{e.quantity}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] leading-tight">{task.equipment?.map((e: Equipment, i: number) => (<div key={i} className="mb-0.5 whitespace-nowrap">• {e.type}</div>))}</td>
+            <td className="border-2 border-black p-1.5 px-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: Equipment, i: number) => (<div key={i} className="mb-0.5">{e.quantity}</div>))}</td>
           </>
         )}
-          {visibleColumns.heavyEquipment && <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>}
+          {visibleColumns.heavyEquipment && <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>}
         {visibleColumns.fuel && (
           <>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax ? he.fuel.pertamax.toLocaleString('id-ID') : ''}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-blue-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax_liter || ''}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite ? he.fuel.dexlite.toLocaleString('id-ID') : ''}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || ''}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax ? he.fuel.pertamax.toLocaleString('id-ID') : ''}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-blue-50/30">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.pertamax_liter || ''}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite ? he.fuel.dexlite.toLocaleString('id-ID') : ''}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight bg-green-50/30">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.dexlite_liter || ''}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
           </>
         )}
         {visibleColumns.coordinator && <td className="border-2 border-black p-2 text-center align-top font-medium">{task.personnel.coordinator}</td>}

@@ -17,8 +17,38 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { logger } from '@/lib/logger';
+import { logger, getErrorMessage } from '@/lib/logger';
 import ExcelJS from 'exceljs';
+
+// ExcelJS column definition type
+interface ExcelColumn {
+  header: string;
+  key: string;
+  width?: number;
+}
+
+// Excel row data type for daily recap
+interface DailyRecapRowData {
+  no: string | number;
+  cat?: string;
+  desc?: string;
+  loc?: string;
+  vol?: string;
+  eq_type?: string;
+  eq_qty?: string;
+  he?: string;
+  coord?: string;
+  members?: number;
+  rem?: string;
+  p0?: string;
+  p50?: string;
+  p100?: string;
+  fp?: string | number;
+  fpl?: string | number;
+  fd?: string | number;
+  fdl?: string | number;
+  fs?: string | number;
+}
 import '@/styles/printStyles.css';
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
@@ -245,9 +275,9 @@ const DailyRecap = () => {
       });
       if (error) throw error;
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error uploading to Drive', error);
-      showError("Gagal mengunggah: " + error.message);
+      showError("Gagal mengunggah: " + getErrorMessage(error));
       throw error;
     } finally {
       dismissToast(toastId);
@@ -267,7 +297,7 @@ const DailyRecap = () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Rekap Harian');
-      const columns: any[] = [{ header: 'No', key: 'no', width: 5 }];
+      const columns: ExcelColumn[] = [{ header: 'No', key: 'no', width: 5 }];
       if (visibleColumns.category) columns.push({ header: 'Tim/Kec.', key: 'cat', width: 15 });
       if (visibleColumns.description) columns.push({ header: 'Uraian Kegiatan', key: 'desc', width: 30 });
       if (visibleColumns.location) columns.push({ header: 'Lokasi', key: 'loc', width: 40 });
@@ -303,7 +333,7 @@ const DailyRecap = () => {
       worksheet.getCell('A3').value = recapTitle;
       worksheet.getCell('A3').font = { bold: true, size: 13 };
       worksheet.getCell('A3').alignment = { horizontal: 'center' };
-      const headerRow = worksheet.addRow(columns.map((c: any) => c.header));
+      const headerRow = worksheet.addRow(columns.map((c: ExcelColumn) => c.header));
       headerRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
         cell.border = { top: { style: 'medium' }, left: { style: 'medium' }, bottom: { style: 'medium' }, right: { style: 'medium' } };
@@ -315,7 +345,7 @@ const DailyRecap = () => {
         for (let i = 0; i < report.tasks.length; i++) {
           const task = report.tasks[i];
           const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
-          const rowData: any = {
+          const rowData: DailyRecapRowData = {
             no: i === 0 ? displayIdx : '',
             cat: i === 0 ? report.category : '',
             desc: task.description,

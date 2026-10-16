@@ -13,7 +13,67 @@ import { Label } from "@/components/ui/label";
 import { Folder, User, FileText, Loader2, CloudUpload, FolderPlus, Check, X, Search, Copy, ExternalLink, Share2, ShieldAlert } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
+import { logger, getErrorMessage } from '@/lib/logger';
 import { useAuth } from '@/context/AuthContext';
+
+// Google API types
+interface GoogleTokenResponse {
+  access_token: string;
+  expires_in?: number;
+  token_type?: string;
+}
+
+interface GooglePickerDocument {
+  id: string;
+  name: string;
+  mimeType?: string;
+}
+
+interface GooglePickerResponse {
+  action: string;
+  docs?: GooglePickerDocument[];
+}
+
+interface GooglePickerCallback {
+  (data: GooglePickerResponse): void;
+}
+
+// Window augmentation for Google API
+// Note: Google Picker API doesn't have official TypeScript definitions
+// We use 'any' for picker parts as they are loaded dynamically from Google
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare global {
+  interface Window {
+    gapi?: {
+      load: (name: string, options: { callback: () => void }) => void;
+    };
+    google?: {
+      accounts?: {
+        oauth2?: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: GoogleTokenResponse) => void;
+          }) => {
+            requestAccessToken: () => void;
+          };
+        };
+      };
+      picker?: {
+        Action: {
+          PICKED: string;
+          CANCEL: string;
+        };
+        ViewId: {
+          FOLDERS: string;
+          DOCS: string;
+        };
+        DocsView: any; // Google Picker API - no official TS definitions
+        PickerBuilder: any; // Google Picker API - no official TS definitions
+      };
+    };
+  }
+}
 import { isPimpinanAccess } from '@/constants/access-control';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -24,7 +84,7 @@ const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapi
 const GOOGLE_DRIVE_ENABLED = !!(CLIENT_ID && API_KEY);
 
 if (!GOOGLE_DRIVE_ENABLED) {
-  console.warn(
+  logger.warn(
     "Google Drive upload is disabled. Please set VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY in your .env file. " +
     "See .env.example for instructions on how to setup Google Cloud Console credentials."
   );
@@ -73,7 +133,7 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
     }
 
     const loadGapi = () => {
-      const gapi = (window as any).gapi;
+      const gapi = window.gapi;
       if (gapi) {
         gapi.load('picker', { callback: () => setIsPickerApiLoaded(true) });
       }
@@ -92,10 +152,10 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
 
   const handleAuth = () => {
     try {
-      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+      const tokenClient = window.google?.accounts?.oauth2?.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: (response: any) => {
+        callback: (response: GoogleTokenResponse) => {
           if (response.access_token) {
             setAccessToken(response.access_token);
             fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${response.access_token}`)
@@ -105,44 +165,52 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
           }
         },
       });
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    } catch (err) {
+      if (tokenClient) {
+        tokenClient.requestAccessToken();
+      }
+    } catch (err: unknown) {
+      logger.error("Failed to start Google authentication", err);
       showError("Gagal memulai autentikasi Google");
     }
   };
 
   const openPicker = () => {
     if (!accessToken) { showError("Silakan pilih akun terlebih dahulu"); return; }
-    const google = (window as any).google;
+    const google = window.google;
     if (!isPickerApiLoaded || !google || !google.picker) { showError("Modul pemilih belum siap"); return; }
 
     try {
       setIsPickerOpen(true);
-      const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+      // Google Picker API - using any for picker parts (no official TS definitions)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pickerAPI = google.picker as any;
+      const view = new pickerAPI.DocsView(pickerAPI.ViewId.FOLDERS)
         .setSelectFolderEnabled(true)
         .setIncludeFolders(true)
         .setMimeTypes('application/vnd.google-apps.folder');
 
-      const picker = new google.picker.PickerBuilder()
+      const picker = new pickerAPI.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
         .setDeveloperKey(API_KEY)
         .setOrigin(window.location.origin)
-        .setCallback((data: any) => {
-          if (data.action === google.picker.Action.PICKED) {
-            const doc = data.docs[0];
-            setFolderName(doc.name);
-            setFolderId(doc.id);
-            setIsPickerOpen(false);
-          } else if (data.action === google.picker.Action.CANCEL) {
+        .setCallback((data: GooglePickerResponse) => {
+          if (data.action === pickerAPI.Action.PICKED) {
+            const doc = data.docs?.[0];
+            if (doc) {
+              setFolderName(doc.name);
+              setFolderId(doc.id);
+              setIsPickerOpen(false);
+            }
+          } else if (data.action === pickerAPI.Action.CANCEL) {
             setIsPickerOpen(false);
           }
         })
         .build();
       picker.setVisible(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsPickerOpen(false);
-      showError(`Gagal membuka pemilih: ${err.message}`);
+      showError(`Gagal membuka pemilih: ${getErrorMessage(err)}`);
     }
   };
 
@@ -162,8 +230,8 @@ const DriveUploadDialog = ({ isOpen, onClose, onUpload, defaultFileName }: Drive
       setShowNewFolderInput(false);
       setNewFolderName("");
       showSuccess(`Folder "${data.name}" dibuat`);
-    } catch (error: any) {
-      showError(error.message);
+    } catch (error: unknown) {
+      showError(getErrorMessage(error));
     } finally {
       setIsCreatingFolder(false);
     }

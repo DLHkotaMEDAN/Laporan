@@ -14,6 +14,7 @@ import { SpjOliRecord } from '@/types/spjOli';
 import { WorkPlan } from '@/types/workPlan';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 import { isSpjOliAdmin, isSuperAdminAccess, isPimpinanAccess,
   getLoginDestination, getLoginDestinationRoles
@@ -256,7 +257,7 @@ export default function SpjOli({ recordCount }: { recordCount?: number | null } 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.date || !form.region_id || !form.team_id || !form.spj_number || !form.oil_name || Number(form.quantity) <= 0) { showError('Lengkapi seluruh data wajib dan jumlah oli.'); return; }
-    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); await clearDraft(); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role)); } catch (error: any) { showError(`Gagal menyimpan: ${error.message}`); }
+    try { await spjOliService.save({ ...form, quantity: Number(form.quantity) }, id); await clearDraft(); showSuccess(id ? 'SPJ Oli diperbarui' : 'SPJ Oli disimpan'); navigate((profile?.roles && profile.roles.length > 0) ? getLoginDestinationRoles(profile.roles) : getLoginDestination(profile?.role)); } catch (error: unknown) { showError(`Gagal menyimpan: ${getErrorMessage(error)}`); }
   };
   const remove = (recordId: string) => setDeleteSpjConfirm({ open: true, id: recordId });
 

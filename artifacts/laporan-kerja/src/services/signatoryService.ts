@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { auditLogService } from '@/services/auditLogService';
 
 export const SIGNATORY_POSITIONS = [
@@ -79,7 +80,7 @@ export const signatoryService = {
       // Lebih aman daripada mengembalikan data lama yang mungkin stale atau
       // sudah dimanipulasi. Komponen pemanggil bertanggung jawab menampilkan
       // pesan error kepada user.
-      console.error('Gagal memuat data penandatangan:', error?.message);
+      logger.error('Gagal memuat data penandatangan:', error?.message);
       return [];
     }
 

@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { showError } from "@/utils/toast";
+import { logger } from "@/lib/logger";
 import { reportService, type ReportFilters } from "@/services/reportService";
 import { workPlanService, type WorkPlanFilters } from "@/services/workPlanService";
 import type { Report } from "@/types/report";
@@ -89,7 +90,7 @@ export function useIndexDataLoader({
         setSelectedRegion("semua");
       }
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load index data", error);
       showError("Gagal memuat data");
     } finally {
       setLoading(false);

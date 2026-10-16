@@ -10,6 +10,7 @@ import { isSuperAdminAccess } from "@/constants/access-control";
 import { notaDinasTemplateService } from "@/services/notaDinasTemplateService";
 import { DEFAULT_NOTA_TEMPLATES, DEFAULT_KOLOM_PERBAIKAN, DEFAULT_KOLOM_PERMINTAAN } from "@/types/notaDinas";
 import type { NotaDinasCategory, NotaDinasTemplate, KolomTabel } from "@/types/notaDinas";
+import { logger } from "@/lib/logger";
 import KolomPerbaikanEditor from "@/components/KolomPerbaikanEditor";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -176,7 +177,7 @@ const NotaDinasTemplateManagement = () => {
       loadTemplates();
       setEditingTemplate(null);
     } catch (err) {
-      console.error("Save template error:", JSON.stringify(err));
+      logger.error("Save template error:", JSON.stringify(err));
       const msg = (err as any)?.message || (err as any)?.error_description || JSON.stringify(err);
       showError(`Gagal menyimpan template: ${msg}`);
     } finally {

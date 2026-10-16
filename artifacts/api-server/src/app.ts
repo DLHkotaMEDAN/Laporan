@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import path from "node:path";
 import { existsSync } from "node:fs";
@@ -27,6 +28,31 @@ app.use(
     },
   }),
 );
+
+// Security headers dengan Helmet
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'", "https://*.supabase.co", "https://*.googleapis.com"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
+  }),
+);
+
 // Batasi CORS hanya ke origin yang dikenal.
 // Request same-origin (frontend di Replit/Dyad yang sama) tidak butuh CORS
 // karena origin === undefined — sudah otomatis diizinkan.
@@ -50,6 +76,7 @@ app.use(
     },
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   }),
 );
 // A print-ready report contains the rendered table and its styles, so it can

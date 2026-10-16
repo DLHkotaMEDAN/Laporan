@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { auditLogService } from '@/services/auditLogService';
 
 /**
@@ -49,7 +50,7 @@ export const storageService = {
       });
 
     if (error) {
-      console.error("Error uploading to storage:", error);
+      logger.error("Error uploading to storage:", error);
       throw error;
     }
 
@@ -86,9 +87,9 @@ export const storageService = {
           .remove([filePath]);
         
         if (error) {
-          console.error("Gagal menghapus file dari storage:", error);
+          logger.error("Gagal menghapus file dari storage:", error);
         } else {
-          console.log(`[storage] Berhasil menghapus foto lama: ${filePath}`);
+          logger.info(`[storage] Berhasil menghapus foto lama: ${filePath}`);
           void auditLogService.logCurrentUser({
             action: 'DELETE',
             entityType: 'REPORT_PHOTO',
@@ -98,7 +99,7 @@ export const storageService = {
         }
       }
     } catch (e) {
-      console.error("Error parsing URL untuk penghapusan:", e);
+      logger.error("Error parsing URL untuk penghapusan:", e);
     }
   }
 };

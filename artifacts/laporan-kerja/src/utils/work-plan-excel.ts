@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { logger } from "@/lib/logger";
 import { WorkPlan } from "@/types/workPlan";
 
 type ExportWorkPlanExcelOptions = {
@@ -70,7 +71,7 @@ export const exportWorkPlanExcel = async ({
       sheet.addImage(medanId, { tl: { col: 0.15, row: 0.1 }, ext: { width: 55, height: 55 } });
       sheet.addImage(dlhId, { tl: { col: 10.9, row: 0.1 }, ext: { width: 55, height: 55 } });
     } catch (error) {
-      console.warn("Logo tidak dapat dimasukkan ke Excel:", error);
+      logger.warn("Logo tidak dapat dimasukkan ke Excel:", error);
     }
   }
 

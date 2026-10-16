@@ -13,6 +13,7 @@ import { KeyRound, Eye, EyeOff, Loader2, CheckCircle2, XCircle, ShieldCheck } fr
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage } from '@/lib/logger';
 
 interface ResetPasswordDialogProps {
   open: boolean;
@@ -75,8 +76,8 @@ export const ResetPasswordDialog = ({
       if (data?.error) throw new Error(data.error);
       showSuccess(`Password ${username} berhasil diubah.`);
       onOpenChange(false);
-    } catch (err: any) {
-      showError('Gagal mengubah password: ' + (err?.message || 'Terjadi kesalahan.'));
+    } catch (err: unknown) {
+      showError('Gagal mengubah password: ' + (getErrorMessage(err) || 'Terjadi kesalahan.'));
     } finally {
       setLoading(false);
     }

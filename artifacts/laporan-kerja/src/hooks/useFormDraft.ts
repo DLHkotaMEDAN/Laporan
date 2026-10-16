@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
+import { logger } from "@/lib/logger";
 
 /** Menghasilkan ID unik per tab browser menggunakan sessionStorage.
  *  sessionStorage berbeda antar tab tapi bertahan selama tab tidak ditutup. */
@@ -190,7 +191,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
       setLastSavedAt(savedAt);
     } catch (error) {
       // Draf bersifat pelindung tambahan; form tetap dapat digunakan jika penyimpanan perangkat tidak tersedia.
-      console.warn("Tidak dapat menyimpan draf formulir", error);
+      logger.warn("Tidak dapat menyimpan draf formulir", error);
     } finally {
       savingRef.current = false;
       if (pendingSaveRef.current && shouldPersistRef.current) {
@@ -227,7 +228,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
           await deleteDraft(withTabId(key));
         }
       } catch (error) {
-        console.warn("Tidak dapat memuat draf formulir", error);
+        logger.warn("Tidak dapat memuat draf formulir", error);
       } finally {
         if (active) {
           readyRef.current = true;
@@ -271,7 +272,7 @@ export function useFormDraft<T extends FieldValues>(form: UseFormReturn<any>, ke
       await deleteDraft(withTabId(key));
       setLastSavedAt(null);
     } catch (error) {
-      console.warn("Tidak dapat menghapus draf formulir", error);
+      logger.warn("Tidak dapat menghapus draf formulir", error);
     }
   }, [key]);
 
@@ -308,7 +309,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
       await writeDraft(withTabId(key), { savedAt, values: valuesRef.current, view: captureViewState() });
       setLastSavedAt(savedAt);
     } catch (error) {
-      console.warn("Tidak dapat menyimpan draf formulir", error);
+      logger.warn("Tidak dapat menyimpan draf formulir", error);
     } finally {
       savingRef.current = false;
       if (pendingSaveRef.current && shouldPersistRef.current) void save();
@@ -338,7 +339,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
           await deleteDraft(withTabId(key));
         }
       } catch (error) {
-        console.warn("Tidak dapat memuat draf formulir", error);
+        logger.warn("Tidak dapat memuat draf formulir", error);
       } finally {
         if (active) {
           readyRef.current = true;
@@ -382,7 +383,7 @@ export function useValueDraft<T>(values: T, restore: (values: T) => void, key?: 
       await deleteDraft(withTabId(key));
       setLastSavedAt(null);
     } catch (error) {
-      console.warn("Tidak dapat menghapus draf formulir", error);
+      logger.warn("Tidak dapat menghapus draf formulir", error);
     }
   }, [key]);
 

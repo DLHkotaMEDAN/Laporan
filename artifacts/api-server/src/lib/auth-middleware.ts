@@ -13,7 +13,7 @@ export interface AuthRequest extends Request {
 
 export async function requireAuth(req: AuthRequest, res: any, next: any) {
   try {
-    const authHeader = req.headers['authorization'] as string | undefined;
+    const authHeader = req.headers.get('authorization');
 
     if (!authHeader) {
       return res.status(401).json({ message: 'Unauthorized: No token provided' });
@@ -24,7 +24,7 @@ export async function requireAuth(req: AuthRequest, res: any, next: any) {
       return res.status(401).json({ message: 'Invalid token format' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     // Check if token is non-empty and reasonable length
     if (!token || token.length < 10) {

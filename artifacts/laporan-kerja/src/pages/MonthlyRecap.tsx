@@ -15,7 +15,59 @@ import { useRegionName } from '@/hooks/useRegionName';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { logger, getErrorMessage } from '@/lib/logger';
 import ExcelJS from 'exceljs';
+
+// Excel row data type for monthly recap
+interface MonthlyRecapRowData {
+  no: string | number;
+  date?: string;
+  category?: string;
+  desc?: string;
+  loc?: string;
+  vol?: string;
+  eq_type?: string;
+  eq_qty?: string;
+  he?: string;
+  coord?: string;
+  members?: number;
+  rem?: string;
+  fp?: number;
+  fp_l?: number;
+  fpl?: number;
+  fd?: number;
+  fd_l?: number;
+  fdl?: number;
+  fs?: number;
+  fs_l?: number;
+}
+
+// Task type for table rendering
+interface TableTask {
+  reportId: string;
+  reportDate: string;
+  description: string;
+  location: {
+    street: string;
+    village: string | string[];
+    subDistrict?: string;
+  };
+  volume: number;
+  equipment: Equipment[];
+  heavyEquipment: HeavyEquipment[];
+  personnel: {
+    coordinator: string;
+    members: number;
+  };
+  remarks?: string;
+  category?: string;
+  photos?: {
+    zero?: string;
+    fifty?: string;
+    hundred?: string;
+  };
+  reportRemarks?: string;
+}
 import { saveAs } from 'file-saver';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import '@/styles/printStyles.css';
@@ -162,7 +214,7 @@ const MonthlyRecap = () => {
         setReports(data);
       }
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load monthly reports", error);
     } finally {
       if (requestId === dataRequestId.current) {
         setLoading(false);
@@ -190,7 +242,7 @@ const MonthlyRecap = () => {
         fileName: monthlyPdfFileName("Laporan Bulanan", Number(selectedMonth), selectedYear, regionName),
       });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create shareable PDF", error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
     } finally {
       dismissToast(toastId);
@@ -240,9 +292,9 @@ const MonthlyRecap = () => {
       });
       if (error) throw error;
       return data;
-    } catch (error: any) {
-      console.error(error);
-      showError("Gagal mengunggah: " + error.message);
+    } catch (error: unknown) {
+      logger.error("Failed to upload to Google Drive", error);
+      showError("Gagal mengunggah: " + getErrorMessage(error));
       throw error;
     } finally {
       dismissToast(toastId);
@@ -318,7 +370,7 @@ const MonthlyRecap = () => {
         for (let i = 0; i < reportTasks.length; i++) {
           const task = reportTasks[i];
           const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
-          const rowData: any = {
+          const rowData: MonthlyRecapRowData = {
             no: (i === 0 && report === reports.find(r => r.date === report.date)) ? currentNo : '',
             date: i === 0 ? new Date(report.date).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : '',
             category: i === 0 ? report.category : '',
@@ -334,9 +386,9 @@ const MonthlyRecap = () => {
           };
           if (recapMode === "with-fuel") {
             rowData.fp = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax || 0), 0) || 0;
-            rowData.fpl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax_liter || 0), 0) || 0;
+            rowData.fp_l = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.pertamax_liter || 0), 0) || 0;
             rowData.fd = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite || 0), 0) || 0;
-            rowData.fdl = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
+            rowData.fd_l = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.dexlite_liter || 0), 0) || 0;
             rowData.fs = task.heavyEquipment?.reduce((acc, he) => acc + (he.fuel?.solar || 0), 0) || 0;
           }
           const row = worksheet.addRow(rowData);
@@ -351,8 +403,8 @@ const MonthlyRecap = () => {
       saveAs(new Blob([buffer]), `Rekap_DLH_${selectedMonth === 'semua' ? 'Semua' : months[parseInt(selectedMonth)-1]}_${selectedYear}.xlsx`);
       dismissToast(toastId);
       showSuccess("Rekap Excel berhasil diunduh");
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      logger.error("Failed to create Excel file", error);
       dismissToast(toastId);
       showError("Gagal membuat file Excel");
     }
@@ -409,7 +461,7 @@ const MonthlyRecap = () => {
 
   const { flatTasks, noSpans, dateSpans } = getTableSpans();
 
-  const renderTaskRow = (task: any, idx: number, currentNo: number) => {
+  const renderTaskRow = (task: TableTask, idx: number, currentNo: number) => {
     const villages = Array.isArray(task.location.village) ? task.location.village.join(", ") : task.location.village;
     const reportTasks = flatTasks.filter(t => t.reportId === task.reportId);
     const isFirstInReport = reportTasks[0] === task;
@@ -430,7 +482,7 @@ const MonthlyRecap = () => {
           </td>
         )}
         <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{task.description}</td>
-        <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{`${task.location.street}, ${villages}, ${task.location.subDistrict}`}</td>
+        <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{`${task.location.street}, ${villages}${task.location.subDistrict ? `, ${task.location.subDistrict}` : ''}`}</td>
         {photoMode === "with-photo" && (
           <>
             <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.zero ? <img src={task.photos.zero} className="w-full h-full object-fill" alt="0%" /> : null}</div></td>
@@ -438,17 +490,17 @@ const MonthlyRecap = () => {
             <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.hundred ? <img src={task.photos.hundred} className="w-full h-full object-fill" alt="100%" /> : null}</div></td>
           </>
         )}
-        <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {getUnitByCategory(task.category)}</td>
-        <td className="border border-black p-0 align-top text-[10px] leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {e.type}</div>))}</td>
-        <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{e.quantity}</div>))}</td>
-        <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>
+        <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {task.category ? getUnitByCategory(task.category) : ''}</td>
+        <td className="border border-black p-0 align-top text-[10px] leading-tight">{task.equipment?.map((e: Equipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {e.type}</div>))}</td>
+        <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.equipment?.map((e: Equipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{e.quantity}</div>))}</td>
+        <td className="border border-black p-0 align-top text-[10px] leading-tight overflow-hidden">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0 whitespace-nowrap">• {he.type} {he.vehicle || ""}</div>))}</td>
         {recapMode === "with-fuel" && (
           <>
-            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.pertamax ? he.fuel.pertamax.toLocaleString('id-ID') : ''}</div>))}</td>
-            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.pertamax_liter || ''}</div>))}</td>
-            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.dexlite ? he.fuel.dexlite.toLocaleString('id-ID') : ''}</div>))}</td>
-            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.dexlite_liter || ''}</div>))}</td>
-            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: any, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.pertamax ? he.fuel.pertamax.toLocaleString('id-ID') : ''}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.pertamax_liter || ''}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.dexlite ? he.fuel.dexlite.toLocaleString('id-ID') : ''}</div>))}</td>
+            <td className="border border-black p-0 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="min-h-5 px-1 py-0.5 border-b border-black last:border-b-0">{he.fuel?.dexlite_liter || ''}</div>))}</td>
+            <td className="border-2 border-black p-1.5 align-top text-[10px] text-center leading-tight">{task.heavyEquipment?.map((he: HeavyEquipment, i: number) => (<div key={i} className="mb-0.5">{he.fuel?.solar || 0}</div>))}</td>
           </>
         )}
         <td className="border-2 border-black p-2 text-center align-top font-medium">{task.personnel.coordinator}</td>

@@ -1,5 +1,6 @@
 // src/lib/acl.ts
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { ROLE_PERMISSIONS, Resource, Action } from '@/constants/permissions';
 import type { AuthContext } from '@/constants/permissions';
 import type { UserRole } from '@/constants/access-control';
@@ -52,7 +53,7 @@ export async function userHasPermission(
 
     return hasPermission(ctx, resource, action);
   } catch (err) {
-    console.error('Error checking permission:', err);
+    logger.error('Error checking permission:', err);
     return false;
   }
 }

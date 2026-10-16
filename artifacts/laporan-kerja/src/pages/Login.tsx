@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Lock, User, Eye, EyeOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { showError } from '@/utils/toast';
 import { getRoleLandingPath, getLoginDestination, getLoginDestinationRoles } from '@/constants/access-control';
+import { getErrorMessage } from '@/lib/logger';
 
 // Email valid: harus ada karakter sebelum @, domain setelah @, dan TLD minimal 2 karakter
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -145,10 +146,10 @@ const Login = () => {
       setLockedUntil(null);
       setCountdown(0);
       clearRateLimit();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const isInvalidCredential =
-        error.message === 'Invalid login credentials' ||
-        error.message?.toLowerCase().includes('invalid');
+        getErrorMessage(error) === 'Invalid login credentials' ||
+        getErrorMessage(error)?.toLowerCase().includes('invalid');
 
       const newFailCount = failCount + 1;
       setFailCount(newFailCount);

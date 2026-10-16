@@ -1,5 +1,6 @@
 ﻿import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/fetchAllPages';
+import { logger } from '@/lib/logger';
 import { FuelReport, FuelReportType } from '@/types/fuelReport';
 import { auditLogService } from '@/services/auditLogService';
 
@@ -22,7 +23,7 @@ const fetchFuelReports = async (
     // diterapkan di Supabase, anggap semua data lama sebagai Admin BBM.
     // Laporan BBM tetap gagal dengan jelas agar tidak tercampur dengan data lama.
     if (reportType === 'admin_bbm' && isMissingReportTypeColumnError(error)) {
-      console.warn('Kolom fuel_reports.report_type belum tersedia; membaca data Admin BBM lama. Jalankan migrasi database.', error);
+      logger.warn('Kolom fuel_reports.report_type belum tersedia; membaca data Admin BBM lama. Jalankan migrasi database.', error);
       return fetchAllPages<FuelReport>(() => buildQuery(false));
     }
     throw error;

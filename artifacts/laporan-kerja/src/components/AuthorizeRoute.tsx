@@ -3,6 +3,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { hasPermission } from '@/lib/acl';
+import { logger } from '@/lib/logger';
 import type { AuthContext, Action, Resource } from '@/constants/permissions';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -66,7 +67,7 @@ export const AuthorizeRoute = ({
           }
         } catch (e) {
           // If fetch fails, we keep nulls; condition may still work or deny
-          console.warn(`Could not fetch ${resource}[${effectiveId}] for auth check`, e);
+          logger.warn(`Could not fetch ${resource}[${effectiveId}] for auth check`, e);
         }
       }
 

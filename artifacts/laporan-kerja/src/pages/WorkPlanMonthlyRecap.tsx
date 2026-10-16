@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Printer, FileText, PenTool, Plus, ChevronDown, Table, Calendar as CalendarIcon, Image, Share2, Edit } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { sortByCategory } from '@/utils/report-helpers';
@@ -162,7 +163,7 @@ const WorkPlanMonthlyRecap = () => {
 
       if (requestId === dataRequestId.current) setPlans(filtered);
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load work plan monthly reports", error);
     } finally {
       if (requestId === dataRequestId.current) setLoading(false);
     }
@@ -219,7 +220,7 @@ const WorkPlanMonthlyRecap = () => {
       });
       showSuccess("Rekap Excel berhasil disimpan");
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create Excel file", error);
       showError("Gagal membuat rekap Excel");
     } finally {
       dismissToast(toastId);
@@ -237,7 +238,7 @@ const WorkPlanMonthlyRecap = () => {
         fileName: monthlyPdfFileName("Rencana Kerja Bulanan", Number(selectedMonth), selectedYear, regionName),
       });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create shareable PDF", error);
       showError(error instanceof Error ? error.message : "Gagal membuat PDF untuk dibagikan");
     } finally {
       dismissToast(toastId);

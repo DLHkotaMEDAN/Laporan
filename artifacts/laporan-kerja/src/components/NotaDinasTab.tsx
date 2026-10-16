@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import { useAuth } from "@/context/AuthContext";
 import { isSuperAdminAccess } from "@/constants/access-control";
 import { useValueDraft } from "@/hooks/useFormDraft";
@@ -139,7 +140,7 @@ const NotaDinasTab = ({ recordCount, isActive }: { recordCount?: number | null; 
       .then(({ data, error }) => {
         if (!active) return;
         if (error || !data || !NOTA_CODE_BY_REGION_CODE[data.code]) {
-          console.error("Wilayah akun Admin Nota Dinas tidak dapat dimuat:", error);
+          logger.error("Wilayah akun Admin Nota Dinas tidak dapat dimuat:", error);
           setAccountRegion(null);
         } else {
           setAccountRegion({ id: data.id, name: data.name, notaCode: NOTA_CODE_BY_REGION_CODE[data.code] });
