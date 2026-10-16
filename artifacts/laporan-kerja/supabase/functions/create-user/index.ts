@@ -7,7 +7,9 @@ const ALLOWED_ORIGINS = [
 ];
 
 const getCorsHeaders = (requestOrigin: string | null) => {
-  const allowedOrigin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+  // Allow any localhost origin for development
+  const isLocalhost = requestOrigin && (requestOrigin.startsWith('http://localhost:') || requestOrigin.startsWith('http://127.0.0.1:'));
+  const allowedOrigin = (requestOrigin && (ALLOWED_ORIGINS.includes(requestOrigin) || isLocalhost))
     ? requestOrigin
     : ALLOWED_ORIGINS[0];
 
@@ -116,10 +118,12 @@ const regionRequiredRoles = new Set([
 
 Deno.serve(async (request) => {
   const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  console.log('Request received:', { method: request.method, origin: request.headers.get('Origin') });
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
     const authorization = request.headers.get('Authorization');
+    console.log('Authorization present:', !!authorization);
     if (!authorization) throw new Error('Sesi login tidak ditemukan.');
 
     const callerClient = createClient(
@@ -127,24 +131,30 @@ Deno.serve(async (request) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authorization } } },
     );
+    console.log('Getting user from auth...');
     const { data: { user: caller } } = await callerClient.auth.getUser();
+    console.log('User retrieved:', !!caller);
     if (!caller) throw new Error('Sesi login tidak valid.');
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+    console.log('Fetching caller profile...');
     const { data: callerProfile, error: callerError } = await adminClient
       .from('profiles')
       .select('role, roles')
       .eq('id', caller.id)
       .single();
+    console.log('Caller profile:', { profile: callerProfile, error: callerError });
     const callerRoles: string[] = (callerProfile?.roles && callerProfile.roles.length > 0)
       ? callerProfile.roles
       : (callerProfile?.role ? [callerProfile.role] : []);
+    console.log('Caller roles:', callerRoles);
     if (callerError || !callerRoles.includes('admin') && !callerRoles.includes('administrator')) throw new Error('Hanya Super Admin yang dapat membuat akun.');
 
     const input = await request.json() as CreateUserInput | ResetPasswordInput | GetUserDetailsInput | ListUserEmailsInput | SetUserActiveInput;
+    console.log('Input received:', { hasAction: 'action' in input, action: 'action' in input ? input.action : 'none' });
     if ('action' in input && input.action === 'list-user-emails') {
       const users: { id: string; email: string | undefined }[] = [];
       const perPage = 1000;

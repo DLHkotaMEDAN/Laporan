@@ -197,16 +197,6 @@ const UserManagement = () => {
       // Derive effective roles from checkbox selection only — do NOT use newUser.role
       // (legacy dropdown was removed; role column is derived server-side from roles[0])
       const effectiveRoles = newUser.roles;
-      console.log('Creating user with data:', {
-        username: newUser.username,
-        email: newUser.email,
-        password: newUser.password ? '***' : '',
-        roles: effectiveRoles,
-        regionId: rolesRequireRegion(effectiveRoles) ? (newUser.regionId || null) : null,
-        teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
-        rawRegionId: newUser.regionId,
-        rolesRequireRegion: rolesRequireRegion(effectiveRoles),
-      });
       const requestBody = {
         username: newUser.username.trim(),
         email: newUser.email.trim(),
@@ -216,7 +206,6 @@ const UserManagement = () => {
         teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
         workPlanCategories: [],
       };
-      console.log('Request body:', requestBody);
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: requestBody,
       });
