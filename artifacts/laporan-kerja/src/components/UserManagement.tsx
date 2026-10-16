@@ -220,19 +220,6 @@ const UserManagement = () => {
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: requestBody,
       });
-        body: {
-          username: newUser.username,
-          email: newUser.email,
-          password: newUser.password,
-          // Send only roles[] — Edge Function derives the legacy `role` column from roles[0]
-          roles: effectiveRoles,
-          // role field omitted intentionally; Edge Function handles it via legacyRole = effectiveRoles[0]
-          // Region: required if any selected role requires it
-          regionId: rolesRequireRegion(effectiveRoles) ? (newUser.regionId || null) : null,
-          teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
-          workPlanCategories: [],
-        },
-      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       void auditLogService.logCurrentUser({ action: 'CREATE', entityType: 'PROFILE', entityId: data.id, details: { username: newUser.username.trim(), email: data.email || newUser.email.trim().toLowerCase(), roles: effectiveRoles } });
