@@ -181,6 +181,10 @@ const UserManagement = () => {
     if (!canMutateUsers) { showError('Akun nonaktif hanya dapat melihat data.'); return; }
     // Validate: at least one permission key must be selected via checkbox
     if (newUser.roles.length === 0) { showError('Pilih minimal satu hak akses.'); return; }
+    // Validate: region is required for region-based roles
+    if (rolesRequireRegion(newUser.roles) && !newUser.regionId) { showError('Pilih wilayah untuk hak akses ini.'); return; }
+    // Validate: team is required for team-based roles
+    if (roleRequiresTeamRoles(newUser.roles) && !newUser.teamId) { showError('Pilih tim untuk hak akses ini.'); return; }
     setCreating(true);
     try {
       // Derive effective roles from checkbox selection only — do NOT use newUser.role
@@ -195,7 +199,7 @@ const UserManagement = () => {
           roles: effectiveRoles,
           // role field omitted intentionally; Edge Function handles it via legacyRole = effectiveRoles[0]
           // Region: required if any selected role requires it
-          regionId: rolesRequireRegion(effectiveRoles) ? newUser.regionId || null : null,
+          regionId: rolesRequireRegion(effectiveRoles) ? (newUser.regionId || null) : null,
           teamId: roleRequiresTeamRoles(effectiveRoles) ? newUser.teamId : null,
           workPlanCategories: [],
         },
@@ -493,8 +497,8 @@ const UserManagement = () => {
           <div className="min-w-0 space-y-1.5">
             <label className="text-xs font-semibold text-blue-900">Cakupan wilayah</label>
             <Select
-              value={newUser.roles.includes('bbm_pusat') ? 'all' : newUser.regionId || (newUser.roles.includes('spj_oli') ? 'all' : '')}
-              onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: '' })}
+              value={newUser.regionId || (newUser.roles.includes('bbm_pusat') || newUser.roles.includes('spj_oli') ? 'all' : '')}
+              onValueChange={regionId => setNewUser({ ...newUser, regionId: regionId === 'all' ? '' : regionId, teamId: regionId === 'all' ? '' : newUser.teamId })}
               disabled={!canMutateUsers || newUser.roles.includes('bbm_pusat') || !rolesRequireRegion(newUser.roles)}
             >
               <SelectTrigger className="w-full"><SelectValue placeholder="Pilih wilayah" /></SelectTrigger>
