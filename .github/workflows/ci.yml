@@ -34,8 +34,23 @@ jobs:
         working-directory: ./artifacts/laporan-kerja
         run: pnpm test:run
 
-      # E2E tests skipped in CI - run manually in local development
-      # E2E tests require browser and dev server which are complex to setup in CI
+      - name: Install Playwright browsers
+        working-directory: ./artifacts/laporan-kerja
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start dev server
+        working-directory: ./artifacts/laporan-kerja
+        run: pnpm dev &
+        shell: bash
+
+      - name: Wait for dev server
+        run: |
+          timeout 60 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 2; done' || exit 1
+        shell: bash
+
+      - name: Run E2E tests
+        working-directory: ./artifacts/laporan-kerja
+        run: pnpm test:e2e
 
       - name: Build
         working-directory: ./artifacts/laporan-kerja

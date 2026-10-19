@@ -11,6 +11,9 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Increase timeout for CI environment
+    actionTimeout: process.env.CI ? 10000 : 5000,
+    navigationTimeout: process.env.CI ? 30000 : 15000,
   },
 
   projects: [
@@ -20,9 +23,6 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-  },
+  // Remove webServer - will be started manually in CI
+  // This gives us better control over startup timing
 });
