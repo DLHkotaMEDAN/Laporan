@@ -23,6 +23,12 @@ export default defineConfig({
     },
   ],
 
-  // Remove webServer - will be started manually in CI
-  // This gives us better control over startup timing
+  // Hybrid approach:
+  // - Local development: use webServer (simple, automatic)
+  // - CI: manual start (reliable, explicit wait)
+  webServer: process.env.CI ? undefined : {
+    command: 'pnpm dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: true,
+  },
 });
