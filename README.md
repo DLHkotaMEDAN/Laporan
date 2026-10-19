@@ -5,19 +5,23 @@ Aplikasi manajemen laporan kerja dengan fitur pelaporan harian, mingguan, bulana
 ## 🏗️ Tech Stack
 
 - **Frontend**: React 19 + TypeScript + Vite
-- **Backend**: Express.js + TypeScript
+- **Backend**: Express.js + TypeScript (alternative) / Vercel Serverless Functions (PDF)
 - **Database**: PostgreSQL (via Supabase)
 - **Authentication**: Supabase Auth
 - **Styling**: Tailwind CSS 4
-- **PDF Generation**: Playwright (server) / Puppeteer (client)
+- **PDF Generation**: Puppeteer + Chromium (Vercel Serverless)
 - **Package Manager**: pnpm (workspace)
 
 ## 📁 Project Structure
 
 ```
 laporan/
+├── api/                     # Vercel Serverless Functions (PDF generation)
+│   ├── lib/
+│   │   └── auth-utils.ts    # Supabase auth utilities
+│   └── render-pdf.ts        # PDF generation endpoint
 ├── artifacts/
-│   ├── api-server/          # Express backend server
+│   ├── api-server/          # Express backend server (alternative)
 │   ├── laporan-kerja/       # React frontend application
 │   └── mockup-sandbox/      # UI mockup/prototyping
 ├── lib/

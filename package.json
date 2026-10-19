@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --filter \"./api\" --if-present run typecheck",
     "dev": "node scripts/dev.mjs",
     "start": "cross-env PORT=19762 pnpm --dir artifacts/api-server start"
   },

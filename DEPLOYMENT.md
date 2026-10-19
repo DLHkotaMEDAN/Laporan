@@ -79,15 +79,49 @@ vercel --prod
 
 ## 🔧 Backend Deployment (Vercel Serverless)
 
-### Prerequisites
+### PDF Generation Endpoint
+
+The PDF generation is implemented as a Vercel Serverless Function located in the `api/` directory at the workspace root.
+
+**Prerequisites:**
 
 1. **Environment Variables** (Vercel Dashboard)
    ```
-   SUPABASE_URL=https://ffgksqjznamthsdbkstu.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+   VITE_SUPABASE_URL=https://ffgksqjznamthsdbkstu.supabase.co
+   VITE_SUPABASE_ANON_KEY=your_anon_key_here
    ```
 
+2. **Dependencies** (already in workspace root package.json)
+   - `@sparticuz/chromium` - Chromium for serverless PDF generation
+   - `puppeteer-core` - Headless browser control
+   - `@supabase/supabase-js` - Supabase client for auth
+
 ### Deployment Steps
+
+The API functions are automatically deployed by Vercel when the root directory is deployed. The `vercel.json` configuration ensures:
+
+1. **Function Configuration** (vercel.json)
+   ```json
+   "functions": {
+     "api/**/*.ts": {
+       "memory": 2048,
+       "maxDuration": 60
+     }
+   }
+   ```
+
+2. **Rewrite Rules** (vercel.json)
+   - `/api/:path*` → `/api/:path*` (routes to serverless functions)
+   - `/(.*)` → `/index.html` (fallback to SPA)
+
+3. **Vercel Deployment**
+   - Deploy from root directory of workspace
+   - Vercel automatically detects `api/` directory as serverless functions
+   - Functions are deployed at `/api/render-pdf`
+
+### Alternative: Express API Server
+
+For production, you may also deploy the Express API server (`artifacts/api-server`) separately:
 
 1. **Deploy API Server as Serverless Function**
    - Currently backend is Express, may need refactoring for serverless

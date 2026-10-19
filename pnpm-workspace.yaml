@@ -39,6 +39,7 @@ minimumReleaseAgeExclude:
   - 'express-rate-limit'
 
 packages:
+  - api
   - artifacts/*
   - lib/*
   - lib/integrations/*

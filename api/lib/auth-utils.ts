@@ -16,7 +16,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
+  email?: string;
   role?: string;
   roles?: string[];
   is_active?: boolean;
