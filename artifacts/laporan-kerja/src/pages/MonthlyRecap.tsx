@@ -16,7 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { logger, getErrorMessage } from '@/lib/logger';
-import ExcelJS from 'exceljs';
+import { loadExcelJS } from '@/utils/lazy-imports';
+import { storageService } from '@/services/storageService';
 
 // Excel row data type for monthly recap
 interface MonthlyRecapRowData {
@@ -312,6 +313,9 @@ const MonthlyRecap = () => {
     }
     const toastId = showLoading("Menyiapkan file Excel...");
     try {
+      // Lazy load ExcelJS only when export is triggered
+      const ExcelJS = await loadExcelJS() as any;
+
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Rekap Laporan');
       const columns = [
@@ -350,11 +354,12 @@ const MonthlyRecap = () => {
       worksheet.getCell('A3').alignment = { horizontal: 'center' };
       
       const headerRow = worksheet.addRow(columns.map(c => c.header));
-      headerRow.eachCell(cell => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
-        cell.border = { top: { style: 'medium' }, left: { style: 'medium' }, bottom: { style: 'medium' }, right: { style: 'medium' } };
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        cell.font = { bold: true };
+      headerRow.eachCell((cell: unknown) => {
+        const typedCell = cell as any;
+        typedCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
+        typedCell.border = { top: { style: 'medium' }, left: { style: 'medium' }, bottom: { style: 'medium' }, right: { style: 'medium' } };
+        typedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        typedCell.font = { bold: true };
       });
 
       let currentNo = 0;
@@ -393,9 +398,10 @@ const MonthlyRecap = () => {
           }
           const row = worksheet.addRow(rowData);
           if (photoMode === "with-photo") row.height = 100;
-          row.eachCell(cell => {
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            cell.alignment = { vertical: 'middle', wrapText: true };
+          row.eachCell((cell: unknown) => {
+            const typedCell = cell as any;
+            typedCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            typedCell.alignment = { vertical: 'middle', wrapText: true };
           });
         }
       }
@@ -485,9 +491,9 @@ const MonthlyRecap = () => {
         <td className="border-2 border-black p-2 align-top whitespace-normal break-words leading-tight">{`${task.location.street}, ${villages}${task.location.subDistrict ? `, ${task.location.subDistrict}` : ''}`}</td>
         {photoMode === "with-photo" && (
           <>
-            <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.zero ? <img src={task.photos.zero} className="w-full h-full object-fill" alt="0%" /> : null}</div></td>
-            <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.fifty ? <img src={task.photos.fifty} className="w-full h-full object-fill" alt="50%" /> : null}</div></td>
-            <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.hundred ? <img src={task.photos.hundred} className="w-full h-full object-fill" alt="100%" /> : null}</div></td>
+            <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.zero ? <img src={storageService.getDisplayImageUrl(task.photos.zero)} className="w-full h-full object-fill" alt="0%" loading="lazy" /> : null}</div></td>
+            <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.fifty ? <img src={storageService.getDisplayImageUrl(task.photos.fifty)} className="w-full h-full object-fill" alt="50%" loading="lazy" /> : null}</div></td>
+            <td className="border-2 border-black p-1 align-middle"><div className="w-full h-[110px] bg-slate-100 border border-slate-300 overflow-hidden">{task.photos?.hundred ? <img src={storageService.getDisplayImageUrl(task.photos.hundred)} className="w-full h-full object-fill" alt="100%" loading="lazy" /> : null}</div></td>
           </>
         )}
         <td className="border-2 border-black p-2 text-center font-bold align-top">{task.volume} {task.category ? getUnitByCategory(task.category) : ''}</td>

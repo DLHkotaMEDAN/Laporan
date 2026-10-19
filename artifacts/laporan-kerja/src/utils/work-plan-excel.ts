@@ -1,7 +1,7 @@
-import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { logger } from "@/lib/logger";
 import { WorkPlan } from "@/types/workPlan";
+import { loadExcelJS } from "./lazy-imports";
 
 type ExportWorkPlanExcelOptions = {
   plans: WorkPlan[];
@@ -11,13 +11,6 @@ type ExportWorkPlanExcelOptions = {
   includeLogo: boolean;
   logoMedanUrl?: string;
   logoDlhUrl?: string;
-};
-
-const thinBorder: Partial<ExcelJS.Borders> = {
-  top: { style: "thin", color: { argb: "FF000000" } },
-  left: { style: "thin", color: { argb: "FF000000" } },
-  bottom: { style: "thin", color: { argb: "FF000000" } },
-  right: { style: "thin", color: { argb: "FF000000" } },
 };
 
 const fetchImage = async (url: string) => {
@@ -35,6 +28,16 @@ export const exportWorkPlanExcel = async ({
   logoMedanUrl,
   logoDlhUrl,
 }: ExportWorkPlanExcelOptions) => {
+  // Lazy load ExcelJS only when export is triggered
+  const ExcelJS = await loadExcelJS();
+
+  const thinBorder: Partial<unknown> = {
+    top: { style: "thin", color: { argb: "FF000000" } },
+    left: { style: "thin", color: { argb: "FF000000" } },
+    bottom: { style: "thin", color: { argb: "FF000000" } },
+    right: { style: "thin", color: { argb: "FF000000" } },
+  };
+
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Sistem Laporan Kerja DLH Kota Medan";
   workbook.created = new Date();
@@ -82,11 +85,12 @@ export const exportWorkPlanExcel = async ({
   const headerRow = sheet.getRow(5);
   headerRow.values = headers;
   headerRow.height = 30;
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
-    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-    cell.border = thinBorder;
+  headerRow.eachCell((cell: unknown) => {
+    const typedCell = cell as any;
+    typedCell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    typedCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
+    typedCell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    typedCell.border = thinBorder;
   });
 
   let rowNumber = 1;
@@ -137,9 +141,10 @@ export const exportWorkPlanExcel = async ({
 
   for (let rowIndex = 6; rowIndex <= sheet.rowCount; rowIndex += 1) {
     const row = sheet.getRow(rowIndex);
-    row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.border = thinBorder;
-      cell.alignment = { vertical: "top", wrapText: true };
+    row.eachCell({ includeEmpty: true }, (cell: unknown) => {
+      const typedCell = cell as any;
+      typedCell.border = thinBorder;
+      typedCell.alignment = { vertical: "top", wrapText: true };
     });
   }
 

@@ -101,5 +101,64 @@ export const storageService = {
     } catch (e) {
       logger.error("Error parsing URL untuk penghapusan:", e);
     }
+  },
+
+  /**
+   * Get optimized image URL using Supabase Image Transformation
+   * Reduces image size significantly for better performance
+   */
+  getOptimizedImageUrl(publicUrl: string, options: {
+    width?: number;
+    height?: number;
+    quality?: number;
+    format?: 'origin' | 'jpg' | 'webp' | 'avif';
+    resize?: 'cover' | 'contain' | 'fill';
+  } = {}): string {
+    if (!publicUrl) return publicUrl;
+
+    const {
+      width = 800,
+      height = 600,
+      quality = 80,
+      format = 'webp',
+      resize = 'cover'
+    } = options;
+
+    try {
+      const url = new URL(publicUrl);
+      url.searchParams.set('width', width.toString());
+      url.searchParams.set('height', height.toString());
+      url.searchParams.set('quality', quality.toString());
+      url.searchParams.set('format', format);
+      url.searchParams.set('resize', resize);
+      return url.toString();
+    } catch (e) {
+      logger.warn('Failed to optimize image URL:', e);
+      return publicUrl;
+    }
+  },
+
+  /**
+   * Get thumbnail URL for preview (smaller size, faster load)
+   */
+  getThumbnailUrl(publicUrl: string): string {
+    return this.getOptimizedImageUrl(publicUrl, {
+      width: 200,
+      height: 150,
+      quality: 70,
+      format: 'webp'
+    });
+  },
+
+  /**
+   * Get full-size optimized URL for display
+   */
+  getDisplayImageUrl(publicUrl: string): string {
+    return this.getOptimizedImageUrl(publicUrl, {
+      width: 800,
+      height: 600,
+      quality: 85,
+      format: 'webp'
+    });
   }
 };

@@ -1,6 +1,6 @@
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { SpjOliRecord } from '@/types/spjOli';
+import { loadExcelJS } from './lazy-imports';
 
 const border = {
   top: { style: 'thin' as const }, bottom: { style: 'thin' as const },
@@ -20,10 +20,13 @@ export async function exportSpjOliExcel(
   showRegionColumn: boolean,
   fileName: string,
 ) {
+  // Lazy load ExcelJS only when export is triggered
+  const ExcelJS = await loadExcelJS();
+
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Rekap SPJ Oli', {
     // Keep A3 (paper-size code 8); ExcelJS's PaperSize declaration omits this valid OOXML value.
-    pageSetup: { orientation: 'landscape', paperSize: 8 as ExcelJS.PaperSize, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    pageSetup: { orientation: 'landscape', paperSize: 8 as any, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
   const headers = [
     'No', 'No. SPJ', 'Tanggal',
@@ -46,11 +49,12 @@ export async function exportSpjOliExcel(
 
   const header = sheet.addRow(headers);
   header.height = 36;
-  header.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    cell.border = border;
+  header.eachCell((cell: unknown) => {
+    const typedCell = cell as any;
+    typedCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    typedCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+    typedCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    typedCell.border = border;
   });
 
   records.forEach((record, index) => {
@@ -106,12 +110,14 @@ export async function exportSpjOliExcel(
     }
   }
 
-  sheet.eachRow((row, index) => {
+  sheet.eachRow((row: unknown, index: number) => {
     if (index < 5) return;
-    row.height = 32;
-    row.eachCell((cell) => {
-      cell.alignment = { vertical: 'top', wrapText: true };
-      cell.border = border;
+    const typedRow = row as any;
+    typedRow.height = 32;
+    typedRow.eachCell((cell: unknown) => {
+      const typedCell = cell as any;
+      typedCell.alignment = { vertical: 'top', wrapText: true };
+      typedCell.border = border;
     });
   });
 

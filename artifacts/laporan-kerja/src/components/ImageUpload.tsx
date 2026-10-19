@@ -2,6 +2,7 @@ import React, { useCallback, useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/utils/image-processor';
+import { storageService } from '@/services/storageService';
 
 interface ImageUploadProps {
   value?: string;
@@ -92,7 +93,7 @@ const ImageUpload = ({ value, onChange, label, disabled = false, aspectClassName
           </div>
         ) : value ? (
           <>
-            <img src={value} alt={label} className="w-full h-full object-fill" />
+            <img src={storageService.getDisplayImageUrl(value)} alt={label} className="w-full h-full object-fill" loading="lazy" />
             {!disabled && (
               <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                 <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700">Ganti Foto</span>
