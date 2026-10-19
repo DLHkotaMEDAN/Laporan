@@ -3,7 +3,7 @@
  * Verifies Supabase session token
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type AuthError, type User } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -22,9 +22,20 @@ export interface AuthenticatedUser {
   is_active?: boolean;
 }
 
+// SupabaseAuthClient's public type is inconsistent across the package
+// versions resolved by Vercel's function builder, although getUser is part of
+// the supported runtime API. Keep the compatibility boundary local and typed.
+type AuthClientWithGetUser = typeof supabase.auth & {
+  getUser: (jwt?: string) => Promise<{
+    data: { user: User | null };
+    error: AuthError | null;
+  }>;
+};
+
 export async function verifySession(token: string): Promise<AuthenticatedUser | null> {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const authClient = supabase.auth as AuthClientWithGetUser;
+    const { data: { user }, error } = await authClient.getUser(token);
 
     if (error || !user) {
       return null;
