@@ -3,7 +3,7 @@
  * Verifies Supabase session token
  */
 
-import { createClient, type AuthError, type User } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -27,8 +27,8 @@ export interface AuthenticatedUser {
 // the supported runtime API. Keep the compatibility boundary local and typed.
 type AuthClientWithGetUser = typeof supabase.auth & {
   getUser: (jwt?: string) => Promise<{
-    data: { user: User | null };
-    error: AuthError | null;
+    data: { user: { id: string; email: string } | null };
+    error: unknown;
   }>;
 };
 
