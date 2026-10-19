@@ -53,17 +53,33 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1600,
-    rollupOptions: {
+    rolldownOptions: {
       onwarn(warning, warn) {
         if (warning.code === "SOURCEMAP_ERROR") return;
         warn(warning);
       },
       output: {
-        manualChunks: {
-          react: ["react", "react-dom", "react-router-dom"],
-          supabase: ["@supabase/supabase-js"],
-          export: ["exceljs", "jspdf"],
-          charts: ["recharts"],
+        // Vite 8 uses Rolldown, whose native code-splitting API replaces
+        // Rollup's removed object form of `manualChunks`.
+        codeSplitting: {
+          groups: [
+            {
+              name: "react",
+              test: /node_modules[\\/]react(?:[\\/]|-dom[\\/]|-router-dom[\\/])/,
+            },
+            {
+              name: "supabase",
+              test: /node_modules[\\/]@supabase[\\/]supabase-js[\\/]/,
+            },
+            {
+              name: "export",
+              test: /node_modules[\\/](?:exceljs|jspdf)[\\/]/,
+            },
+            {
+              name: "charts",
+              test: /node_modules[\\/]recharts[\\/]/,
+            },
+          ],
         },
       },
     },
