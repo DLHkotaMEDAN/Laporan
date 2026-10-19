@@ -159,6 +159,9 @@ importers:
       '@sparticuz/chromium':
         specifier: ^149.0.0
         version: 149.0.0
+      '@supabase/supabase-js':
+        specifier: ^2.117.3
+        version: 2.117.3
       puppeteer-core:
         specifier: ^25.6.0
         version: 25.6.0
@@ -172,6 +175,9 @@ importers:
       '@tailwindcss/oxide-win32-x64-msvc':
         specifier: 4.3.0
         version: 4.3.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.2
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
