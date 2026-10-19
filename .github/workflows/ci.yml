@@ -34,25 +34,30 @@ jobs:
         working-directory: ./artifacts/laporan-kerja
         run: pnpm test:run
 
+      - name: Build
+        working-directory: ./artifacts/laporan-kerja
+        run: pnpm build
+
       - name: Install Playwright browsers
         working-directory: ./artifacts/laporan-kerja
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Start dev server
+      - name: Install serve
+        run: npm install -g serve
+
+      - name: Start static server
         working-directory: ./artifacts/laporan-kerja
-        run: pnpm dev &
+        run: npx serve dist -l 5173 &
         shell: bash
 
-      - name: Wait for dev server
+      - name: Wait for static server
         run: |
-          timeout 60 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 2; done' || exit 1
+          timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 1; done' || exit 1
         shell: bash
 
       - name: Run E2E tests
         working-directory: ./artifacts/laporan-kerja
         run: pnpm test:e2e
-
-      - name: Build
         working-directory: ./artifacts/laporan-kerja
         run: pnpm build
 

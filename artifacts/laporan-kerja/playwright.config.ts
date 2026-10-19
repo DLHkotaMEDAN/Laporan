@@ -11,9 +11,9 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // Increase timeout for CI environment
-    actionTimeout: process.env.CI ? 10000 : 5000,
-    navigationTimeout: process.env.CI ? 30000 : 15000,
+    // Standard timeouts - static server is fast
+    actionTimeout: 5000,
+    navigationTimeout: 15000,
   },
 
   projects: [
@@ -23,9 +23,9 @@ export default defineConfig({
     },
   ],
 
-  // Hybrid approach:
-  // - Local development: use webServer (simple, automatic)
-  // - CI: manual start (reliable, explicit wait)
+  // Professional approach:
+  // - CI: Test against build output (production-like, reliable, fast)
+  // - Local: Use dev server for development convenience
   webServer: process.env.CI ? undefined : {
     command: 'pnpm dev',
     url: 'http://localhost:5173',
