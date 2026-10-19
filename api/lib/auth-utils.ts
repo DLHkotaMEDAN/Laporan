@@ -14,6 +14,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const createAuthenticatedClient = (token: string) =>
+  createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
 export interface AuthenticatedUser {
   id: string;
   email?: string;
@@ -34,7 +48,8 @@ type AuthClientWithGetUser = typeof supabase.auth & {
 
 export async function verifySession(token: string): Promise<AuthenticatedUser | null> {
   try {
-    const authClient = supabase.auth as AuthClientWithGetUser;
+    const authenticatedClient = createAuthenticatedClient(token);
+    const authClient = authenticatedClient.auth as AuthClientWithGetUser;
     const { data: { user }, error } = await authClient.getUser(token);
 
     if (error || !user) {
@@ -42,13 +57,14 @@ export async function verifySession(token: string): Promise<AuthenticatedUser | 
     }
 
     // Fetch user profile from database
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await authenticatedClient
       .from('profiles')
       .select('id, role, roles, is_active')
       .eq('id', user.id)
       .single();
 
-    if (!profile) {
+    if (profileError || !profile) {
+      console.error('Profile lookup failed during PDF authentication:', profileError?.message ?? 'profile not found');
       return null;
     }
 
