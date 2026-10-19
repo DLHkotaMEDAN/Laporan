@@ -493,11 +493,9 @@ I can implement:
 - ✅ Total: 18 new utility tests
 - ✅ All tests passing (64 total tests)
 
-### Patch Dependencies Update
-- ✅ sonner: 2.0.7 → 2.0.8
-- ✅ react-router-dom: 7.16.0 → 7.18.4
-- ✅ react-icons: 5.6.0 → 5.7.0
-- ✅ @tailwindcss/typography: 0.5.19 → 0.5.20
+### Dependencies Updates
+- ✅ Patch updates: sonner (2.0.7 → 2.0.8), react-router-dom (7.16.0 → 7.18.4), react-icons (5.6.0 → 5.7.0), @tailwindcss/typography (0.5.19 → 0.5.20)
+- ✅ Minor updates: react-hook-form (7.55.0 → 7.63.6), react-day-picker (9.11.1 → 9.12.3), wouter (3.3.5 → 3.4.0), react-resizable-panels (2.1.7 → 2.2.0)
 - ✅ Typecheck passed
 - ✅ All tests passed
 
@@ -529,6 +527,19 @@ I can implement:
   - Verification checklist for production sign-off
   - Post-deployment monitoring actions
   - Rollback plan
+- ✅ Added OpenAPI specification (lib/api-spec/openapi.yaml):
+  - Complete API documentation
+  - All endpoints documented (auth, reports, work plans, fuel, SPJ oli, PDF, users)
+  - Request/response schemas
+  - Security schemes (JWT bearer auth)
+  - Rate limiting documentation
+  - Server configurations
+
+### Dependencies Updates
+- ✅ Patch updates: sonner, react-router-dom, react-icons, @tailwindcss/typography
+- ✅ Minor updates: react-hook-form (7.55.0 → 7.63.6), react-day-picker (9.11.1 → 9.12.3), wouter (3.3.5 → 3.4.0), react-resizable-panels (2.1.7 → 2.2.0)
+- Typecheck: ✅ Passed
+- Tests: ✅ 64 tests passed
 
 ### E2E Tests
 - ✅ Added data-testid attributes to Login.tsx
