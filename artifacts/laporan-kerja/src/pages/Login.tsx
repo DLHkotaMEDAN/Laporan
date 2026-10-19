@@ -243,6 +243,7 @@ const Login = () => {
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   id="username"
+                  data-testid="username"
                   type="text"
                   placeholder="Ketik username Anda"
                   className="pl-10"
@@ -260,6 +261,7 @@ const Login = () => {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   id="password"
+                  data-testid="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Ketik kata sandi"
                   className="pl-10 pr-10"
