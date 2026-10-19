@@ -58,8 +58,6 @@ jobs:
       - name: Run E2E tests
         working-directory: ./artifacts/laporan-kerja
         run: pnpm test:e2e
-        working-directory: ./artifacts/laporan-kerja
-        run: pnpm build
 
   backend:
     runs-on: ubuntu-latest
