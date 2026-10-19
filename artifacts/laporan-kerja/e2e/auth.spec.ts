@@ -12,6 +12,9 @@ test.describe('Authentication E2E Tests', () => {
   test('should display login form', async ({ page }) => {
     await page.goto('/login');
     
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
+    
     // Check page title
     await expect(page).toHaveTitle(/laporan/i);
     
@@ -24,6 +27,9 @@ test.describe('Authentication E2E Tests', () => {
   test('should show error with empty credentials', async ({ page }) => {
     await page.goto('/login');
     
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
+    
     // Try to login without credentials
     await page.getByRole('button', { name: /masuk/i }).click();
     
@@ -33,6 +39,9 @@ test.describe('Authentication E2E Tests', () => {
 
   test('should show error with invalid credentials', async ({ page }) => {
     await page.goto('/login');
+    
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
     
     // Enter invalid credentials
     await page.getByTestId('username').fill('invaliduser');
@@ -45,6 +54,9 @@ test.describe('Authentication E2E Tests', () => {
 
   test('should toggle password visibility', async ({ page }) => {
     await page.goto('/login');
+    
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
     
     const passwordInput = page.getByTestId('password');
     const toggleButton = page.locator('button[type="button"]').filter({ hasText: '' }).first();
@@ -67,6 +79,9 @@ test.describe('Authentication E2E Tests', () => {
 
   test('should auto-append @gmail.com if not present', async ({ page }) => {
     await page.goto('/login');
+    
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
     
     // Enter username without @gmail.com
     await page.getByTestId('username').fill('testuser');

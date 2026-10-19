@@ -4,6 +4,9 @@ test.describe('Report Form E2E Tests', () => {
   test('should load daily recap page', async ({ page }) => {
     await page.goto('/daily-recap');
     
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
+    
     // Check that page loads successfully
     await expect(page).toHaveTitle(/laporan/i);
   });
