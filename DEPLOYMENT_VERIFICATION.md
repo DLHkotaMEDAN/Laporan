@@ -16,6 +16,7 @@ This guide provides step-by-step verification procedures for security fixes depl
 - ✅ Rate limiting (10 req/min)
 - ✅ JWT authentication required
 - ✅ Request validation
+- ✅ Vercel configuration updated for API routing (2026-10-19)
 
 ### SEC-03: RLS Inactive Account Protection
 - ✅ RLS policies check `is_active = true`
