@@ -1,4 +1,4 @@
-import { verifySession } from './lib/auth-utils';
+import { verifySession } from './lib/auth-utils.js';
 
 const MAX_DOCUMENT_SIZE = 4 * 1024 * 1024;
 
