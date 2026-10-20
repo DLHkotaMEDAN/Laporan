@@ -93,7 +93,7 @@ const WorkPlanDailyRecap = () => {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().split('T')[0]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialSelectedCategories(searchParams));
   const [signatureMode, setSignatureMode] = useState<SignatureMode>("without-signature");
   const [logoMode, setLogoMode] = useState<LogoMode>("without-logo");
@@ -885,7 +885,7 @@ const WorkPlanDailyRecap = () => {
         <div className="text-center mb-5">
           <h3 className="text-xl font-bold underline uppercase">{recapTitle}</h3>
           <p className="text-lg font-bold">
-            Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : "Memuat..."}
+            Tanggal: {selectedDate === "semua" ? "Semua Tanggal" : selectedDate ? format(new Date(selectedDate), 'EEEE, dd MMMM yyyy', { locale: localeId }) : format(new Date(), 'EEEE, dd MMMM yyyy', { locale: localeId })}
           </p>
         </div>
 
