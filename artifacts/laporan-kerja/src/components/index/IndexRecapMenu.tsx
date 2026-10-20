@@ -53,9 +53,9 @@ export function IndexRecapMenu({
           )}
           {activeTab === "workplans" && (
             <>
-              <DropdownMenuItem onClick={() => onNavigate(`/work-plans/daily-rekap${canFilterWorkPlanRegions && selectedRegion !== "semua" ? `?region=${selectedRegion}` : ""}`)} className="py-3 cursor-pointer"><Printer className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Rencana</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate(`/work-plans/weekly-rekap${canFilterWorkPlanRegions && selectedRegion !== "semua" ? `?region=${selectedRegion}` : ""}`)} className="py-3 cursor-pointer"><Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Rencana</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate(`/work-plans/monthly-rekap${canFilterWorkPlanRegions && selectedRegion !== "semua" ? `?region=${selectedRegion}` : ""}`)} className="py-3 cursor-pointer"><FileText className="mr-3 h-4 w-4 text-purple-600" /> Rekap Bulanan Rencana</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate(`/work-plans/daily-rekap${!isAdmin && canFilterWorkPlanRegions && selectedRegion !== "semua" ? `?region=${selectedRegion}` : ""}`)} className="py-3 cursor-pointer"><Printer className="mr-3 h-4 w-4 text-blue-600" /> Rekap Harian Rencana</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate(`/work-plans/weekly-rekap${!isAdmin && canFilterWorkPlanRegions && selectedRegion !== "semua" ? `?region=${selectedRegion}` : ""}`)} className="py-3 cursor-pointer"><Table className="mr-3 h-4 w-4 text-green-600" /> Rekap Mingguan Rencana</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate(`/work-plans/monthly-rekap${!isAdmin && canFilterWorkPlanRegions && selectedRegion !== "semua" ? `?region=${selectedRegion}` : ""}`)} className="py-3 cursor-pointer"><FileText className="mr-3 h-4 w-4 text-purple-600" /> Rekap Bulanan Rencana</DropdownMenuItem>
             </>
           )}
           {activeTab === "overtime" && (

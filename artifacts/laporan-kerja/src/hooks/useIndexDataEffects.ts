@@ -51,6 +51,7 @@ export const useIndexDataEffects = ({
     isNotaDinasOnly,
     accountRegionId,
     isUserRestricted,
+    isAdmin,
   } = access;
 
   useEffect(() => {
@@ -62,13 +63,16 @@ export const useIndexDataEffects = ({
       return;
     }
     loadData();
-    if (accountRegionId && selectedRegion !== accountRegionId) {
+    // Super admin selalu default ke "semua wilayah"
+    if (isAdmin && selectedRegion !== "semua") {
+      setSelectedRegion("semua");
+    } else if (accountRegionId && selectedRegion !== accountRegionId) {
       setSelectedRegion(accountRegionId);
     }
     if (isUserRestricted && profile?.category) {
       setSelectedCategory(profile.category);
     }
-  }, [profile, isLoggedIn, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId]);
+  }, [profile, isLoggedIn, isAdminBbm, isAdminBbmPusat, isAdminLaporanBbm, isAdminSpj, isAdminSpjOli, authLoading, navigate, accountRegionId, isAdmin, selectedRegion]);
 
   // Kirim filter eksplisit agar tidak membaca stale closure saat React memproses state bersamaan.
   useEffect(() => {

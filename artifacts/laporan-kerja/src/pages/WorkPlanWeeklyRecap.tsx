@@ -111,7 +111,7 @@ const WorkPlanWeeklyRecap = () => {
   const [searchParams] = useSearchParams();
   const { session, profile } = useAuth();
   const isAdmin = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
-  const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
+  const [selectedRegion, setSelectedRegion] = useState(isAdmin ? "semua" : (searchParams.get('region') || "semua"));
   const { regions } = useRegionFilterOptions(isAdmin, selectedRegion);
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
   const regionName = useRegionName(regionId, isAdmin && selectedRegion === 'semua' ? 'SEMUA WILAYAH' : undefined);

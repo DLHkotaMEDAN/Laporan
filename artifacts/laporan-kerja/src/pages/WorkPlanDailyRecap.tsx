@@ -84,7 +84,7 @@ const WorkPlanDailyRecap = () => {
   const [searchParams] = useSearchParams();
   const { session, profile } = useAuth();
   const isAdmin = isGlobalWorkPlanAdmin(profile?.role, session?.user?.email);
-  const [selectedRegion, setSelectedRegion] = useState(searchParams.get('region') || "semua");
+  const [selectedRegion, setSelectedRegion] = useState(isAdmin ? "semua" : (searchParams.get('region') || "semua"));
   const teamFilterRegion = isAdmin ? selectedRegion : (profile?.region_id || 'semua');
   const { regions, teams } = useRegionFilterOptions(Boolean(session && profile && profile.role !== 'user'), teamFilterRegion);
   const regionId = isAdmin ? (selectedRegion === 'semua' ? null : selectedRegion) : profile?.region_id;
