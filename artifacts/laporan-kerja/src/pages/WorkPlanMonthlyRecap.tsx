@@ -136,30 +136,40 @@ const WorkPlanMonthlyRecap = () => {
     const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
-      const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
-      if (requestId !== dataRequestId.current) return;
-      setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
-      // Gunakan perbandingan string pada p.date ("YYYY-MM-DD") untuk menghindari
-      // timezone shift yang bisa membuat tanggal 1 bulan muncul di bulan sebelumnya.
-      const monthStr = String(selectedMonth).padStart(2, '0');
-      const filtered = data.filter(p => {
-        // p.date format: "YYYY-MM-DD" — ekstrak bulan dan tahun langsung dari string
-        const [yearPart, monthPart] = p.date.split('-');
-        const matchMonth = yearPart === selectedYear && monthPart === monthStr;
-        return matchMonth &&
-               (selectedCategories.includes('semua') || selectedCategories.includes(p.category)) &&
-               p.is_visible !== false;
+
+      // Kirim filter tanggal ke server untuk performa lebih baik
+      const dateFilter = selectedMonth !== 'semua' && selectedYear !== 'semua'
+        ? { type: 'month' as const, month: selectedMonth, year: selectedYear }
+        : selectedYear !== 'semua'
+          ? { type: 'year' as const, year: selectedYear }
+          : null;
+
+      const effectiveCategory = selectedCategories.includes('semua') ? null : selectedCategories[0] || null;
+
+      const data = await workPlanService.getFilteredWorkPlans({
+        dateFilter,
+        category: effectiveCategory,
+        regionId,
       });
 
-      filtered.sort((a, b) => {
-        if (isAdmin && selectedRegion === 'semua') {
+      if (requestId !== dataRequestId.current) return;
+
+      setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
+
+      // Filter kategori multi-select di client (server hanya mendukung satu nilai)
+      const filtered = data.filter(p =>
+        (selectedCategories.includes('semua') || selectedCategories.includes(p.category)) &&
+        p.is_visible !== false
+      );
+
+      // Sorting untuk admin yang melihat semua wilayah
+      if (isAdmin && selectedRegion === 'semua') {
+        filtered.sort((a, b) => {
           const regionDiff = getRegionOrder(a.region_id) - getRegionOrder(b.region_id);
           if (regionDiff !== 0) return regionDiff;
-        }
-        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return sortByCategory(a.category, b.category);
-      });
+          return sortByCategory(a.category, b.category);
+        });
+      }
 
       if (requestId === dataRequestId.current) setPlans(filtered);
     } catch (error) {

@@ -28,6 +28,7 @@ export const workPlanService = {
         .from('work_plans')
         .select('*')
         .order('date', { ascending: false })
+        .order('category', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (dateFilter?.type === 'date') {
@@ -68,8 +69,9 @@ export const workPlanService = {
         .from('work_plans')
         .select('*')
         .order('date', { ascending: false })
+        .order('category', { ascending: true })
         .order('created_at', { ascending: false });
-      
+
       if (categoryFilter && categoryFilter !== 'semua') {
         query = query.eq('category', categoryFilter);
       }
@@ -82,6 +84,29 @@ export const workPlanService = {
         query = query.is('deleted_at', null);
       } else {
         query = query.not('deleted_at', 'is', null);
+      }
+
+      return query;
+    });
+  },
+
+  async getWorkPlansByDateRange(startDate: string, endDate: string, categoryFilter?: string | null, regionId?: string | null) {
+    return fetchAllPages<WorkPlan>(() => {
+      let query = supabase
+        .from('work_plans')
+        .select('*')
+        .is('deleted_at', null)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true })
+        .order('category', { ascending: true });
+
+      if (categoryFilter && categoryFilter !== 'semua') {
+        query = query.eq('category', categoryFilter);
+      }
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
       }
 
       return query;

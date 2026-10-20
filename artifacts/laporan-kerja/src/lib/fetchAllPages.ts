@@ -10,12 +10,14 @@ import { logger } from '@/lib/logger';
  *
  * @param buildQuery  Fungsi yang mengembalikan Supabase query builder
  * @param pageSize    Jumlah baris per halaman (default 1000)
- * @param maxPages    Batas maksimum halaman — cegah loop tak henti (default 50 = 50.000 baris)
+ * @param maxPages    Batas maksimum halaman — cegah loop tak henti (default 10 = 10.000 baris)
+ * @param maxRows     Batas maksimum total baris (default 5000) - berhenti lebih cepat untuk performa
  */
 export const fetchAllPages = async <T>(
   buildQuery: () => any,
   pageSize = 1000,
-  maxPages = 50,
+  maxPages = 10,
+  maxRows = 5000,
 ): Promise<T[]> => {
   const rows: T[] = [];
 
@@ -31,6 +33,15 @@ export const fetchAllPages = async <T>(
 
     // Berhenti jika halaman terakhir (data kurang dari pageSize)
     if (batch.length < pageSize) break;
+
+    // Berhenti jika sudah mencapai maxRows (untuk performa)
+    if (rows.length >= maxRows) {
+      logger.warn(
+        `[fetchAllPages] Data dibatasi ke ${maxRows} baris untuk performa. ` +
+        `Pertimbangkan untuk menambah filter tanggal/wilayah lebih spesifik.`
+      );
+      break;
+    }
   }
 
   // Kalau loop selesai karena maxPages tercapai (bukan karena data habis),

@@ -99,16 +99,11 @@ ON overtime_records (deleted_at)
 WHERE deleted_at IS NULL;
 
 -- Add indexes for nota_dinas_records table
-CREATE INDEX IF NOT EXISTS idx_nota_dinas_records_date_region
-ON nota_dinas_records (form->>'tanggal', region_id)
-WHERE deleted_at IS NULL;
+-- Note: Skip JSON field indexing for nota_dinas as it requires GIN/GIST index which is more complex
+-- The date field in nota_dinas is stored in JSON, so we'll only index simpler fields
 
 CREATE INDEX IF NOT EXISTS idx_nota_dinas_records_region_id
 ON nota_dinas_records (region_id)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_nota_dinas_records_date
-ON nota_dinas_records (form->>'tanggal')
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_nota_dinas_records_deleted_at

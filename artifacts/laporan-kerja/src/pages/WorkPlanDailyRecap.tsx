@@ -141,37 +141,36 @@ const WorkPlanDailyRecap = () => {
     const requestId = ++dataRequestId.current;
     try {
       setLoading(true);
-      const data = await workPlanService.getAllWorkPlans(undefined, false, regionId);
+
+      // Kirim filter tanggal ke server untuk performa lebih baik
+      const dateFilter = selectedDate && selectedDate !== 'semua'
+        ? { type: 'date' as const, value: selectedDate }
+        : null;
+
+      const data = await workPlanService.getFilteredWorkPlans({
+        dateFilter,
+        category: selectedCategories.includes('semua') ? null : selectedCategories[0] || null,
+        regionId,
+      });
 
       if (requestId !== dataRequestId.current) return;
 
       setAvailableCategories(Array.from(new Set(data.map((plan) => plan.category))).sort((first, second) => first.localeCompare(second)));
-      let targetDate = selectedDate;
 
-      if (!targetDate && data.length > 0) {
-        const allDates = data.map(p => p.date);
-        targetDate = allDates.reduce((a, b) => (a > b ? a : b));
-        setSelectedDate(targetDate);
-      } else if (!targetDate && data.length === 0) {
-        targetDate = "semua";
-        setSelectedDate("semua");
-      }
-
+      // Filter kategori multi-select di client (server hanya mendukung satu nilai)
       const filtered = data.filter(p =>
-        (targetDate === "semua" || p.date === targetDate) &&
         (selectedCategories.includes("semua") || selectedCategories.includes(p.category)) &&
         p.is_visible !== false
       );
 
-      filtered.sort((a, b) => {
-        if (isAdmin && selectedRegion === 'semua') {
+      // Sorting untuk admin yang melihat semua wilayah
+      if (isAdmin && selectedRegion === 'semua') {
+        filtered.sort((a, b) => {
           const regionDiff = getRegionOrder(a.region_id) - getRegionOrder(b.region_id);
           if (regionDiff !== 0) return regionDiff;
-        }
-        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return sortByCategory(a.category, b.category);
-      });
+          return sortByCategory(a.category, b.category);
+        });
+      }
 
       if (requestId === dataRequestId.current) setPlans(filtered);
     } catch (error) {
