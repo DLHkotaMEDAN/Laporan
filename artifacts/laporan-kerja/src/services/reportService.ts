@@ -28,7 +28,8 @@ export const reportService = {
       let query = supabase
         .from('reports')
         .select('*')
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .order('category', { ascending: true });
 
       // Filter tanggal — kirim ke Supabase agar baris yang tidak relevan tidak ditarik
       if (dateFilter?.type === 'date') {
@@ -89,7 +90,7 @@ export const reportService = {
     });
   },
 
-  async getReportsByDateRange(startDate: string, endDate: string, categoryFilter?: string | null) {
+  async getReportsByDateRange(startDate: string, endDate: string, categoryFilter?: string | null, regionId?: string | null) {
     return fetchAllPages<Report>(() => {
       let query = supabase
         .from('reports')
@@ -97,10 +98,15 @@ export const reportService = {
         .is('deleted_at', null)
         .gte('date', startDate)
         .lte('date', endDate)
-        .order('date', { ascending: true });
+        .order('date', { ascending: true })
+        .order('category', { ascending: true });
 
       if (categoryFilter && categoryFilter !== 'semua') {
         query = query.eq('category', categoryFilter);
+      }
+
+      if (regionId) {
+        query = query.eq('region_id', regionId);
       }
 
       return query;

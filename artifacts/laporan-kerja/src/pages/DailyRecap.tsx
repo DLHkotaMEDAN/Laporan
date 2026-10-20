@@ -197,11 +197,15 @@ const DailyRecap = () => {
         data = data.filter(r => selectedCategories.includes(r.category));
       }
 
-      data.sort((a, b) => {
-        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return sortByCategory(a.category, b.category);
-      });
+      // Sorting sudah dilakukan di server-side, tidak perlu sorting lagi di client
+      // Kecuali jika ada filter kategori multi-select yang mengubah urutan
+      if (!isUserRestricted && !selectedCategories.includes('semua') && selectedCategories.length > 1) {
+        data.sort((a, b) => {
+          const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          return sortByCategory(a.category, b.category);
+        });
+      }
 
       if (requestId === dataRequestId.current) {
         setReports(data);

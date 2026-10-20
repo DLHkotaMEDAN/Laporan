@@ -224,23 +224,19 @@ const WeeklyRecap = () => {
 
       // Gunakan getReportsByDateRange untuk range minggu — lebih tepat dari
       // getFilteredReports yang hanya mendukung satu tanggal per query.
-      let data = await reportService.getReportsByDateRange(startStr, endStr, effectiveCategory);
-
-      // Filter wilayah client-side sebagai pengaman tambahan
-      if (regionId) {
-        data = data.filter(r => r.region_id === regionId);
-      }
+      // Filter wilayah dikirim ke server untuk performa lebih baik
+      let data = await reportService.getReportsByDateRange(startStr, endStr, effectiveCategory, regionId);
 
       // Filter kategori multi-select (jika user memilih lebih dari satu kategori)
       if (!isUserRestricted && !selectedCategories.includes('semua') && selectedCategories.length > 1) {
         data = data.filter(r => selectedCategories.includes(r.category));
+        // Re-sort setelah filter kategori multi-select
+        data.sort((a, b) => {
+          const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          return sortByCategory(a.category, b.category);
+        });
       }
-
-      data.sort((a, b) => {
-        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return sortByCategory(a.category, b.category);
-      });
 
       if (requestId === dataRequestId.current) {
         setReports(data);
