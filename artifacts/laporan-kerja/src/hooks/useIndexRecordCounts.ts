@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { emptyRecordCounts, type MainTab, type RecordCounts } from "@/components/index/indexConfig";
 import { getDatabaseRecordCount } from "@/services/indexRecordCountService";
-import { logger } from "@/lib/logger";
+import { getErrorMessage, logger } from "@/lib/logger";
 import type { Report } from "@/types/report";
 import type { WorkPlan } from "@/types/workPlan";
 
@@ -53,23 +53,19 @@ export function useIndexRecordCounts({
   useEffect(() => { reportsRef.current = reports; }, [reports]);
   useEffect(() => { workPlansRef.current = workPlans; }, [workPlans]);
 
-  const loadRecordCounts = async () => {
+  const loadRecordCounts = useCallback(async () => {
     if (!hasProfile || !isLoggedIn) return;
 
     const jobs: Partial<Record<MainTab, Promise<number>>> = {};
     const canShowReports = canViewReportsTab && !isOvertimeOnly;
     const canShowWorkPlans = !isNotaDinasOnly && !isLaporanOnly && !isFuelSpecialist && !isOvertimeOnly;
 
-    if (canShowReports) {
+    if (canShowReports && reportsRef.current.length > 0) {
       // Baca ref agar selalu memakai data terbaru, bukan nilai closure lama.
-      jobs.reports = reportsRef.current.length > 0
-        ? Promise.resolve(reportsRef.current.length)
-        : getDatabaseRecordCount("reports", { regionId: accountRegionId ?? undefined, softDeleted: false });
+      jobs.reports = Promise.resolve(reportsRef.current.length);
     }
-    if (canShowWorkPlans) {
-      jobs.workplans = workPlansRef.current.length > 0
-        ? Promise.resolve(workPlansRef.current.length)
-        : getDatabaseRecordCount("work_plans", { regionId: accountRegionId ?? undefined, softDeleted: false });
+    if (canShowWorkPlans && workPlansRef.current.length > 0) {
+      jobs.workplans = Promise.resolve(workPlansRef.current.length);
     }
     if (canViewOvertime) {
       jobs.overtime = getDatabaseRecordCount("overtime_records", { regionId: accountRegionId, softDeleted: false });
@@ -94,7 +90,7 @@ export function useIndexRecordCounts({
       try {
         return [tab, await job] as const;
       } catch (error) {
-        logger.warn(`Gagal menghitung record tab ${tab}:`, error);
+        logger.warn(`Gagal menghitung record tab ${tab}: ${getErrorMessage(error)}`);
         return [tab, null] as const;
       }
     }));
@@ -103,7 +99,24 @@ export function useIndexRecordCounts({
       ...current,
       ...Object.fromEntries(entries),
     } as RecordCounts));
-  };
+  }, [
+    hasProfile,
+    isLoggedIn,
+    canViewReportsTab,
+    isOvertimeOnly,
+    isNotaDinasOnly,
+    isLaporanOnly,
+    isFuelSpecialist,
+    canViewOvertime,
+    isAdmin,
+    isAdminBbm,
+    isAdminBbmPusat,
+    isAdminLaporanBbm,
+    isPimpinan,
+    isAdminSpj,
+    isAdminSpjOli,
+    accountRegionId,
+  ]);
 
   return { recordCounts, setRecordCounts, loadRecordCounts };
 }

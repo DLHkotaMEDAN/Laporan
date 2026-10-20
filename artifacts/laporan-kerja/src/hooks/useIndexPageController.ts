@@ -135,7 +135,6 @@ export const useIndexPageController = ({ setConfirmDialog, onOpenDailyReportReca
     isLoggedIn,
     profile,
     access,
-    navigate,
     loadRecordCounts,
     loadData,
     selectedDate,

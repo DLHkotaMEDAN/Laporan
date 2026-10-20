@@ -84,7 +84,7 @@ const Index = () => {
       <IndexDialogs
         isTrashOpen={isTrashOpen}
         onTrashOpenChange={setIsTrashOpen}
-        onRefresh={page.loadData}
+        onRefresh={async () => { await page.loadData(); }}
         activeTab={page.activeTab}
         isChangePasswordOpen={isChangePasswordOpen}
         onPasswordChangeOpen={setIsChangePasswordOpen}

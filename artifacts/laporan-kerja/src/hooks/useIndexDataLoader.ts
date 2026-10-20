@@ -1,6 +1,6 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useRef, type Dispatch, type SetStateAction } from "react";
 import { showError } from "@/utils/toast";
-import { logger } from "@/lib/logger";
+import { getErrorMessage, logger } from "@/lib/logger";
 import { reportService, type ReportFilters } from "@/services/reportService";
 import { workPlanService, type WorkPlanFilters } from "@/services/workPlanService";
 import type { Report } from "@/types/report";
@@ -40,12 +40,16 @@ export function useIndexDataLoader({
   setSelectedRegion,
   setRecordCounts,
 }: UseIndexDataLoaderOptions) {
+  const requestIdRef = useRef(0);
+
   const loadData = async (
     date = selectedDate,
     month = selectedMonth,
     year = selectedYear,
     category = selectedCategory,
   ) => {
+    const requestId = ++requestIdRef.current;
+
     try {
       setLoading(true);
       const effectiveCategory = isUserRestricted
@@ -76,6 +80,10 @@ export function useIndexDataLoader({
         workPlanService.getFilteredWorkPlans(workPlanFilters),
       ]);
 
+      // Ignore a slower response when a newer filter request has already
+      // started. This keeps stale data from replacing the current view.
+      if (requestId !== requestIdRef.current) return false;
+
       setReports(reportsData);
       setWorkPlans(workPlansData);
       setRecordCounts((current) => ({
@@ -89,11 +97,15 @@ export function useIndexDataLoader({
       } else if (!isAdmin) {
         setSelectedRegion("semua");
       }
+      return true;
     } catch (error) {
-      logger.error("Failed to load index data", error);
-      showError("Gagal memuat data");
+      if (requestId === requestIdRef.current) {
+        logger.error("Failed to load index data", getErrorMessage(error));
+        showError(`Gagal memuat data: ${getErrorMessage(error)}`);
+      }
+      return false;
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   };
 
